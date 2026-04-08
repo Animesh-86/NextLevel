@@ -1,5 +1,4 @@
 import './globals.css';
-import Sidebar from '@/components/Sidebar';
 import AuthProvider from '@/components/AuthProvider';
 import { ToastProvider } from '@/components/Toast';
 
@@ -28,12 +27,7 @@ export default function RootLayout({ children }) {
       <body>
         <AuthProvider>
           <ToastProvider>
-            <div className="app-container">
-              <Sidebar />
-              <main className="main-content">
-                {children}
-              </main>
-            </div>
+            {children}
           </ToastProvider>
         </AuthProvider>
       </body>

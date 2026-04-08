@@ -7,13 +7,20 @@ async function handleProxy(req) {
   const isLoggedIn = !!session;
 
   // Public paths that don't require auth
-  const publicPaths = ['/login', '/api/auth'];
-  const isPublicPath = publicPaths.some(path => pathname.startsWith(path));
+  const publicPaths = ['/login', '/api/auth', '/'];
+  const isPublicPath = publicPaths.some(path => {
+    if (path === '/') return pathname === '/';
+    return pathname.startsWith(path);
+  });
 
   if (isPublicPath) {
-    // Redirect logged-in users away from login page
+    // Redirect logged-in users from login page to dashboard
     if (isLoggedIn && pathname === '/login') {
-      return NextResponse.redirect(new URL('/', req.url));
+      return NextResponse.redirect(new URL('/dashboard', req.url));
+    }
+    // Redirect logged-in users from landing to dashboard
+    if (isLoggedIn && pathname === '/') {
+      return NextResponse.redirect(new URL('/dashboard', req.url));
     }
     return NextResponse.next();
   }
@@ -29,7 +36,7 @@ async function handleProxy(req) {
   const adminPaths = ['/manage', '/exams'];
   const isAdminPath = adminPaths.some(path => pathname.startsWith(path));
   if (isAdminPath && session?.user?.role !== 'admin') {
-    return NextResponse.redirect(new URL('/', req.url));
+    return NextResponse.redirect(new URL('/dashboard', req.url));
   }
 
   return NextResponse.next();

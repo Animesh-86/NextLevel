@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 const navItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/exams', label: 'Exams', icon: BookOpen, adminOnly: true },
   { href: '/manage', label: 'Question Bank', icon: Settings, adminOnly: true },
   { href: '/test', label: 'Focus Test', icon: Play },
