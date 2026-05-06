@@ -6,7 +6,7 @@ import { useState } from 'react';
 import {
   LayoutDashboard, BookOpen, Play, Trophy,
   UserCircle, Settings, LogOut, Menu, X, ChevronRight, Inbox,
-  FolderOpen, CalendarDays
+  FolderOpen, CalendarDays, Map, Link2
 } from 'lucide-react';
 import ReminderBell from '@/components/ReminderBell';
 
@@ -15,6 +15,8 @@ const navItems = [
   { href: '/captures', label: 'Capture Hub', icon: Inbox },
   { href: '/vault', label: 'File Vault', icon: FolderOpen },
   { href: '/planner', label: 'Planner', icon: CalendarDays },
+  { href: '/journey', label: 'Journey', icon: Map },
+  { href: '/links', label: 'Links', icon: Link2 },
   { href: '/exams', label: 'Exams', icon: BookOpen, adminOnly: true },
   { href: '/manage', label: 'Question Bank', icon: Settings, adminOnly: true },
   { href: '/test', label: 'Focus Test', icon: Play },
