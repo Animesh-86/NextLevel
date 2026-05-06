@@ -3,14 +3,21 @@ import AuthProvider from '@/components/AuthProvider';
 import { ToastProvider } from '@/components/Toast';
 
 export const metadata = {
-  title: 'NextLevel — Assessment Platform',
-  description: 'Practice, test, and master any certification with smart spaced repetition and detailed analytics.',
-  keywords: ['exam', 'assessment', 'quiz', 'certification', 'practice', 'learning'],
+  title: 'NextLevel — Learning Companion',
+  description: 'Your brain\'s second memory — capture, organize, plan. Study materials everywhere.',
+  keywords: ['exam', 'assessment', 'study', 'planner', 'capture', 'learning', 'pwa'],
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'NextLevel',
+  },
 };
 
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
+  themeColor: '#0a0a0a',
 };
 
 export default function RootLayout({ children }) {
@@ -23,6 +30,7 @@ export default function RootLayout({ children }) {
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
           rel="stylesheet"
         />
+        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
       <body>
         <AuthProvider>
@@ -30,6 +38,17 @@ export default function RootLayout({ children }) {
             {children}
           </ToastProvider>
         </AuthProvider>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').catch(function() {});
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );
