@@ -5,11 +5,13 @@ import { useSession, signOut } from 'next-auth/react';
 import { useState } from 'react';
 import {
   LayoutDashboard, BookOpen, Play, Trophy,
-  UserCircle, Settings, LogOut, Menu, X, ChevronRight
+  UserCircle, Settings, LogOut, Menu, X, ChevronRight, Inbox
 } from 'lucide-react';
+import ReminderBell from '@/components/ReminderBell';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/captures', label: 'Capture Hub', icon: Inbox },
   { href: '/exams', label: 'Exams', icon: BookOpen, adminOnly: true },
   { href: '/manage', label: 'Question Bank', icon: Settings, adminOnly: true },
   { href: '/test', label: 'Focus Test', icon: Play },
@@ -59,6 +61,7 @@ export default function Sidebar() {
             </svg>
             <span className="sidebar-brand">NextLevel</span>
           </div>
+          <ReminderBell />
           <button
             className="sidebar-close-btn"
             onClick={() => setMobileOpen(false)}
