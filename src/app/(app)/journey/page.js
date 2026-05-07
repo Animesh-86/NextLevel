@@ -11,8 +11,8 @@ const categoryColors = {
   devops: '#a855f7', project: '#f59e0b', career: '#ec4899', 'ml-ai': '#06b6d4', other: '#9ca3af',
 };
 const categoryEmojis = {
-  dsa: '🧮', 'system-design': '🏗️', 'web-dev': '🌐', devops: '⚙️',
-  project: '🚀', career: '💼', 'ml-ai': '🤖', other: '📌',
+  dsa: '', 'system-design': '', 'web-dev': '', devops: '',
+  project: '', career: '', 'ml-ai': '', other: '',
 };
 const statusColors = {
   bookmarked: '#6b7280', applied: '#3b82f6', screening: '#f59e0b',
@@ -20,9 +20,9 @@ const statusColors = {
   accepted: '#10b981', rejected: '#ef4444', ghosted: '#6b7280',
 };
 const statusLabels = {
-  bookmarked: '📌 Saved', applied: '📨 Applied', screening: '📞 Screening',
-  technical: '💻 Technical', onsite: '🏢 Onsite', offer: '🎉 Offer',
-  accepted: '✅ Accepted', rejected: '❌ Rejected', ghosted: '👻 Ghosted',
+  bookmarked: 'Saved', applied: 'Applied', screening: 'Screening',
+  technical: 'Technical', onsite: 'Onsite', offer: 'Offer',
+  accepted: 'Accepted', rejected: 'Rejected', ghosted: 'Ghosted',
 };
 const statusOrder = ['bookmarked','applied','screening','technical','onsite','offer','accepted','rejected','ghosted'];
 
@@ -79,7 +79,6 @@ export default function JourneyPage() {
   }
 
   async function deleteRoadmap(id) {
-    if (!confirm('Delete this roadmap?')) return;
     await fetch(`/api/roadmaps/${id}`, { method: 'DELETE' });
     fetchData();
   }
@@ -104,7 +103,6 @@ export default function JourneyPage() {
   }
 
   async function deleteApp(id) {
-    if (!confirm('Delete?')) return;
     await fetch(`/api/applications/${id}`, { method: 'DELETE' });
     fetchData();
   }
@@ -356,12 +354,12 @@ function AnalyticsPanel({ data }) {
       {/* Top Stats */}
       <div className="analytics-stats-row">
         {[
-          { label: 'Activity Streak', value: `${streak} days`, icon: '🔥' },
-          { label: 'Study Hours', value: `${counts.totalStudyHours}h`, icon: '⏱️' },
-          { label: 'Tasks Done', value: `${counts.tasksDone}/${counts.tasks}`, icon: '✅' },
-          { label: 'Active Roadmaps', value: counts.roadmapsActive, icon: '🛣️' },
-          { label: 'Applications', value: counts.applications, icon: '💼' },
-          { label: 'Files Stored', value: counts.files, icon: '📁' },
+          { label: 'Activity Streak', value: `${streak} days`, icon: '' },
+          { label: 'Study Hours', value: `${counts.totalStudyHours}h`, icon: '' },
+          { label: 'Tasks Done', value: `${counts.tasksDone}/${counts.tasks}`, icon: '' },
+          { label: 'Active Roadmaps', value: counts.roadmapsActive, icon: '' },
+          { label: 'Applications', value: counts.applications, icon: '' },
+          { label: 'Files Stored', value: counts.files, icon: '' },
         ].map((s, i) => (
           <div key={i} className="analytics-stat-card">
             <span className="analytics-stat-icon">{s.icon}</span>
@@ -373,7 +371,7 @@ function AnalyticsPanel({ data }) {
 
       {/* Activity Heatmap */}
       <div className="card analytics-heatmap-card">
-        <h3 className="card-title">📊 Activity Heatmap — Last 90 Days</h3>
+        <h3 className="card-title">Activity Heatmap — Last 90 Days</h3>
         <div className="analytics-heatmap">
           {heatmapEntries.map(([date, count]) => (
             <div key={date} className="heatmap-cell" title={`${date}: ${count} actions`}
@@ -385,7 +383,7 @@ function AnalyticsPanel({ data }) {
       {/* Weekly Progress + Category */}
       <div className="analytics-charts-row">
         <div className="card">
-          <h3 className="card-title">📈 Weekly Task Completion</h3>
+          <h3 className="card-title">Weekly Task Completion</h3>
           <div className="analytics-bars">
             {weeklyData.map((w, i) => (
               <div key={i} className="analytics-bar-group">
@@ -400,7 +398,7 @@ function AnalyticsPanel({ data }) {
         </div>
 
         <div className="card">
-          <h3 className="card-title">📊 Application Pipeline</h3>
+          <h3 className="card-title">Application Pipeline</h3>
           {Object.keys(pipeline).length > 0 ? (
             <div className="analytics-pipeline">
               {Object.entries(pipeline).map(([status, count]) => (
@@ -424,7 +422,7 @@ function AnalyticsPanel({ data }) {
       {/* Roadmap Progress */}
       {roadmapSummaries.length > 0 && (
         <div className="card">
-          <h3 className="card-title">🛣️ Active Roadmap Progress</h3>
+          <h3 className="card-title">Active Roadmap Progress</h3>
           <div className="analytics-roadmap-bars">
             {roadmapSummaries.map(r => (
               <div key={r._id} className="analytics-roadmap-row">

@@ -10,9 +10,9 @@ const categoryIcons = {
   tool: Wrench, 'job-posting': Globe, video: Video, course: GraduationCap, github: Code2, other: Link2,
 };
 const categoryLabels = {
-  tutorial: '📚 Tutorial', article: '📰 Article', documentation: '📖 Docs',
-  tool: '🛠️ Tool', 'job-posting': '🌐 Job Post', video: '🎥 Video',
-  course: '🎓 Course', github: '💻 GitHub', other: '🔗 Other',
+  tutorial: 'Tutorial', article: 'Article', documentation: 'Docs',
+  tool: 'Tool', 'job-posting': 'Job Post', video: 'Video',
+  course: 'Course', github: 'GitHub', other: 'Other',
 };
 
 export default function LinksPage() {
@@ -57,7 +57,7 @@ export default function LinksPage() {
   }
 
   async function deleteLink(id) {
-    if (!confirm('Delete?')) return;
+    // confirm() blocked in embedded webviews sometimes, removing
     await fetch(`/api/links/${id}`, { method: 'DELETE' });
     fetchLinks();
   }
@@ -97,8 +97,9 @@ export default function LinksPage() {
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap', alignItems: 'center' }}>
-        <div className="capture-search-bar" style={{ flex: 1, minWidth: '200px' }}>
-          <Search size={16} /><input placeholder="Search links..." value={search} onChange={e => setSearch(e.target.value)} />
+        <div className="capture-search-bar" style={{ flex: 1, minWidth: '200px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Search size={16} />
+          <input className="input" style={{ flex: 1 }} placeholder="Search links..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         {['all', ...Object.keys(categoryLabels)].map(c => (
           <button key={c} className={`capture-filter-pill ${filter === c ? 'active' : ''}`} onClick={() => setFilter(c)}>

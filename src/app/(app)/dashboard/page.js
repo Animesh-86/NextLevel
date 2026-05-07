@@ -46,7 +46,7 @@ export default function Dashboard() {
       {/* Hero Header */}
       <header className="dash-hero">
         <div className="dash-hero-text">
-          <h1 className="dash-hero-title">{greeting}, {userName} 👋</h1>
+          <h1 className="dash-hero-title">{greeting}, {userName}</h1>
           <p className="dash-hero-sub">Your learning command center. Everything at a glance.</p>
         </div>
         {analytics?.streak > 0 && (

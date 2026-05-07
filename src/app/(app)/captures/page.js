@@ -10,22 +10,22 @@ import { SkeletonCard } from '@/components/SkeletonLoader';
 
 const categoryFilters = [
   { value: 'all', label: 'All' },
-  { value: 'exam', label: '📝 Exam' },
-  { value: 'project', label: '🚀 Project' },
-  { value: 'deadline', label: '⏰ Deadline' },
-  { value: 'resource', label: '📚 Resource' },
-  { value: 'personal', label: '💡 Personal' },
-  { value: 'college', label: '🎓 College' },
-  { value: 'other', label: '📌 Other' },
+  { value: 'exam', label: 'Exam' },
+  { value: 'project', label: 'Project' },
+  { value: 'deadline', label: 'Deadline' },
+  { value: 'resource', label: 'Resource' },
+  { value: 'personal', label: 'Personal' },
+  { value: 'college', label: 'College' },
+  { value: 'other', label: 'Other' },
 ];
 
 const urgencyFilters = [
   { value: 'all', label: 'All Urgency' },
-  { value: 'critical', label: '🔴 Critical' },
-  { value: 'high', label: '🟠 High' },
-  { value: 'medium', label: '🟡 Medium' },
-  { value: 'low', label: '🔵 Low' },
-  { value: 'none', label: '⚪ None' },
+  { value: 'critical', label: 'Critical' },
+  { value: 'high', label: 'High' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'low', label: 'Low' },
+  { value: 'none', label: 'None' },
 ];
 
 const statusTabs = [
@@ -91,7 +91,6 @@ export default function CaptureHub() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Delete this capture?')) return;
     try {
       await fetch(`/api/captures/${id}`, { method: 'DELETE' });
       fetchCaptures();
