@@ -2,7 +2,9 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { LogIn, UserPlus, Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
+import { useEffect } from 'react';
+import { LogIn, UserPlus, Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const [mode, setMode] = useState('login');
@@ -10,6 +12,13 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('mode') === 'register') {
+      setMode('register');
+    }
+  }, []);
 
   const [form, setForm] = useState({
     name: '',
@@ -112,6 +121,10 @@ export default function LoginPage() {
           <p className="auth-subtitle">
             {isLogin ? 'Sign in to continue your practice' : 'Create your account to start'}
           </p>
+          <Link href="/" className="auth-back-link" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '1rem', textDecoration: 'none', transition: 'color 0.2s' }}>
+            <ArrowLeft size={14} />
+            Back to Landing Page
+          </Link>
         </div>
 
         <div className="auth-tabs">

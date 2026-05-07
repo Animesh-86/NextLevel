@@ -1,6 +1,9 @@
 import Link from 'next/link';
+import { auth } from '@/lib/auth';
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const session = await auth();
+
   return (
     <div className="landing">
       {/* ─── Background ─── */}
@@ -24,13 +27,21 @@ export default function LandingPage() {
 
           <div className="landing-nav-links">
             <a href="#features">Features</a>
-            <a href="#how-it-works">How It Works</a>
-            <a href="#pricing">Pricing</a>
+            <a href="#workflow">Workflow</a>
+            <a href="#dashboard">Command Center</a>
           </div>
 
           <div className="landing-nav-actions">
-            <Link href="/login" className="btn btn-secondary" style={{ padding: '0.5rem 1.25rem' }}>Log In</Link>
-            <Link href="/login" className="btn btn-primary" style={{ padding: '0.5rem 1.25rem' }}>Get Started Free</Link>
+            {session ? (
+              <Link href="/dashboard" className="btn btn-primary" style={{ padding: '0.5rem 1.25rem' }}>
+                Go to Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className="btn btn-secondary" style={{ padding: '0.5rem 1.25rem' }}>Log In</Link>
+                <Link href="/login?mode=register" className="btn btn-primary" style={{ padding: '0.5rem 1.25rem' }}>Sign Up</Link>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -39,31 +50,38 @@ export default function LandingPage() {
       <section className="landing-hero">
         <div className="landing-badge">
           <span className="landing-beacon" />
-          Now with AI-Powered Explanations
+          The All-In-One Productivity Platform
         </div>
 
         <h1 className="landing-headline">
-          Master Any Certification.<br />
-          <span className="landing-headline-accent">One Exam at a Time.</span>
+          Your Ultimate Digital<br />
+          <span className="landing-headline-accent">Command Center.</span>
         </h1>
 
         <p className="landing-subtext">
-          Smart practice with spaced repetition, real-time analytics,<br className="landing-br" />
-          and intelligent question tracking — all in one platform.
+          Track roadmaps, manage job applications, capture rapid notes, <br className="landing-br" />
+          and simulate exams — everything unified in one sleek dashboard.
         </p>
 
         <div className="landing-hero-actions">
-          <Link href="/login" className="btn btn-primary landing-btn-lg">
-            Start Free Practice
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
-          </Link>
-          <a href="#how-it-works" className="btn btn-secondary landing-btn-lg">
-            See How It Works
+          {session ? (
+            <Link href="/dashboard" className="btn btn-primary landing-btn-lg">
+              Open {session.user?.name ? `${session.user.name.split(' ')[0]}'s ` : ''}Workspace
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
+            </Link>
+          ) : (
+            <Link href="/login?mode=register" className="btn btn-primary landing-btn-lg">
+              Create Free Account
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
+            </Link>
+          )}
+          <a href="#features" className="btn btn-secondary landing-btn-lg">
+            Explore Features
           </a>
         </div>
 
         {/* Dashboard Mockup */}
-        <div className="landing-mockup">
+        <div className="landing-mockup" id="dashboard">
           <div className="landing-mockup-inner">
             <div className="landing-mockup-header">
               <div className="landing-mockup-dots">
@@ -74,25 +92,25 @@ export default function LandingPage() {
             </div>
             <div className="landing-mockup-body">
               <div className="landing-mockup-stats">
-                <MockStat label="Tests Taken" value="142" />
-                <MockStat label="Accuracy" value="87%" />
-                <MockStat label="Streak" value="14 days" />
-                <MockStat label="Study Hours" value="63h" />
+                <MockStat label="Active Tasks" value="24" />
+                <MockStat label="Job Applications" value="18" />
+                <MockStat label="Global Streak" value="32 days" />
+                <MockStat label="Exam Accuracy" value="89%" />
               </div>
               <div className="landing-mockup-charts">
                 <div className="landing-mockup-chart">
-                  <div className="landing-chart-title">Skill Proficiency</div>
-                  <svg viewBox="0 0 200 200" className="landing-radar">
-                    <polygon points="100,20 170,60 170,140 100,180 30,140 30,60" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-                    <polygon points="100,50 150,75 150,125 100,150 50,125 50,75" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
-                    <polygon points="100,45 160,72 155,135 100,165 45,130 48,68" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
-                  </svg>
+                  <div className="landing-chart-title">Activity Heatmap</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '4px', marginTop: '1rem', opacity: 0.6 }}>
+                    {Array.from({ length: 48 }).map((_, i) => (
+                      <div key={i} style={{ aspectRatio: '1', borderRadius: '2px', background: Math.random() > 0.6 ? 'var(--primary-color)' : 'rgba(255,255,255,0.05)', opacity: Math.random() > 0.6 ? 1 : 0.5 }} />
+                    ))}
+                  </div>
                 </div>
                 <div className="landing-mockup-chart">
-                  <div className="landing-chart-title">Weekly Progress</div>
+                  <div className="landing-chart-title">Productivity Flow</div>
                   <svg viewBox="0 0 200 100" className="landing-line-chart">
-                    <polyline points="10,80 40,60 70,70 100,30 130,50 160,20 190,35" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    <polyline points="10,80 40,60 70,70 100,30 130,50 160,20 190,35" fill="url(#lineGrad)" stroke="none" />
+                    <polyline points="10,80 40,50 70,70 100,20 130,40 160,10 190,25" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <polyline points="10,80 40,50 70,70 100,20 130,40 160,10 190,25" fill="url(#lineGrad)" stroke="none" />
                     <defs>
                       <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="rgba(255,255,255,0.1)" />
@@ -110,89 +128,81 @@ export default function LandingPage() {
       {/* ─── Features ─── */}
       <section className="landing-section" id="features">
         <div className="landing-section-header">
-          <span className="landing-label">Features</span>
-          <h2 className="landing-section-title">Everything You Need to Succeed</h2>
-          <p className="landing-section-sub">Built for serious learners who want measurable results.</p>
+          <span className="landing-label">The Ecosystem</span>
+          <h2 className="landing-section-title">Everything Connected.</h2>
+          <p className="landing-section-sub">A powerful suite of tools designed to replace your scattered apps.</p>
         </div>
 
         <div className="landing-features-grid">
           <FeatureCard
-            icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>}
-            title="Adaptive Testing"
-            desc="Countdown timer, MCQ/MSQ support, flag questions for review. Simulation mode mirrors real exam conditions."
+            icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>}
+            title="Interactive Roadmaps"
+            desc="Plan your entire learning journey. Track milestones visually and conquer technical interviews systematically."
           />
           <FeatureCard
-            icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83" /><path d="M22 12A10 10 0 0 0 12 2v10z" /></svg>}
-            title="Smart Analytics"
-            desc="Radar charts, module breakdowns, progress tracking. Know exactly where you stand and what to study next."
+            icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>}
+            title="Career Pipeline"
+            desc="A dedicated Kanban board for job tracking. Manage interviews, assessments, and offers with ease."
           />
           <FeatureCard
-            icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>}
-            title="Import Anywhere"
-            desc="Upload PDF, Word docs, or CSV files to instantly build question banks. Parse, preview, and save."
+            icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>}
+            title="Capture Hub"
+            desc="Instantly save fleeting thoughts, urgent tasks, or screenshots. Smart categorization keeps the noise organized."
           />
           <FeatureCard
-            icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>}
-            title="Spaced Repetition"
-            desc="SRS algorithm surfaces your weak areas automatically. Study smarter, not harder."
+            icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>}
+            title="Daily Planner"
+            desc="Schedule your tasks alongside your exams and job interviews. A centralized calendar for maximum productivity."
           />
           <FeatureCard
-            icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>}
-            title="Achievement System"
-            desc="Streaks, daily goals, achievement badges — gamified progression that keeps you coming back."
+            icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>}
+            title="Vault Storage"
+            desc="Upload PDFs, Code files, and System Design docs. Access your critical knowledge base directly from the dashboard."
           />
           <FeatureCard
-            icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>}
-            title="Instant Results"
-            desc="Question-by-question review with correct answers, explanations, and module-level performance breakdowns."
+            icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>}
+            title="Exam Simulator"
+            desc="AI-powered test generation, adaptive scoring, and spaced repetition to master any certification."
           />
         </div>
       </section>
 
       {/* ─── How It Works ─── */}
-      <section className="landing-section" id="how-it-works">
+      <section className="landing-section" id="workflow">
         <div className="landing-section-header">
-          <span className="landing-label">How It Works</span>
-          <h2 className="landing-section-title">Three Steps to Mastery</h2>
+          <span className="landing-label">Workflow</span>
+          <h2 className="landing-section-title">The Engineering Approach</h2>
         </div>
 
         <div className="landing-steps">
-          <StepCard num="01" title="Create or Import" desc="Build question banks manually or upload PDF, Word, CSV files. Organize by exam and module." />
+          <StepCard num="01" title="Capture & Organize" desc="Save links, notes, and files into the Vault and Capture Hub so you never lose context." />
           <div className="landing-step-connector">
             <svg width="40" height="2"><line x1="0" y1="1" x2="40" y2="1" stroke="rgba(255,255,255,0.2)" strokeWidth="2" strokeDasharray="4 4" /></svg>
           </div>
-          <StepCard num="02" title="Practice & Test" desc="Take timed simulation exams or study with SRS-powered sessions. Flag, review, and learn." />
+          <StepCard num="02" title="Plan & Execute" desc="Set up Roadmaps and daily Planner tasks. Move job applications through the pipeline." />
           <div className="landing-step-connector">
             <svg width="40" height="2"><line x1="0" y1="1" x2="40" y2="1" stroke="rgba(255,255,255,0.2)" strokeWidth="2" strokeDasharray="4 4" /></svg>
           </div>
-          <StepCard num="03" title="Track & Improve" desc="Analyze results with detailed breakdowns. Watch your radar chart expand as you level up." />
-        </div>
-      </section>
-
-      {/* ─── Social Proof ─── */}
-      <section className="landing-section">
-        <div className="landing-proof">
-          <div className="landing-proof-avatars">
-            {[...'ABCDE'].map((l, i) => (
-              <div key={i} className="landing-proof-avatar" style={{ zIndex: 5 - i, marginLeft: i > 0 ? '-10px' : 0 }}>{l}</div>
-            ))}
-          </div>
-          <div>
-            <div className="landing-proof-stars">★★★★★</div>
-            <p className="landing-proof-text">Trusted by <strong>10,000+</strong> students preparing for certifications</p>
-          </div>
+          <StepCard num="03" title="Analyze Growth" desc="Watch your global activity heatmap populate as you complete exams, tasks, and interviews." />
         </div>
       </section>
 
       {/* ─── CTA Banner ─── */}
-      <section className="landing-section">
+      <section className="landing-section" style={{ marginTop: '4rem' }}>
         <div className="landing-cta-banner">
-          <h2 className="landing-cta-title">Ready to level up?</h2>
-          <p className="landing-cta-sub">Join thousands of students mastering their exams with NextLevel.</p>
-          <Link href="/login" className="btn btn-primary landing-btn-lg">
-            Get Started Free
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
-          </Link>
+          <h2 className="landing-cta-title">Take Control of Your Time</h2>
+          <p className="landing-cta-sub">Join NextLevel and experience true digital productivity.</p>
+          {session ? (
+            <Link href="/dashboard" className="btn btn-primary landing-btn-lg">
+              Go to Dashboard
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
+            </Link>
+          ) : (
+            <Link href="/login?mode=register" className="btn btn-primary landing-btn-lg">
+              Create Your Workspace
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
+            </Link>
+          )}
         </div>
       </section>
 
@@ -209,11 +219,11 @@ export default function LandingPage() {
           </div>
           <div className="landing-footer-links">
             <a href="#features">Features</a>
-            <a href="#how-it-works">How It Works</a>
-            <a href="#pricing">Pricing</a>
+            <a href="#workflow">Workflow</a>
             <Link href="/login">Sign In</Link>
+            <Link href="/login?mode=register">Sign Up</Link>
           </div>
-          <p className="landing-footer-copy">© 2026 NextLevel. Built with ♥ for learners everywhere.</p>
+          <p className="landing-footer-copy">© 2026 NextLevel. Designed for elite productivity.</p>
         </div>
       </footer>
     </div>

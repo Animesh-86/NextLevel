@@ -164,9 +164,9 @@ button { cursor: pointer; font-family: inherit; border: none; background: none; 
   position: fixed;
   top: 0;
   left: 0;
+  left: 0;
   bottom: 0;
   z-index: 100;
-  overflow-y: auto;
 }
 
 .sidebar-header {
@@ -200,6 +200,7 @@ button { cursor: pointer; font-family: inherit; border: none; background: none; 
   flex-direction: column;
   gap: 0.25rem;
   flex: 1;
+  overflow-y: auto;
 }
 
 .sidebar-link {
