@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import SavedLink from '@/models/SavedLink';
 import { requireAuth } from '@/lib/auth';
+import { inngest } from '@/lib/inngest';
 
 export async function GET(request) {
   const authResult = await requireAuth();
@@ -55,6 +56,16 @@ export async function POST(request) {
       category: body.category || 'other',
       tags: body.tags || [],
       favicon,
+    });
+
+    // Trigger Inngest AI Core Workflow for Links
+    await inngest.send({
+      name: "capture/created",
+      data: {
+        captureId: link._id.toString(),
+        content: link.url,
+        type: 'link',
+      },
     });
 
     return NextResponse.json({ success: true, data: link }, { status: 201 });

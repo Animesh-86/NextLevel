@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Capture from '@/models/Capture';
 import { requireAuth } from '@/lib/auth';
+import { inngest } from '@/lib/inngest';
 
 // GET /api/captures — List captures with filters
 export async function GET(request) {
@@ -101,6 +102,16 @@ export async function POST(request) {
       imageData,
     });
 
+    });
+
+    // Trigger Inngest AI Core Workflow
+    await inngest.send({
+      name: "capture/created",
+      data: {
+        captureId: capture._id.toString(),
+        content: capture.rawContent,
+        type: capture.type,
+      },
     });
 
     // Don't return imageData in response to keep it lightweight

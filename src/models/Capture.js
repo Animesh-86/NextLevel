@@ -80,6 +80,12 @@ const CaptureSchema = new mongoose.Schema({
     enum: ['active', 'completed', 'expired'],
     default: 'active',
   },
+  // Vector data for semantic search
+  embedding: {
+    type: [Number],
+    default: [],
+    index: false, // Will be used in Atlas Vector Search index
+  },
 }, { timestamps: true });
 
 // Indexes for fast queries

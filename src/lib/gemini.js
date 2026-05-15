@@ -213,3 +213,21 @@ Return ONLY valid JSON, no markdown formatting.`;
     };
   }
 }
+
+/**
+ * Generate vector embeddings for a piece of text.
+ */
+export async function generateEmbeddings(text) {
+  const ai = getGenAI();
+  if (!ai) return [];
+
+  try {
+    const model = ai.getGenerativeModel({ model: "text-embedding-004" });
+    const result = await model.embedContent(text.slice(0, 8000));
+    return result.embedding.values;
+  } catch (err) {
+    console.error("Gemini embedding generation failed:", err.message);
+    return [];
+  }
+}
+
