@@ -56,6 +56,7 @@ export async function POST(request) {
       tags: body.tags || [],
       favicon,
     });
+
     return NextResponse.json({ success: true, data: link }, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: 'Failed to save' }, { status: 500 });

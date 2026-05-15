@@ -101,6 +101,8 @@ export async function POST(request) {
       imageData,
     });
 
+    });
+
     // Don't return imageData in response to keep it lightweight
     const responseData = capture.toObject();
     delete responseData.imageData;
