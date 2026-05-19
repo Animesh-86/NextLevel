@@ -4,8 +4,7 @@ import Capture from "@/models/Capture";
 import { analyzeText, generateEmbeddings } from "@/lib/gemini";
 
 export const processCapture = inngest.createFunction(
-  { id: "process-capture" },
-  { event: "capture/created" },
+  { id: "process-capture", event: "capture/created" },
   async ({ event, step }) => {
     const { captureId, content, type } = event.data;
 
