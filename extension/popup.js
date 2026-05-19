@@ -9,6 +9,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const title = document.getElementById('title').value;
     const url = document.getElementById('url').value;
     const notes = document.getElementById('notes').value;
+    const category = document.getElementById('category').value;
+    const urgency = document.getElementById('urgency').value;
+    const tagsInput = document.getElementById('tags').value;
+    const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(Boolean) : [];
     
     const btnText = document.getElementById('btnText');
     const loader = document.getElementById('loader');
@@ -26,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       chrome.runtime.sendMessage(
         { 
           action: "SAVE_LINK", 
-          payload: { title, url, description: notes } 
+          payload: { title, url, description: notes, category, urgency, tags } 
         }, 
         (response) => {
           loader.style.display = 'none';

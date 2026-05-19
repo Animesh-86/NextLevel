@@ -16,13 +16,6 @@ export default function ReminderBell() {
   const [open, setOpen] = useState(false);
   const [totalPending, setTotalPending] = useState(0);
 
-  useEffect(() => {
-    fetchReminders();
-    // Poll every 60 seconds
-    const interval = setInterval(fetchReminders, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
   async function fetchReminders() {
     try {
       const res = await fetch('/api/captures/reminders');
@@ -35,6 +28,13 @@ export default function ReminderBell() {
       // Silently fail
     }
   }
+
+  useEffect(() => {
+    fetchReminders();
+    // Poll every 60 seconds
+    const interval = setInterval(fetchReminders, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   async function dismissReminder(id) {
     try {

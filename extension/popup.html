@@ -82,7 +82,7 @@
   </style>
 </head>
 <body>
-  <h2>🚀 NextLevel</h2>
+  <h2>NextLevel</h2>
   
   <div class="input-group">
     <label for="title">Title</label>
@@ -92,6 +92,34 @@
   <div class="input-group">
     <label for="url">URL</label>
     <input type="text" id="url" readonly>
+  </div>
+
+  <div class="input-group" style="display: flex; gap: 8px;">
+    <div style="flex: 1;">
+      <label for="category">Category</label>
+      <select id="category" style="width: 100%; padding: 8px; background: #18181b; color: white; border: 1px solid #27272a; border-radius: 6px;">
+        <option value="other">Auto-detect</option>
+        <option value="project">Project</option>
+        <option value="exam">Exam</option>
+        <option value="resource">Resource</option>
+        <option value="deadline">Deadline</option>
+      </select>
+    </div>
+    <div style="flex: 1;">
+      <label for="urgency">Urgency</label>
+      <select id="urgency" style="width: 100%; padding: 8px; background: #18181b; color: white; border: 1px solid #27272a; border-radius: 6px;">
+        <option value="none">Normal</option>
+        <option value="low">Low</option>
+        <option value="medium">Medium</option>
+        <option value="high">High</option>
+        <option value="critical">Critical</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="input-group">
+    <label for="tags">Tags (comma separated)</label>
+    <input type="text" id="tags" placeholder="react, tutorial, api">
   </div>
 
   <div class="input-group">

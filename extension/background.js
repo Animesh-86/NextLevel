@@ -34,7 +34,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       type: 'link',
       title: request.payload.title,
       rawContent: request.payload.url,
-      description: request.payload.description
+      description: request.payload.description,
+      category: request.payload.category,
+      urgency: request.payload.urgency,
+      tags: request.payload.tags
     }).then(success => {
       sendResponse({ success });
     });
