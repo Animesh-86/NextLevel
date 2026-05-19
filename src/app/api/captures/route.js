@@ -102,9 +102,7 @@ export async function POST(request) {
       imageData,
     });
 
-    });
-
-    // Trigger Inngest AI Core Workflow
+    // Trigger Inngest AI Core Workflow (Force Refresh)
     await inngest.send({
       name: "capture/created",
       data: {

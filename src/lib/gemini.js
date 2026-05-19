@@ -1,6 +1,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 
 let genAI = null;
+let groqClient = null;
 
 function getGenAI() {
   if (!genAI) {
@@ -8,9 +10,16 @@ function getGenAI() {
     if (!apiKey) {
       return null;
     }
-    genAI = new GoogleGenerativeAI(apiKey);
+    genAI = new GoogleGenerativeAI(apiKey, { apiVersion: 'v1' });
   }
   return genAI;
+}
+
+function getGroq() {
+  if (!groqClient && process.env.GROQ_API_KEY) {
+    groqClient = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  }
+  return groqClient;
 }
 
 /**
@@ -19,14 +28,9 @@ function getGenAI() {
  */
 export async function analyzeText(text) {
   const ai = getGenAI();
+  const groq = getGroq();
 
-  if (!ai) {
-    return fallbackAnalyze(text);
-  }
-
-  try {
-    const model = ai.getGenerativeModel({ model: 'gemini-2.0-flash' });
-    const prompt = `Analyze the following text and return a JSON object with these fields:
+  const prompt = `Analyze the following text and return a JSON object with these fields:
 - "title": A concise title (max 80 chars) summarizing the content
 - "category": One of: exam, project, deadline, resource, personal, college, other
 - "urgency": One of: critical, high, medium, low, none
@@ -41,6 +45,28 @@ ${text.slice(0, 2000)}
 
 Return ONLY valid JSON, no markdown formatting.`;
 
+  // 1. Try Groq (Llama 3) First (Free & Super Fast)
+  if (groq) {
+    try {
+      const completion = await groq.chat.completions.create({
+        messages: [{ role: "user", content: prompt }],
+        model: "llama3-8b-8192", // Lightning fast open-source model
+        response_format: { type: "json_object" }
+      });
+      const response = completion.choices[0]?.message?.content;
+      return JSON.parse(response || '{}');
+    } catch (err) {
+      console.error('Groq analysis failed, falling back to Gemini:', err.message);
+    }
+  }
+
+  // 2. Fallback to Gemini 2.0 Flash
+  if (!ai) {
+    return fallbackAnalyze(text);
+  }
+
+  try {
+    const model = ai.getGenerativeModel({ model: 'gemini-2.0-flash' });
     const result = await model.generateContent(prompt);
     const response = result.response.text();
     const cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -226,7 +252,7 @@ export async function generateEmbeddings(text) {
     const result = await model.embedContent(text.slice(0, 8000));
     return result.embedding.values;
   } catch (err) {
-    console.error("Gemini embedding generation failed:", err.message);
+    console.error("DEBUG: Gemini embedding generation failed:", err.message);
     return [];
   }
 }

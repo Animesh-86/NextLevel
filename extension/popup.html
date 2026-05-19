@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NextLevel Clipper</title>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      width: 320px;
+      margin: 0;
+      padding: 16px;
+      background-color: #09090b; /* Zinc 950 */
+      color: #f4f4f5; /* Zinc 100 */
+    }
+    h2 {
+      font-size: 1.25rem;
+      margin-top: 0;
+      margin-bottom: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .input-group {
+      margin-bottom: 12px;
+    }
+    label {
+      display: block;
+      font-size: 0.875rem;
+      margin-bottom: 4px;
+      color: #a1a1aa; /* Zinc 400 */
+    }
+    input[type="text"], textarea {
+      width: 100%;
+      box-sizing: border-box;
+      background-color: #18181b; /* Zinc 900 */
+      border: 1px solid #27272a; /* Zinc 800 */
+      color: white;
+      padding: 8px;
+      border-radius: 6px;
+      font-family: inherit;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+    button {
+      width: 100%;
+      background-color: #3b82f6; /* Blue 500 */
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    button:hover {
+      background-color: #2563eb; /* Blue 600 */
+    }
+    #status {
+      margin-top: 12px;
+      font-size: 0.875rem;
+      text-align: center;
+      color: #10b981; /* Emerald 500 */
+      display: none;
+    }
+    .loader {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      display: none;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <h2>🚀 NextLevel</h2>
+  
+  <div class="input-group">
+    <label for="title">Title</label>
+    <input type="text" id="title" placeholder="Page Title">
+  </div>
+
+  <div class="input-group">
+    <label for="url">URL</label>
+    <input type="text" id="url" readonly>
+  </div>
+
+  <div class="input-group">
+    <label for="notes">Quick Note (Optional)</label>
+    <textarea id="notes" placeholder="Add some context..."></textarea>
+  </div>
+
+  <button id="saveBtn">
+    <span id="btnText">Save to Vault</span>
+    <div class="loader" id="loader"></div>
+  </button>
+
+  <div id="status">✅ Saved successfully!</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
