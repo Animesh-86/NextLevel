@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.nextlevel.api.model.Capture;
@@ -36,8 +35,7 @@ public class CaptureProcessingService {
         this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
     }
 
-    @Async("captureProcessingExecutor")
-    public void processCaptureAsync(String captureId, String content, String type) {
+    public void processCapture(String captureId, String content, String type) {
         submitted.incrementAndGet();
         running.incrementAndGet();
 

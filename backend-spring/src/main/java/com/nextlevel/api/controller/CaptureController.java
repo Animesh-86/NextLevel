@@ -30,16 +30,20 @@ import com.nextlevel.api.model.Capture;
 import com.nextlevel.api.repository.CaptureRepository;
 import com.nextlevel.api.security.CurrentUser;
 
+import org.jobrunr.scheduling.JobScheduler;
+
 @RestController
 @RequestMapping("/api/captures")
 public class CaptureController {
 
     private final CaptureRepository captureRepository;
     private final com.nextlevel.api.service.CaptureProcessingService captureProcessingService;
+    private final JobScheduler jobScheduler;
 
-    public CaptureController(CaptureRepository captureRepository, com.nextlevel.api.service.CaptureProcessingService captureProcessingService) {
+    public CaptureController(CaptureRepository captureRepository, com.nextlevel.api.service.CaptureProcessingService captureProcessingService, JobScheduler jobScheduler) {
         this.captureRepository = captureRepository;
         this.captureProcessingService = captureProcessingService;
+        this.jobScheduler = jobScheduler;
     }
 
     @GetMapping
@@ -102,9 +106,9 @@ public class CaptureController {
         Capture saved = captureRepository.save(capture);
         Capture responseCapture = withoutImageData(saved);
 
-        // Trigger background processing (async) similar to Inngest workflow
+        // Trigger background processing (durable) via JobRunr
         try {
-            captureProcessingService.processCaptureAsync(saved.getId(), saved.getRawContent(), saved.getType());
+            jobScheduler.enqueue(() -> captureProcessingService.processCapture(saved.getId(), saved.getRawContent(), saved.getType()));
         } catch (Exception ignored) {
         }
 

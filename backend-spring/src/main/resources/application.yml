@@ -14,6 +14,15 @@ spring:
             client-secret: ${GOOGLE_CLIENT_SECRET}
             scope: openid,profile,email
             redirect-uri: "{baseUrl}/login/oauth2/code/google"
+  ai:
+    gemini:
+      api-key: ${GEMINI_API_KEY}
+      chat:
+        options:
+          model: gemini-2.0-flash
+      embedding:
+        options:
+          model: text-embedding-004
   jackson:
     default-property-inclusion: non_null
 
