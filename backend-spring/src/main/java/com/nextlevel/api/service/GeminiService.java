@@ -78,8 +78,11 @@ public class GeminiService {
             return List.of();
         }
         
-        List<Double> vector = embeddingModel.embed(truncate(text, 8000));
-        return vector != null ? vector : List.of();
+        float[] raw = embeddingModel.embed(truncate(text, 8000));
+        if (raw == null) return List.of();
+        List<Double> vector = new java.util.ArrayList<>(raw.length);
+        for (float f : raw) vector.add((double) f);
+        return vector;
     }
     
     // Resilience4j Fallbacks
