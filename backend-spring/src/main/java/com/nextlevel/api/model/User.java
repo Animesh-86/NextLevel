@@ -25,8 +25,6 @@ public class User {
     @Indexed(unique = true)
     private String email;
 
-    @NotBlank
-    @Size(min = 6)
     private String password;
 
     private UserRole role = UserRole.student;
