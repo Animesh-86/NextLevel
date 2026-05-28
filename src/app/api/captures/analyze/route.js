@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
-import { analyzeText } from '@/lib/gemini';
+import { analyzeText, analyzeImage } from '@/lib/gemini';
 
-// POST /api/captures/analyze — AI-analyze text/URL content
+// POST /api/captures/analyze — AI-analyze text/URL/image content
 export async function POST(request) {
   const authResult = await requireAuth();
   if (authResult.error) {
@@ -10,7 +10,12 @@ export async function POST(request) {
   }
 
   try {
-    const { text } = await request.json();
+    const { text, image, mimeType } = await request.json();
+
+    if (image) {
+      const analysis = await analyzeImage(image, mimeType || 'image/png');
+      return NextResponse.json({ success: true, data: analysis });
+    }
 
     if (!text || !text.trim()) {
       return NextResponse.json({ error: 'Text content is required' }, { status: 400 });

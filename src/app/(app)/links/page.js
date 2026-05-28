@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Link2, Plus, Search, ExternalLink, Pin, Trash2, Loader2,
-  BookOpen, Video, Wrench, Code2, FileText, Globe, GraduationCap, X
+  BookOpen, Video, Wrench, Code2, FileText, Globe, GraduationCap, X, Edit2
 } from 'lucide-react';
 
 const categoryIcons = {
@@ -23,6 +23,8 @@ export default function LinksPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ url: '', title: '', description: '', category: 'other', tags: '' });
 
+  const [editingId, setEditingId] = useState(null);
+
   const fetchLinks = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
@@ -39,13 +41,29 @@ export default function LinksPage() {
 
   async function saveLink() {
     if (!form.url || !form.title) return;
-    await fetch('/api/links', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+    const url = editingId ? `/api/links/${editingId}` : '/api/links';
+    const method = editingId ? 'PATCH' : 'POST';
+    
+    await fetch(url, {
+      method, headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...form, tags: form.tags.split(',').map(t => t.trim()).filter(Boolean) }),
     });
     setForm({ url: '', title: '', description: '', category: 'other', tags: '' });
     setShowForm(false);
+    setEditingId(null);
     fetchLinks();
+  }
+
+  function startEdit(link) {
+    setForm({
+      url: link.url,
+      title: link.title,
+      description: link.description || '',
+      category: link.category || 'other',
+      tags: (link.tags || []).join(', ')
+    });
+    setEditingId(link._id);
+    setShowForm(true);
   }
 
   async function togglePin(id, pinned) {
@@ -57,7 +75,6 @@ export default function LinksPage() {
   }
 
   async function deleteLink(id) {
-    // confirm() blocked in embedded webviews sometimes, removing
     await fetch(`/api/links/${id}`, { method: 'DELETE' });
     fetchLinks();
   }
@@ -69,28 +86,103 @@ export default function LinksPage() {
           <h1 className="capture-hub-title">Saved Links</h1>
           <p className="capture-hub-subtitle">Your bookmarked resources — {links.length} links</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}><Plus size={16} /> Add Link</button>
+        <button className="btn btn-primary" onClick={() => {
+          setForm({ url: '', title: '', description: '', category: 'other', tags: '' });
+          setEditingId(null);
+          setShowForm(!showForm);
+        }}>
+          <Plus size={16} /> Add Link
+        </button>
       </header>
 
       {showForm && (
-        <div className="card" style={{ marginBottom: '1.5rem', padding: '1.25rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-            <div><label className="capture-filter-label">URL *</label>
-              <input className="input" placeholder="https://..." value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))} /></div>
-            <div><label className="capture-filter-label">Title *</label>
-              <input className="input" placeholder="Link name..." value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
-            <div><label className="capture-filter-label">Category</label>
-              <select className="input" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
-                {Object.entries(categoryLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select></div>
-            <div><label className="capture-filter-label">Tags (comma separated)</label>
-              <input className="input" placeholder="react, tutorial, beginner" value={form.tags} onChange={e => setForm(f => ({ ...f, tags: e.target.value }))} /></div>
-            <div style={{ gridColumn: '1 / -1' }}><label className="capture-filter-label">Description</label>
-              <input className="input" placeholder="Optional notes..." value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></div>
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-            <button className="btn btn-primary" onClick={saveLink}>Save</button>
-            <button className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
+        <div className="dialog-overlay" onClick={() => { setShowForm(false); setEditingId(null); }}>
+          <div className="capture-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div className="capture-modal-header">
+              <h2 className="capture-modal-title">
+                {editingId ? 'Edit Link' : 'Add New Link'}
+              </h2>
+              <button className="icon-btn" onClick={() => { setShowForm(false); setEditingId(null); }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="capture-form" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div>
+                <label className="capture-filter-label" style={{ marginBottom: '0.35rem', display: 'block' }}>URL *</label>
+                <input
+                  className="input"
+                  placeholder="https://..."
+                  value={form.url}
+                  onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))}
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div>
+                <label className="capture-filter-label" style={{ marginBottom: '0.35rem', display: 'block' }}>Title *</label>
+                <input
+                  className="input"
+                  placeholder="Link name..."
+                  value={form.title}
+                  onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label className="capture-filter-label" style={{ marginBottom: '0.35rem', display: 'block' }}>Category</label>
+                  <select
+                    className="input"
+                    value={form.category}
+                    onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                    style={{ width: '100%' }}
+                  >
+                    {Object.entries(categoryLabels).map(([k, v]) => (
+                      <option key={k} value={k}>{v}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="capture-filter-label" style={{ marginBottom: '0.35rem', display: 'block' }}>Tags (comma separated)</label>
+                  <input
+                    className="input"
+                    placeholder="react, tutorial, beginner"
+                    value={form.tags}
+                    onChange={(e) => setForm((f) => ({ ...f, tags: e.target.value }))}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="capture-filter-label" style={{ marginBottom: '0.35rem', display: 'block' }}>Description</label>
+                <textarea
+                  className="input"
+                  placeholder="Optional notes..."
+                  value={form.description}
+                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                  style={{ width: '100%', minHeight: '80px', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setShowForm(false);
+                    setEditingId(null);
+                  }}
+                >
+                  Cancel
+                </button>
+                <button className="btn btn-primary" onClick={saveLink}>
+                  {editingId ? 'Update' : 'Save'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -120,11 +212,22 @@ export default function LinksPage() {
           {links.map(link => {
             const Icon = categoryIcons[link.category] || Link2;
             return (
-              <div key={link._id} className={`link-card ${link.isPinned ? 'pinned' : ''}`}>
+              <div
+                key={link._id}
+                className={`link-card ${link.isPinned ? 'pinned' : ''}`}
+                onClick={(e) => {
+                  if (e.target.closest('button') || e.target.closest('a')) return;
+                  startEdit(link);
+                }}
+                style={{ cursor: 'pointer' }}
+              >
                 <div className="link-card-header">
                   <img src={link.favicon || `https://www.google.com/s2/favicons?domain=example.com&sz=32`} alt="" width={20} height={20} style={{ borderRadius: '4px' }} />
                   <span className="link-card-category">{categoryLabels[link.category]}</span>
                   <div className="link-card-actions">
+                    <button className="icon-btn" onClick={() => startEdit(link)} title="Edit Link">
+                      <Edit2 size={14} />
+                    </button>
                     <button className="icon-btn" onClick={() => togglePin(link._id, link.isPinned)} title={link.isPinned ? 'Unpin' : 'Pin'}>
                       <Pin size={14} style={{ fill: link.isPinned ? 'currentColor' : 'none' }} />
                     </button>

@@ -84,14 +84,12 @@ export async function POST(request) {
       imageData = null,
     } = body;
 
-    if (!title || !title.trim()) {
-      return NextResponse.json({ error: 'Title is required' }, { status: 400 });
-    }
-
+    const finalTitle = title?.trim() || '⚙️ Processing AI Extraction...';
+    
     const capture = await Capture.create({
       userId: authResult.user.id,
       type,
-      title: title.trim(),
+      title: finalTitle,
       rawContent,
       description,
       category,

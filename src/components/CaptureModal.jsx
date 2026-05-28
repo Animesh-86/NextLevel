@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   X, Upload, Type, Link2, Camera, Sparkles, Loader2,
   Clock, Tag, AlertTriangle, ChevronDown
@@ -12,6 +12,11 @@ const categories = [
   { value: 'resource', label: '📚 Resource' },
   { value: 'personal', label: '💡 Personal' },
   { value: 'college', label: '🎓 College' },
+  { value: 'work', label: '💼 Work' },
+  { value: 'job-posting', label: '🎯 Job Post' },
+  { value: 'tutorial', label: '📖 Tutorial' },
+  { value: 'code', label: '💻 Code' },
+  { value: 'idea', label: '✨ Idea' },
   { value: 'other', label: '📌 Other' },
 ];
 
@@ -60,6 +65,44 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
     setAiSuggested(false);
     setMode('text');
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    if (editingCapture) {
+      setTitle(editingCapture.title || '');
+      setRawContent(editingCapture.rawContent || '');
+      setDescription(editingCapture.description || '');
+      setCategory(editingCapture.category || 'other');
+      setUrgency(editingCapture.urgency || 'none');
+      setTags(editingCapture.tags?.join(', ') || '');
+      setReminderAt(
+        editingCapture.reminderAt ? new Date(editingCapture.reminderAt).toISOString().slice(0, 16) : ''
+      );
+      setReminderRepeats(editingCapture.reminderRepeats || 'none');
+      setPreviewImage(editingCapture.imageData || null);
+      setMode(editingCapture.type === 'screenshot' ? 'screenshot' : 'text');
+
+      if (editingCapture.type === 'screenshot' && !editingCapture.imageData) {
+        setLoading(true);
+        fetch(`/api/captures/${editingCapture._id}`)
+          .then(res => res.json())
+          .then(data => {
+            if (active && data.success && data.data) {
+              setPreviewImage(data.data.imageData || null);
+            }
+          })
+          .catch(err => console.error('Failed to fetch full capture:', err))
+          .finally(() => {
+            if (active) setLoading(false);
+          });
+      }
+    } else {
+      resetForm();
+    }
+    return () => {
+      active = false;
+    };
+  }, [editingCapture, isOpen, resetForm]);
 
   const handleClose = () => {
     resetForm();
@@ -111,7 +154,43 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
 
     setImageFile(file);
     const reader = new FileReader();
-    reader.onload = (e) => setPreviewImage(e.target.result);
+    reader.onload = async (e) => {
+      const base64Data = e.target.result;
+      setPreviewImage(base64Data);
+      setAnalyzing(true);
+      try {
+        const res = await fetch('/api/captures/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64Data, mimeType: file.type }),
+        });
+        const data = await res.json();
+        if (data.success && data.data) {
+          const a = data.data;
+          if (a.title) setTitle(a.title);
+          if (a.category) setCategory(a.category);
+          if (a.urgency) setUrgency(a.urgency);
+          if (a.tags) setTags(a.tags.join(', '));
+          if (a.summary) setDescription(a.summary);
+          if (a.extractedText) setRawContent(a.extractedText);
+          if (a.extractedLink) {
+            // Append link to description/rawContent
+            setRawContent(prev => prev ? `${prev}\n\nLink: ${a.extractedLink}` : `Link: ${a.extractedLink}`);
+          }
+          if (a.reminderSuggestion) {
+            const localDate = new Date(a.reminderSuggestion);
+            const offset = localDate.getTimezoneOffset();
+            const adjustedDate = new Date(localDate.getTime() - (offset * 60 * 1000));
+            setReminderAt(adjustedDate.toISOString().slice(0, 16));
+          }
+          setAiSuggested(true);
+        }
+      } catch (err) {
+        console.error('Image analysis failed:', err);
+      } finally {
+        setAnalyzing(false);
+      }
+    };
     reader.readAsDataURL(file);
   };
 
@@ -145,32 +224,26 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
 
     try {
       if (mode === 'screenshot' && imageFile && !editingCapture) {
-        // Upload screenshot
+        // Upload screenshot with optional manual edits as form data
         const formData = new FormData();
         formData.append('file', imageFile);
+        formData.append('title', title.trim() || 'Screenshot Capture');
+        formData.append('description', description);
+        formData.append('category', category);
+        formData.append('urgency', urgency);
+        formData.append('tags', tags);
+        formData.append('rawContent', rawContent);
+        if (reminderAt) {
+          formData.append('reminderAt', new Date(reminderAt).toISOString());
+        }
+        formData.append('reminderRepeats', reminderRepeats);
+
         const res = await fetch('/api/captures/upload', {
           method: 'POST',
           body: formData,
         });
         const data = await res.json();
-
         if (data.success) {
-          // If user has overridden any AI suggestions, update the capture
-          const overrides = {};
-          if (title && title !== data.data.title) overrides.title = title;
-          if (description && description !== data.data.description) overrides.description = description;
-          if (category !== data.data.category) overrides.category = category;
-          if (urgency !== data.data.urgency) overrides.urgency = urgency;
-          if (tags) overrides.tags = tags.split(',').map(t => t.trim()).filter(Boolean);
-          if (reminderAt) overrides.reminderAt = new Date(reminderAt).toISOString();
-
-          if (Object.keys(overrides).length > 0) {
-            await fetch(`/api/captures/${data.data._id}`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(overrides),
-            });
-          }
           onSave?.();
         }
       } else {
@@ -246,44 +319,67 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
         )}
 
         <form onSubmit={handleSubmit} className="capture-form">
-          {/* Screenshot upload area */}
-          {mode === 'screenshot' && !editingCapture && (
-            <div
-              className={`capture-dropzone ${dragOver ? 'dragover' : ''} ${previewImage ? 'has-preview' : ''}`}
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {previewImage ? (
-                <div className="capture-preview-container">
-                  <img src={previewImage} alt="Preview" className="capture-preview-img" />
-                  <button
-                    type="button"
-                    className="capture-preview-remove"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setPreviewImage(null);
-                      setImageFile(null);
-                    }}
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
+          {/* Screenshot upload / preview area */}
+          {mode === 'screenshot' && (
+            <div className="capture-screenshot-section" style={{ marginBottom: '1.5rem' }}>
+              {editingCapture ? (
+                previewImage ? (
+                  <div className="capture-preview-container">
+                    <img src={previewImage} alt="Screenshot" className="capture-preview-img" />
+                  </div>
+                ) : (
+                  <div className="capture-dropzone" style={{ height: '140px' }}>
+                    <div className="capture-dropzone-content">
+                      <Loader2 className="auth-spinner" size={24} />
+                      <p>Loading screenshot...</p>
+                    </div>
+                  </div>
+                )
               ) : (
-                <div className="capture-dropzone-content">
-                  <Upload size={32} strokeWidth={1.5} />
-                  <p>Drop screenshot here or click to upload</p>
-                  <span>Also try Ctrl+V to paste from clipboard</span>
+                <div
+                  className={`capture-dropzone ${dragOver ? 'dragover' : ''} ${previewImage ? 'has-preview' : ''}`}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {previewImage ? (
+                    <div className="capture-preview-container">
+                      <img src={previewImage} alt="Preview" className="capture-preview-img" />
+                      {analyzing && (
+                        <div className="capture-preview-overlay">
+                          <Loader2 className="auth-spinner" size={24} />
+                          <span>AI Extracting Text & Date...</span>
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        className="capture-preview-remove"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewImage(null);
+                          setImageFile(null);
+                        }}
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="capture-dropzone-content">
+                      <Upload size={32} strokeWidth={1.5} />
+                      <p>Drop screenshot here or click to upload</p>
+                      <span>Also try Ctrl+V to paste from clipboard</span>
+                    </div>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleFileSelect(e.target.files[0])}
+                  />
                 </div>
               )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                style={{ display: 'none' }}
-                onChange={(e) => handleFileSelect(e.target.files[0])}
-              />
             </div>
           )}
 
@@ -316,72 +412,78 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
           )}
 
           {/* AI suggestion banner */}
-          {aiSuggested && (
+          {aiSuggested && editingCapture && (
             <div className="capture-ai-banner">
               <Sparkles size={14} /> AI suggestions applied — feel free to edit below
             </div>
           )}
 
-          {/* Title */}
-          <div className="capture-field">
-            <label className="auth-label">Title</label>
-            <input
-              className="input"
-              type="text"
-              placeholder="What's this about?"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-            />
-          </div>
+          {/* Show manual fields if editing, in text mode, or if screenshot is uploaded */}
+          {(editingCapture || mode === 'text' || previewImage) && (
+            <>
+              {/* Title */}
+              <div className="capture-field">
+                <label className="auth-label">Title</label>
+                <input
+                  className="input"
+                  type="text"
+                  placeholder="What's this about?"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                />
+              </div>
 
-          {/* Description */}
-          <div className="capture-field">
-            <label className="auth-label">Notes / Description</label>
-            <textarea
-              className="textarea"
-              placeholder="Add any additional context..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-            />
-          </div>
+              {/* Description */}
+              <div className="capture-field">
+                <label className="auth-label">Notes / Description</label>
+                <textarea
+                  className="textarea"
+                  placeholder="Add any additional context..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={2}
+                />
+              </div>
 
-          {/* Category + Urgency row */}
-          <div className="capture-field-row">
-            <div className="capture-field" style={{ flex: 1 }}>
-              <label className="auth-label">Category</label>
-              <select className="select" value={category} onChange={(e) => setCategory(e.target.value)}>
-                {categories.map(c => (
-                  <option key={c.value} value={c.value}>{c.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="capture-field" style={{ flex: 1 }}>
-              <label className="auth-label">Urgency</label>
-              <select className="select" value={urgency} onChange={(e) => setUrgency(e.target.value)}>
-                {urgencies.map(u => (
-                  <option key={u.value} value={u.value}>{u.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+              {/* Category + Urgency row */}
+              <div className="capture-field-row">
+                <div className="capture-field" style={{ flex: 1 }}>
+                  <label className="auth-label">Category</label>
+                  <select className="select" value={category} onChange={(e) => setCategory(e.target.value)}>
+                    {categories.map(c => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="capture-field" style={{ flex: 1 }}>
+                  <label className="auth-label">Urgency</label>
+                  <select className="select" value={urgency} onChange={(e) => setUrgency(e.target.value)}>
+                    {urgencies.map(u => (
+                      <option key={u.value} value={u.value}>{u.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
-          {/* Tags */}
-          <div className="capture-field">
-            <label className="auth-label">
-              <Tag size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> Tags
-            </label>
-            <input
-              className="input"
-              type="text"
-              placeholder="exam, important, react (comma separated)"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-            />
-          </div>
+              {/* Tags */}
+              <div className="capture-field">
+                <label className="auth-label">
+                  <Tag size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> Tags
+                </label>
+                <input
+                  className="input"
+                  type="text"
+                  placeholder="exam, important, react (comma separated)"
+                  value={tags}
+                  onChange={(e) => setTags(e.target.value)}
+                />
+              </div>
 
-          {/* Reminder */}
+            </>
+          )}
+
+          {/* Reminder (Fixed Date Picker Style) - Always Visible */}
           <div className="capture-field-row">
             <div className="capture-field" style={{ flex: 2 }}>
               <label className="auth-label">
@@ -390,6 +492,7 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
               <input
                 className="input"
                 type="datetime-local"
+                style={{ colorScheme: 'dark', cursor: 'pointer' }}
                 value={reminderAt}
                 onChange={(e) => setReminderAt(e.target.value)}
               />
@@ -409,7 +512,7 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
           <button
             type="submit"
             className="btn btn-primary capture-submit"
-            disabled={loading || (!title.trim() && !imageFile)}
+            disabled={loading || (mode === 'text' && !rawContent.trim()) || (mode === 'screenshot' && !imageFile && !editingCapture)}
           >
             {loading ? (
               <><Loader2 size={16} className="auth-spinner" /> Saving...</>

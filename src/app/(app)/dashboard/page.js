@@ -133,13 +133,29 @@ export default function Dashboard() {
                     <Link href="/journey?tab=analytics" className="dash-see-all">Full Analytics <ChevronRight size={14} /></Link>
                   </div>
                   <div className="dash-heatmap">
-                    {Object.entries(analytics.heatmap).sort((a, b) => a[0].localeCompare(b[0])).map(([date, count]) => {
-                      const max = Math.max(...Object.values(analytics.heatmap), 1);
-                      return (
+                    {(() => {
+                      const days = [];
+                      const today = new Date();
+                      const hmap = analytics.heatmap || {};
+                      
+                      for (let i = 89; i >= 0; i--) {
+                        const d = new Date();
+                        d.setDate(today.getDate() - i);
+                        const dateStr = d.toISOString().split('T')[0];
+                        days.push({ date: dateStr, count: hmap[dateStr] || 0 });
+                      }
+                      
+                      const max = Math.max(...Object.values(hmap), 1);
+                      return days.map(({ date, count }) => (
                         <div key={date} className="heatmap-cell" title={`${date}: ${count}`}
-                          style={{ opacity: count === 0 ? 0.1 : 0.25 + (count / max) * 0.75, background: count > 0 ? '#22c55e' : 'var(--border-light)' }} />
-                      );
-                    })}
+                          style={{
+                            opacity: count === 0 ? 0.05 : 0.25 + (count / max) * 0.75,
+                            background: count > 0 ? '#4ade80' : 'rgba(255, 255, 255, 0.1)',
+                            borderRadius: '4px',
+                            boxShadow: count > 0 ? '0 0 8px rgba(74, 222, 128, 0.4)' : 'none'
+                          }} />
+                      ));
+                    })()}
                   </div>
                 </section>
               )}

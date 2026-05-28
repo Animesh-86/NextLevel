@@ -101,9 +101,20 @@ export default async function LandingPage() {
                 <div className="landing-mockup-chart">
                   <div className="landing-chart-title">Activity Heatmap</div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '4px', marginTop: '1rem', opacity: 0.6 }}>
-                    {Array.from({ length: 48 }).map((_, i) => (
-                      <div key={i} style={{ aspectRatio: '1', borderRadius: '2px', background: Math.random() > 0.6 ? 'var(--primary-color)' : 'rgba(255,255,255,0.05)', opacity: Math.random() > 0.6 ? 1 : 0.5 }} />
-                    ))}
+                    {Array.from({ length: 48 }).map((_, i) => {
+                      const isActive = (i % 3) === 0;
+                      return (
+                        <div
+                          key={i}
+                          style={{
+                            aspectRatio: '1',
+                            borderRadius: '2px',
+                            background: isActive ? 'var(--primary-color)' : 'rgba(255,255,255,0.05)',
+                            opacity: isActive ? 1 : 0.5,
+                          }}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
                 <div className="landing-mockup-chart">

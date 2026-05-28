@@ -25,8 +25,21 @@ export async function GET(request) {
     const queryEmbedding = await generateEmbeddings(query);
 
     if (!queryEmbedding || queryEmbedding.length === 0) {
-      console.error('Embedding generation returned empty result');
-      return NextResponse.json({ error: 'failed to generate search embedding' }, { status: 500 });
+      console.warn('Embedding generation returned empty result. Falling back to keyword search.');
+      const keywordResults = await Capture.find({
+        userId: authResult.user.id,
+        status: { $ne: 'archived' },
+        $or: [
+          { title: { $regex: query, $options: 'i' } },
+          { description: { $regex: query, $options: 'i' } },
+          { rawContent: { $regex: query, $options: 'i' } },
+          { tags: { $regex: query, $options: 'i' } }
+        ]
+      }).limit(10).lean();
+      
+      // Map to have a mock score so frontend structure remains identical
+      const mapped = keywordResults.map(r => ({ ...r, score: 0.5 }));
+      return NextResponse.json({ success: true, data: mapped });
     }
 
     console.log('Embedding generated successfully. Running Vector Search...');
