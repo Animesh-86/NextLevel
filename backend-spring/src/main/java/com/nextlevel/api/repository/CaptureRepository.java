@@ -1,0 +1,31 @@
+package com.nextlevel.api.repository;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.mongodb.repository.MongoRepository;
+
+import com.nextlevel.api.model.Capture;
+
+public interface CaptureRepository extends MongoRepository<Capture, String> {
+
+    Page<Capture> findByUserIdAndStatus(String userId, String status, Pageable pageable);
+
+    Optional<Capture> findByIdAndUserId(String id, String userId);
+
+    Optional<Capture> findByIdAndUserIdAndStatus(String id, String userId, String status);
+
+        List<Capture> findTop10ByUserIdAndReminderAtLessThanEqualAndIsReminderDismissedAndStatusOrderByReminderAtAsc(
+            String userId, Instant reminderAt, Boolean isReminderDismissed, String status);
+
+        List<Capture> findTop10ByUserIdAndReminderAtGreaterThanAndReminderAtLessThanEqualAndIsReminderDismissedAndStatusOrderByReminderAtAsc(
+            String userId, Instant start, Instant end, Boolean isReminderDismissed, String status);
+
+        long countByUserIdAndReminderAtLessThanEqualAndIsReminderDismissedAndStatus(
+            String userId, Instant reminderAt, Boolean isReminderDismissed, String status);
+
+        List<Capture> findByUserId(String userId);
+}

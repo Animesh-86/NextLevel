@@ -71,9 +71,13 @@ export default function CaptureCard({ capture, onEdit, onDelete, onPin, onArchiv
   return (
     <div
       className="capture-card"
-      style={{ borderLeftColor: urg.color }}
+      style={{ '--urgency-color': urg.color, cursor: 'pointer' }}
       data-urgency={capture.urgency}
       data-pinned={capture.isPinned}
+      onClick={(e) => {
+        if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.capture-tag') || e.target.closest('.capture-preview-remove')) return;
+        onEdit?.(capture);
+      }}
     >
       {/* Header */}
       <div className="capture-card-header">
@@ -102,7 +106,11 @@ export default function CaptureCard({ capture, onEdit, onDelete, onPin, onArchiv
 
       {/* Title & Urgency */}
       <div className="capture-card-title-row">
-        <h3 className="capture-card-title">{capture.title}</h3>
+        <h3 className="capture-card-title">
+          {capture.title.includes('Processing') && <Loader2 size={16} className="auth-spinner" style={{ display: 'inline', marginRight: '6px', color: 'var(--text-muted)' }} />}
+          {capture.description?.includes('failed') && <AlertTriangle size={16} style={{ display: 'inline', marginRight: '6px', color: '#ef4444' }} />}
+          {capture.title}
+        </h3>
         {capture.urgency !== 'none' && (
           <span
             className="capture-urgency-badge"

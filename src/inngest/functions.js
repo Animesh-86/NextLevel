@@ -1,7 +1,7 @@
 import { inngest } from "@/lib/inngest";
 import dbConnect from "@/lib/mongodb";
 import Capture from "@/models/Capture";
-import { analyzeText, generateEmbeddings } from "@/lib/gemini";
+import { analyzeText, analyzeImage, generateEmbeddings } from "@/lib/gemini";
 
 export const processCapture = inngest.createFunction(
   { id: "process-capture", event: "capture/created" },
@@ -25,6 +25,13 @@ export const processCapture = inngest.createFunction(
 
     // 2. AI Analysis
     const analysis = await step.run("ai-analysis", async () => {
+      if (type === 'screenshot') {
+        await dbConnect();
+        const cap = await Capture.findById(captureId).select('imageData');
+        if (cap && cap.imageData) {
+          return await analyzeImage(cap.imageData, "image/png"); // Assuming png or auto-handled
+        }
+      }
       return await analyzeText(processedContent);
     });
 

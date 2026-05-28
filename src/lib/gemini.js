@@ -32,10 +32,11 @@ export async function analyzeText(text) {
 
   const prompt = `Analyze the following text and return a JSON object with these fields:
 - "title": A concise title (max 80 chars) summarizing the content
-- "category": One of: exam, project, deadline, resource, personal, college, other
+- "category": One of: exam, project, deadline, resource, personal, college, work, job-posting, tutorial, code, idea, other
 - "urgency": One of: critical, high, medium, low, none
 - "tags": An array of 1-4 relevant tags (lowercase, single words or short phrases)
-- "reminderSuggestion": If there's a date/deadline mentioned, return ISO date string. If it seems urgent, suggest a date within 24 hours. Otherwise null.
+- "reminderSuggestion": If there's a date, deadline, or time mentioned, return the exact ISO date string (YYYY-MM-DDTHH:MM:SS) representing it. Otherwise null.
+- "extractedLink": Any URL, website link, or domain mentioned in the text (e.g. https://example.com/page). Otherwise null.
 - "summary": A 1-2 sentence summary
 
 Text to analyze:
@@ -50,7 +51,7 @@ Return ONLY valid JSON, no markdown formatting.`;
     try {
       const completion = await groq.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
-        model: "llama3-8b-8192", // Lightning fast open-source model
+        model: "llama-3.1-8b-instant", // Lightning fast open-source model
         response_format: { type: "json_object" }
       });
       const response = completion.choices[0]?.message?.content;
@@ -83,7 +84,57 @@ Return ONLY valid JSON, no markdown formatting.`;
  */
 export async function analyzeImage(base64Image, mimeType = 'image/png') {
   const ai = getGenAI();
+  const groq = getGroq();
 
+  const prompt = `Look at this screenshot and analyze it. Return a JSON object with:
+- "title": A concise title (max 80 chars) describing what this screenshot is about
+- "category": One of: exam, project, deadline, resource, personal, college, work, job-posting, tutorial, code, idea, other
+- "urgency": One of: critical, high, medium, low, none (based on content — deadlines = high/critical, notes = low, etc.)
+- "tags": An array of 1-4 relevant tags (lowercase)
+- "reminderSuggestion": If there's a date, deadline, or time mentioned or visible, return the exact ISO date string (YYYY-MM-DDTHH:MM:SS) representing it. Otherwise null.
+- "extractedLink": Any URL, website link, or domain mentioned in the text (e.g. https://example.com/page). Otherwise null.
+- "summary": A 1-2 sentence summary of the screenshot content
+- "extractedText": All readable text from the screenshot
+
+Return ONLY valid JSON, no markdown formatting.`;
+
+  let cleanBase64 = base64Image;
+  let finalMimeType = mimeType;
+  
+  // Strip data URI prefix if present
+  if (base64Image.startsWith('data:')) {
+    const parts = base64Image.split(',');
+    if (parts.length === 2) {
+      cleanBase64 = parts[1];
+      finalMimeType = parts[0].split(';')[0].replace('data:', '');
+    }
+  }
+
+  // 1. Try Groq Vision first
+  if (groq) {
+    try {
+      const completion = await groq.chat.completions.create({
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              { type: "image_url", image_url: { url: `data:${finalMimeType};base64,${cleanBase64}` } }
+            ]
+          }
+        ],
+        model: "meta-llama/llama-4-scout-17b-16e-instruct",
+        temperature: 0.1,
+      });
+      const responseText = completion.choices[0]?.message?.content || '{}';
+      const cleaned = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      return JSON.parse(cleaned);
+    } catch (err) {
+      console.error('Groq vision analysis failed, falling back to Gemini:', err.message);
+    }
+  }
+
+  // 2. Fallback to Gemini
   if (!ai) {
     return {
       title: 'Screenshot Capture',
@@ -98,23 +149,12 @@ export async function analyzeImage(base64Image, mimeType = 'image/png') {
 
   try {
     const model = ai.getGenerativeModel({ model: 'gemini-2.0-flash' });
-    const prompt = `Look at this screenshot and analyze it. Return a JSON object with:
-- "title": A concise title (max 80 chars) describing what this screenshot is about
-- "category": One of: exam, project, deadline, resource, personal, college, other
-- "urgency": One of: critical, high, medium, low, none (based on content — deadlines = high/critical, notes = low, etc.)
-- "tags": An array of 1-4 relevant tags (lowercase)
-- "reminderSuggestion": If there's a date/deadline visible, return ISO date string. Otherwise null.
-- "summary": A 1-2 sentence summary of the screenshot content
-- "extractedText": All readable text from the screenshot
-
-Return ONLY valid JSON, no markdown formatting.`;
-
     const result = await model.generateContent([
       prompt,
       {
         inlineData: {
-          mimeType,
-          data: base64Image,
+          mimeType: finalMimeType,
+          data: cleanBase64,
         },
       },
     ]);

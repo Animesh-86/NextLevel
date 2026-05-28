@@ -34,22 +34,57 @@ export async function POST(request) {
     const arrayBuffer = await file.arrayBuffer();
     const base64 = Buffer.from(arrayBuffer).toString('base64');
 
-    // Analyze with Gemini Vision
-    const analysis = await analyzeImage(base64, file.type);
+    // Get optional overrides from formData
+    const overrideTitle = formData.get('title');
+    const overrideDescription = formData.get('description');
+    const overrideCategory = formData.get('category');
+    const overrideUrgency = formData.get('urgency');
+    const overrideTags = formData.get('tags');
+    const overrideReminderAt = formData.get('reminderAt');
+    const overrideReminderRepeats = formData.get('reminderRepeats');
+    const overrideRawContent = formData.get('rawContent');
+
+    // Only analyze if title or description is missing
+    let analysis = {};
+    if (!overrideTitle || !overrideDescription) {
+      analysis = await analyzeImage(base64, file.type);
+    }
+
+    const finalTitle = overrideTitle || analysis.title || 'Screenshot Capture';
+    const finalDescription = overrideDescription || analysis.summary || '';
+    const finalCategory = overrideCategory || analysis.category || 'other';
+    const finalUrgency = overrideUrgency || analysis.urgency || 'none';
+    
+    let finalTags = ['screenshot'];
+    if (overrideTags) {
+      finalTags = overrideTags.split(',').map(t => t.trim()).filter(Boolean);
+    } else if (analysis.tags) {
+      finalTags = analysis.tags;
+    }
+
+    let finalReminderAt = null;
+    if (overrideReminderAt) {
+      finalReminderAt = new Date(overrideReminderAt);
+    } else if (analysis.reminderSuggestion) {
+      finalReminderAt = new Date(analysis.reminderSuggestion);
+    }
+
+    const finalRawContent = overrideRawContent || analysis.extractedText || '';
 
     // Store in DB
     await dbConnect();
     const capture = await Capture.create({
       userId: authResult.user.id,
       type: 'screenshot',
-      title: analysis.title || 'Screenshot Capture',
-      rawContent: analysis.extractedText || '',
-      description: analysis.summary || '',
+      title: finalTitle,
+      rawContent: finalRawContent,
+      description: finalDescription,
       imageData: `data:${file.type};base64,${base64}`,
-      category: analysis.category || 'other',
-      tags: analysis.tags || ['screenshot'],
-      urgency: analysis.urgency || 'none',
-      reminderAt: analysis.reminderSuggestion ? new Date(analysis.reminderSuggestion) : null,
+      category: finalCategory,
+      tags: finalTags,
+      urgency: finalUrgency,
+      reminderAt: finalReminderAt,
+      reminderRepeats: overrideReminderRepeats || 'none',
     });
 
     // Return without the heavy imageData
@@ -60,7 +95,6 @@ export async function POST(request) {
     return NextResponse.json({
       success: true,
       data: responseData,
-      analysis,
     }, { status: 201 });
   } catch (err) {
     console.error('Error uploading screenshot:', err);

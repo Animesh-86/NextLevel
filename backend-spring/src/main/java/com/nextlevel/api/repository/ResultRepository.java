@@ -1,0 +1,19 @@
+package com.nextlevel.api.repository;
+
+import java.util.Optional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.mongodb.repository.MongoRepository;
+
+import com.nextlevel.api.model.Result;
+
+public interface ResultRepository extends MongoRepository<Result, String> {
+    Page<Result> findByUserId(String userId, Pageable pageable);
+    Page<Result> findByUserIdAndExamId(String userId, String examId, Pageable pageable);
+    Optional<Result> findByIdAndUserId(String id, String userId);
+
+    long countByUserId(String userId);
+    long countByUserIdAndPassed(String userId, Boolean passed);
+    long countByUserIdAndScorePercent(String userId, Double scorePercent);
+}

@@ -37,7 +37,7 @@ const CaptureSchema = new mongoose.Schema({
   // Organization
   category: {
     type: String,
-    enum: ['exam', 'project', 'deadline', 'resource', 'personal', 'college', 'other'],
+    enum: ['exam', 'project', 'deadline', 'resource', 'personal', 'college', 'work', 'job-posting', 'tutorial', 'code', 'idea', 'other'],
     default: 'other',
   },
   tags: [{
