@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/useAuth';
 import Link from 'next/link';
 import {
   Flame, Target, BookOpen, Clock, Play, Map, Briefcase, FolderOpen,

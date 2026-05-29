@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
+
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { LogIn, UserPlus, Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2, ArrowLeft } from 'lucide-react';

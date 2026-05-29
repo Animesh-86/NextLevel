@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/Toast';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/useAuth';
 import { SkeletonCard } from '@/components/SkeletonLoader';
 import { User, Mail, Calendar, Flame, BookOpen, HelpCircle, Clock, Award, Save, Lock, Eye, EyeOff } from 'lucide-react';
 
