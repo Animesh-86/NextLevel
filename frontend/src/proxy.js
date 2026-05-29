@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth';
 import { NextResponse } from 'next/server';
 
 // Basic in-memory rate limiter for serverless (per-instance)
@@ -34,7 +34,8 @@ async function handleProxy(req) {
     return new NextResponse('Too Many Requests. Please slow down.', { status: 429 });
   }
 
-  const session = await auth();
+  const result = await requireAuth();
+  const session = result.user ? { user: result.user } : null;
   const { pathname } = req.nextUrl;
   const isLoggedIn = !!session;
 

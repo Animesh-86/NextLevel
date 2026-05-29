@@ -1,8 +1,9 @@
 import Link from 'next/link';
-import { auth } from '@/lib/auth';
+import { requireAuth } from '@/lib/auth';
 
 export default async function LandingPage() {
-  const session = await auth();
+  const result = await requireAuth();
+  const session = result.user ? { user: result.user } : null;
 
   return (
     <div className="landing">
