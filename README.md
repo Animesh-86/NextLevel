@@ -1,100 +1,147 @@
-# 🚀 NextLevel: The AI-First Knowledge Operating System
+# NextLevel: Intelligent Knowledge Operating System
 
-NextLevel is a high-performance, professional-grade platform designed to consolidate your digital life into a single, intelligent vault. It leverages state-of-the-art AI orchestration and durable background processing to turn raw information into actionable knowledge.
+NextLevel is a high-performance, enterprise-grade platform designed to consolidate digital information into a single, intelligent knowledge vault. It leverages state-of-the-art AI orchestration and durable background processing to transform raw data into actionable, searchable knowledge.
 
 ---
 
-## 🏗 System Architecture
+## Problem and Solution
+
+**The Problem:**
+Information overload limits productivity. Professionals and students constantly gather links, notes, documents, and code snippets, but finding and synthesizing this data when needed is complex. Traditional note-taking applications rely on rigid keyword searches and manual tagging, creating friction in retrieving critical information. Furthermore, most systems lack automated workflows to summarize or categorize data at scale.
+
+**The Solution:**
+NextLevel introduces an "AI-First" knowledge architecture. Instead of relying on manual organization, the system ingests raw inputs (URLs, text, files) and automatically extracts meaning, generates summaries, and assigns categories. By utilizing vector embeddings and semantic search, users can query their knowledge base conceptually (e.g., searching for "database scaling" will return notes on "sharding" even if the exact keywords do not match).
+
+---
+
+## System Architecture
 
 ```mermaid
 graph TD
-    User((User)) -->|Interacts| Frontend[Next.js 15 UI / App Router]
-    Frontend -->|Triggers| API[Next.js API Routes]
+    User((User)) -->|HTTPS / REST| Frontend[Next.js Client]
+    Frontend -->|API Calls| API[Spring Boot 3 REST API]
     
-    subgraph "AI Core Orchestration"
-        API -->|Dispatches Events| Inngest[Inngest Background Engine]
-        Inngest -->|Scrapes| Jina[Jina AI Reader]
-        Inngest -->|Analyzes| Gemini[Google Gemini 2.0 Flash]
-        Inngest -->|Vectorizes| Embeddings[Gemini embedding-001]
+    subgraph "Backend Services (Java 21 / Spring Boot)"
+        API -->|Delegates| Services[Service Layer]
+        Services -->|Async Jobs| JobRunr[JobRunr Background Engine]
+        
+        subgraph "AI & Processing Core"
+            JobRunr -->|Scrapes| Jina[Jina AI Reader]
+            JobRunr -->|Analyzes via Resilience4j| Gemini[Google Gemini 2.0 Flash]
+            JobRunr -->|Vectorizes| Embeddings[Google text-embedding-004]
+        end
+        
+        API -->|Rate Limited via Bucket4j| Gemini
     end
 
     subgraph "Data Persistence"
-        API -->|CRUD| Mongo[(MongoDB Atlas)]
+        Services -->|Spring Data| Mongo[(MongoDB Atlas)]
         Embeddings -->|Storage| VectorIdx[Atlas Vector Search Index]
     end
 
     API -->|Semantic Query| VectorIdx
-    VectorIdx -->|Ranked Results| User
+    VectorIdx -->|Ranked Results| API
 ```
 
 ---
 
-## 🔥 Key Features
+## Technical Stack
 
-### 1. 🧠 Semantic "Brain" Search
-*   **Beyond Keywords**: Uses vector cosine similarity to find notes based on *meaning*. Search for "Spring Boot help" and find notes about "Java backend tutorials" automatically.
-*   **Powered By**: MongoDB Atlas Vector Search + Gemini 768-dim embeddings.
+NextLevel is built with a focus on reliability, scalability, and modern engineering practices.
 
-### 2. ⚡ Durable AI Workflows (Inngest)
-*   **Reliable Scrapping**: Every link you save is instantly scraped via Jina AI and summarized by Gemini.
-*   **Fault Tolerance**: If an AI call fails, Inngest automatically retries with exponential backoff.
-*   **No-Code Replacement**: Successfully replaced heavy n8n dependencies with native, high-performance Javascript functions.
+### Backend (Core Services & API)
+*   **Framework**: Java 21 / Spring Boot 3
+*   **Architecture**: Multi-tier architecture (Controllers, Services, Repositories, DTOs)
+*   **Background Processing**: JobRunr for durable, fault-tolerant asynchronous task execution
+*   **Resilience & Rate Limiting**: Resilience4j (Circuit Breakers & Retries) and Bucket4j
+*   **Security**: Spring Security, JWT Authentication, OAuth2 (Google), Method-level Security
+*   **API Documentation**: SpringDoc OpenAPI (Swagger UI)
 
-### 3. 📝 Smart Captures & Vault
-*   **Auto-Categorization**: AI detects if a note is an `Exam`, `Project`, or `Deadline`.
-*   **Urgency Detection**: Automatically flags notes as `Critical` or `High` based on the content.
-*   **PWA Support**: Fully installable as a mobile app for on-the-go capturing.
+### Frontend (Client Application)
+*   **Framework**: Next.js (App Router, Turbopack)
+*   **Styling**: Tailwind CSS, Framer Motion
+*   **State Management**: React Hooks & Context API
 
-### 4. 🗺 AI Roadmap Generator
-*   **Pathfinding**: Generate structured learning roadmaps for any topic (e.g., "Learn Kubernetes in 4 weeks").
-*   **Milestone Tracking**: Tracks your progress through AI-generated steps.
-
-### 5. 📅 Dynamic Planner & Reminders
-*   **Calendar Integration**: View your AI-detected deadlines in a unified planner.
-*   **Smart Reminders**: System-suggested reminder times based on task urgency.
-
-### 6. 🎓 Exam & Test Engine
-*   **Mock Tests**: Take practice exams and track results.
-*   **Performance Analytics**: Deep dives into your test scores over time.
+### Infrastructure & Database
+*   **Database**: MongoDB Atlas (Document Store)
+*   **Search**: MongoDB Atlas Vector Search
+*   **AI Integration**: Spring AI (Google Gemini Chat & Embedding Models)
 
 ---
 
-## 🛠 Tech Stack
+## Key Features
 
-| Layer | Technology |
-|---|---|
-| **Framework** | Next.js 15 (App Router / Turbopack) |
-| **Styling** | Tailwind CSS 4 + Framer Motion |
-| **Database** | MongoDB Atlas (Vector Search Enabled) |
-| **AI (LLM)** | Google Gemini 2.0 Flash |
-| **AI (Embeddings)** | Google text-embedding-004 |
-| **Orchestration** | Inngest (Event-Driven Architecture) |
-| **Authentication** | NextAuth.js |
+### 1. Semantic Knowledge Retrieval
+*   **Conceptual Search**: Utilizes vector cosine similarity to locate notes based on meaning rather than exact keyword matches.
+*   **Implementation**: Powered by MongoDB Atlas Vector Search combined with 768-dimensional embeddings generated by Google's text-embedding-004 model.
+
+### 2. Durable AI Workflows
+*   **Automated Enrichment**: URLs and notes are asynchronously scraped (via Jina AI) and summarized (via Gemini).
+*   **Fault Tolerance**: The integration of JobRunr and Resilience4j ensures that failing external API calls are retried with exponential backoff and circuit breakers prevent cascading system failures.
+
+### 3. Intelligent Data Categorization
+*   **Auto-Triage**: The AI engine automatically detects if a captured input is an exam, project, deadline, or general resource.
+*   **Urgency Detection**: Flags critical notes and deadlines automatically, integrating them into user workflows.
+
+### 4. Automated Learning Roadmaps
+*   **Path Generation**: Generates structured, milestone-driven learning roadmaps for complex topics based on user prompts.
+*   **Tracking**: Maintains progress state across AI-generated milestones and tasks.
+
+### 5. Exam & Assessment Engine
+*   **Mock Assessments**: Provides a comprehensive engine for taking practice exams.
+*   **Performance Analytics**: Calculates pass rates, identifies weak areas, and flags questions requiring review using optimized MongoDB aggregation pipelines.
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Prerequisites
-*   Node.js 18+ & MongoDB Atlas account.
-*   Google AI Studio API Key.
+*   Java 21 / Maven
+*   Node.js 18+
+*   MongoDB Atlas Account (with Vector Search capabilities)
+*   Google AI Studio API Key
 
-### 2. Installation
+### 2. Installation & Setup
+
+Clone the repository:
 ```bash
 git clone https://github.com/Animesh-86/NextLevel.git
+cd NextLevel
+```
+
+### 3. Backend Setup
+
+Configure the environment variables in `backend-spring/src/main/resources/application.yml` or via system environment variables:
+```env
+MONGODB_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/nextlevel
+GEMINI_API_KEY=your_google_api_key
+GOOGLE_CLIENT_ID=your_oauth_client_id
+GOOGLE_CLIENT_SECRET=your_oauth_client_secret
+JWT_SECRET=your_secure_jwt_secret
+```
+
+Build and run the Spring Boot application:
+```bash
+cd backend-spring
+mvn clean install
+mvn spring-boot:run
+```
+
+### 4. Frontend Setup
+
+Navigate to the frontend directory and install dependencies:
+```bash
+cd frontend
 npm install
 ```
 
-### 3. Environment Config (`.env.local`)
-```env
-MONGODB_URI=...
-GEMINI_API_KEY=...
-AUTH_SECRET=...
-NEXTAUTH_URL=http://localhost:3000
+Start the development server:
+```bash
+npm run dev
 ```
 
-### 4. Vector Search Index Setup
-In your MongoDB Atlas dashboard, create a **Vector Search Index** on the `captures` collection:
+### 5. Vector Search Configuration
+Within the MongoDB Atlas console, define a Vector Search Index on the `captures` collection using the following JSON definition:
 ```json
 {
   "fields": [
@@ -108,22 +155,17 @@ In your MongoDB Atlas dashboard, create a **Vector Search Index** on the `captur
 }
 ```
 
-### 5. Development
-Start the app:
-```bash
-npm run dev
-```
+---
 
-Start the background worker:
-```bash
-npx inngest-cli@latest dev -u http://localhost:3000/api/inngest
-```
+## API Documentation
+Once the backend is running, the interactive OpenAPI specification and Swagger UI can be accessed at:
+`http://localhost:8080/swagger-ui.html`
 
 ---
 
-## 🤝 Roadmap & Future
-- [ ] Multi-file PDF Analysis (RAG).
-- [ ] Collaborative Vaults for Teams.
-- [ ] Integration with Google Calendar/Outlook.
+## Future Enhancements
+*   Multi-file PDF ingestion and Retrieval-Augmented Generation (RAG).
+*   Collaborative vaults with Role-Based Access Control (RBAC).
+*   Calendar integrations (Google Calendar, Microsoft Outlook) for automated deadline syncing.
 
-Built with ❤️ by [Animesh](https://github.com/Animesh-86)
+*Maintained by Animesh*

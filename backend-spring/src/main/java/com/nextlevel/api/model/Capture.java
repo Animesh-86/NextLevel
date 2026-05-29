@@ -9,6 +9,11 @@ import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import com.fasterxml.jackson.annotation.JsonView;
+
+import lombok.Data;
+
+@Data
 @Document(collection = "captures")
 @CompoundIndexes({
         @CompoundIndex(def = "{'userId': 1, 'status': 1, 'createdAt': -1}"),
@@ -20,175 +25,60 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class Capture {
 
     @Id
+    @JsonView(Views.Public.class)
     private String id;
+    
+    @JsonView(Views.Public.class)
     private String userId;
+    
+    @JsonView(Views.Public.class)
     private String type = "text";
+    
+    @JsonView(Views.Public.class)
     private String title;
+    
+    @JsonView(Views.Public.class)
     private String rawContent = "";
+    
+    @JsonView(Views.Public.class)
     private String description = "";
+    
+    @JsonView(Views.Internal.class)
     private String imageData;
+    
+    @JsonView(Views.Public.class)
     private String category = "other";
+    
+    @JsonView(Views.Public.class)
     private List<String> tags = new ArrayList<>();
+    
+    @JsonView(Views.Public.class)
     private String urgency = "none";
+    
+    @JsonView(Views.Public.class)
     private Instant reminderAt;
+    
+    @JsonView(Views.Public.class)
     private String reminderRepeats = "none";
+    
+    @JsonView(Views.Public.class)
     private Boolean isReminderDismissed = false;
+    
+    @JsonView(Views.Public.class)
     private Boolean isPinned = false;
+    
+    @JsonView(Views.Public.class)
     private Boolean isArchived = false;
+    
+    @JsonView(Views.Public.class)
     private String status = "active";
+    
+    @JsonView(Views.Internal.class)
     private List<Double> embedding = new ArrayList<>();
+    
+    @JsonView(Views.Public.class)
     private Instant createdAt;
+    
+    @JsonView(Views.Public.class)
     private Instant updatedAt;
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getUserId() {
-        return userId;
-    }
-
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public String getRawContent() {
-        return rawContent;
-    }
-
-    public void setRawContent(String rawContent) {
-        this.rawContent = rawContent;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getImageData() {
-        return imageData;
-    }
-
-    public void setImageData(String imageData) {
-        this.imageData = imageData;
-    }
-
-    public String getCategory() {
-        return category;
-    }
-
-    public void setCategory(String category) {
-        this.category = category;
-    }
-
-    public List<String> getTags() {
-        return tags;
-    }
-
-    public void setTags(List<String> tags) {
-        this.tags = tags;
-    }
-
-    public String getUrgency() {
-        return urgency;
-    }
-
-    public void setUrgency(String urgency) {
-        this.urgency = urgency;
-    }
-
-    public Instant getReminderAt() {
-        return reminderAt;
-    }
-
-    public void setReminderAt(Instant reminderAt) {
-        this.reminderAt = reminderAt;
-    }
-
-    public String getReminderRepeats() {
-        return reminderRepeats;
-    }
-
-    public void setReminderRepeats(String reminderRepeats) {
-        this.reminderRepeats = reminderRepeats;
-    }
-
-    public Boolean getIsReminderDismissed() {
-        return isReminderDismissed;
-    }
-
-    public void setIsReminderDismissed(Boolean isReminderDismissed) {
-        this.isReminderDismissed = isReminderDismissed;
-    }
-
-    public Boolean getIsPinned() {
-        return isPinned;
-    }
-
-    public void setIsPinned(Boolean isPinned) {
-        this.isPinned = isPinned;
-    }
-
-    public Boolean getIsArchived() {
-        return isArchived;
-    }
-
-    public void setIsArchived(Boolean isArchived) {
-        this.isArchived = isArchived;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public List<Double> getEmbedding() {
-        return embedding;
-    }
-
-    public void setEmbedding(List<Double> embedding) {
-        this.embedding = embedding;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
-    }
 }

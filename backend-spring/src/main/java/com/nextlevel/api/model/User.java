@@ -9,7 +9,9 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import lombok.Data;
 
+@Data
 @Document(collection = "users")
 public class User {
 
@@ -34,92 +36,4 @@ public class User {
     private Integer questionsAnswered = 0;
     private Instant createdAt;
     private Instant updatedAt;
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public UserRole getRole() {
-        return role;
-    }
-
-    public void setRole(UserRole role) {
-        this.role = role;
-    }
-
-    public Integer getStreak() {
-        return streak;
-    }
-
-    public void setStreak(Integer streak) {
-        this.streak = streak;
-    }
-
-    public Instant getLastActiveDate() {
-        return lastActiveDate;
-    }
-
-    public void setLastActiveDate(Instant lastActiveDate) {
-        this.lastActiveDate = lastActiveDate;
-    }
-
-    public Integer getTotalStudyMinutes() {
-        return totalStudyMinutes;
-    }
-
-    public void setTotalStudyMinutes(Integer totalStudyMinutes) {
-        this.totalStudyMinutes = totalStudyMinutes;
-    }
-
-    public Integer getQuestionsAnswered() {
-        return questionsAnswered;
-    }
-
-    public void setQuestionsAnswered(Integer questionsAnswered) {
-        this.questionsAnswered = questionsAnswered;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
-    }
 }

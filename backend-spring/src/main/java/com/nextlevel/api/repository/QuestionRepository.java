@@ -12,4 +12,7 @@ public interface QuestionRepository extends MongoRepository<Question, String> {
     List<Question> findByIdIn(List<String> ids);
     Page<Question> findByExamId(String examId, Pageable pageable);
     long countByExamId(String examId);
+
+    @org.springframework.data.mongodb.repository.Query("{ $expr: { $gte: [ { $divide: [ '$timesFailed', '$timesTested' ] }, 0.5 ] }, timesTested: { $gt: 0 } }")
+    long countNeedsReview();
 }

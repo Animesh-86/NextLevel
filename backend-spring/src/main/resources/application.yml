@@ -27,6 +27,19 @@ spring:
   jackson:
     default-property-inclusion: non_null
 
+resilience4j.circuitbreaker:
+  instances:
+    geminiApi:
+      slidingWindowSize: 5
+      failureRateThreshold: 50
+      waitDurationInOpenState: 10000
+      permittedNumberOfCallsInHalfOpenState: 3
+resilience4j.retry:
+  instances:
+    geminiApi:
+      maxAttempts: 3
+      waitDuration: 2000
+
 management:
   endpoints:
     web:
