@@ -21,13 +21,20 @@ const nextConfig = {
   },
 
   async rewrites() {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
     return [
       {
         source: '/api/:path*',
-        destination: process.env.NEXT_PUBLIC_API_URL
-          ? `${process.env.NEXT_PUBLIC_API_URL}/api/:path*`
-          : 'http://localhost:8080/api/:path*',
+        destination: `${backendUrl}/api/:path*`,
       },
+      {
+        source: '/oauth2/:path*',
+        destination: `${backendUrl}/oauth2/:path*`,
+      },
+      {
+        source: '/login/oauth2/:path*',
+        destination: `${backendUrl}/login/oauth2/:path*`,
+      }
     ];
   },
 };
