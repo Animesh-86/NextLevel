@@ -11,7 +11,7 @@ export async function requireAuth() {
   }
 
   try {
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef');
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET || '5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437');
     const { payload } = await jwtVerify(token, secret);
     
     // The Spring Boot JWT claims typically have: sub (id), email, role
