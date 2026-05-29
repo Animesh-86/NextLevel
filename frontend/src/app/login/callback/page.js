@@ -13,7 +13,8 @@ function LoginCallbackContent() {
     if (token) {
       // Store token in a cookie that is accessible by our Next.js API routes
       document.cookie = `token=${token}; path=/; max-age=2592000; SameSite=Lax`;
-      router.push('/dashboard');
+      // Force a hard navigation so Next.js server gets the cookie and bypasses router cache
+      window.location.href = '/dashboard';
     } else if (searchParams.toString() !== "") {
       // Only error out if searchParams are populated but token is missing
       router.push('/login?error=OAuthFailed');
