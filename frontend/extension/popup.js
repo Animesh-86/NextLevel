@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           
           if (response && response.success) {
             status.style.display = 'block';
-            status.innerText = '✅ Saved successfully!';
+            status.innerText = response.queued ? '✅ Queued for background saving!' : '✅ Saved successfully!';
             setTimeout(() => window.close(), 1500);
           } else {
             btnText.style.display = 'inline';

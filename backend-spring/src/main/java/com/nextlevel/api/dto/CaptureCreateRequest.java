@@ -3,10 +3,13 @@ package com.nextlevel.api.dto;
 import java.time.Instant;
 import java.util.List;
 
+import jakarta.validation.constraints.NotBlank;
+
 public class CaptureCreateRequest {
 
     private String type = "text";
     private String title;
+    @NotBlank(message = "Raw content cannot be empty")
     private String rawContent = "";
     private String description = "";
     private String category = "other";

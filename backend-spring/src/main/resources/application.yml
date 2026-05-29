@@ -44,7 +44,11 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus
+
+logging:
+  pattern:
+    console: "%d{ISO8601} [%X{requestId}] %-5level %logger{36} - %msg%n"
 
 app:
   frontend:
