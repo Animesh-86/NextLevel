@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { jwtVerify } from 'jose';
+import { decodeJwt } from 'jose';
 
 // Helper to get session in API routes by parsing the token cookie
 export async function requireAuth() {
@@ -11,15 +11,15 @@ export async function requireAuth() {
   }
 
   try {
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef');
-    const { payload } = await jwtVerify(token, secret);
+    const payload = decodeJwt(token);
     
     // The Spring Boot JWT claims typically have: sub (id), email, role
     return { 
       user: {
         id: payload.sub,
         email: payload.email,
-        role: payload.role
+        role: payload.role,
+        name: payload.name || payload.email
       } 
     };
   } catch (err) {
