@@ -1,10 +1,14 @@
 const DEFAULT_API_BASE_URL = 'http://localhost:8080';
 
+export function getBackendUrl() {
+  return (process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_BASE_URL).replace(/\/$/, '');
+}
+
 export function getApiBaseUrl() {
   if (typeof window !== 'undefined') {
     return ''; // Use Next.js proxy on the client to avoid CORS entirely
   }
-  return (process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_BASE_URL).replace(/\/$/, '');
+  return getBackendUrl();
 }
 
 export function getTokenFromCookie() {

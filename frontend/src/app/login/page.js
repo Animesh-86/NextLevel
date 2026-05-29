@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { LogIn, UserPlus, Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { apiFetch, getApiBaseUrl } from '@/lib/api';
+import { apiFetch, getApiBaseUrl, getBackendUrl } from '@/lib/api';
 
 export default function LoginPage() {
   const searchParams = useSearchParams();
@@ -257,7 +257,7 @@ export default function LoginPage() {
         </div>
 
         <a
-          href={`${getApiBaseUrl()}/oauth2/authorization/google`}
+          href={`${getBackendUrl()}/oauth2/authorization/google`}
           className="btn btn-secondary"
           style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', textDecoration: 'none' }}
         >
