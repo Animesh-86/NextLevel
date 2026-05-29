@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useSession } from '@/lib/useAuth';
+import { apiFetch } from '@/lib/api';
 import Link from 'next/link';
 import {
   Flame, Target, BookOpen, Clock, Play, Map, Briefcase, FolderOpen,
@@ -21,10 +22,10 @@ export default function Dashboard() {
     async function loadAll() {
       try {
         const [statsR, analyticsR, tasksR, capturesR] = await Promise.all([
-          fetch('/api/stats').then(r => r.json()).catch(() => ({ success: false })),
-          fetch('/api/analytics').then(r => r.json()).catch(() => ({ success: false })),
-          fetch(`/api/planner?start=${new Date().toISOString().split('T')[0]}&end=${new Date().toISOString().split('T')[0]}`).then(r => r.json()).catch(() => ({ success: false })),
-          fetch('/api/captures?limit=5').then(r => r.json()).catch(() => ({ success: false })),
+          apiFetch('/api/stats').then(r => r.json()).catch(() => ({ success: false })),
+          apiFetch('/api/analytics').then(r => r.json()).catch(() => ({ success: false })),
+          apiFetch(`/api/planner?start=${new Date().toISOString().split('T')[0]}&end=${new Date().toISOString().split('T')[0]}`).then(r => r.json()).catch(() => ({ success: false })),
+          apiFetch('/api/captures?limit=5').then(r => r.json()).catch(() => ({ success: false })),
         ]);
         if (statsR.success) setStats(statsR.data);
         if (analyticsR.success) setAnalytics(analyticsR.data);

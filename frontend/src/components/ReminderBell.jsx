@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Bell, Clock, AlertTriangle, X, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { apiFetch } from '@/lib/api';
 
 const urgencyColors = {
   critical: '#ef4444',
@@ -18,7 +19,7 @@ export default function ReminderBell() {
 
   async function fetchReminders() {
     try {
-      const res = await fetch('/api/captures/reminders');
+      const res = await apiFetch('/api/captures/reminders');
       const data = await res.json();
       if (data.success) {
         setReminders(data.data);
@@ -30,15 +31,21 @@ export default function ReminderBell() {
   }
 
   useEffect(() => {
-    fetchReminders();
+    const timeout = setTimeout(() => {
+      fetchReminders();
+    }, 0);
+
     // Poll every 60 seconds
     const interval = setInterval(fetchReminders, 60000);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(timeout);
+      clearInterval(interval);
+    };
   }, []);
 
   async function dismissReminder(id) {
     try {
-      await fetch(`/api/captures/${id}`, {
+      await apiFetch(`/api/captures/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isReminderDismissed: true }),

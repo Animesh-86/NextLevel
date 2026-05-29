@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { apiFetch } from '@/lib/api';
 import {
   X, Upload, Type, Link2, Camera, Sparkles, Loader2,
   Clock, Tag, AlertTriangle, ChevronDown
@@ -84,7 +85,7 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
 
       if (editingCapture.type === 'screenshot' && !editingCapture.imageData) {
         setLoading(true);
-        fetch(`/api/captures/${editingCapture._id}`)
+        apiFetch(`/api/captures/${editingCapture._id}`)
           .then(res => res.json())
           .then(data => {
             if (active && data.success && data.data) {
@@ -114,7 +115,7 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
     if (!rawContent.trim()) return;
     setAnalyzing(true);
     try {
-      const res = await fetch('/api/captures/analyze', {
+      const res = await apiFetch('/api/captures/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: rawContent }),
@@ -159,7 +160,7 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
       setPreviewImage(base64Data);
       setAnalyzing(true);
       try {
-        const res = await fetch('/api/captures/analyze', {
+        const res = await apiFetch('/api/captures/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image: base64Data, mimeType: file.type }),
@@ -238,7 +239,7 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
         }
         formData.append('reminderRepeats', reminderRepeats);
 
-        const res = await fetch('/api/captures/upload', {
+        const res = await apiFetch('/api/captures/upload', {
           method: 'POST',
           body: formData,
         });
@@ -265,7 +266,7 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
           ? `/api/captures/${editingCapture._id}`
           : '/api/captures';
 
-        const res = await fetch(url, {
+        const res = await apiFetch(url, {
           method: editingCapture ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),

@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { apiFetch } from '@/lib/api';
 import {
   Upload, Search, FolderOpen, Grid, List, Loader2,
   SlidersHorizontal, FileText, Image, File, Table
@@ -54,7 +55,7 @@ export default function FileVault() {
       if (fileType !== 'all') params.set('fileType', fileType);
       if (search.trim()) params.set('search', search.trim());
 
-      const res = await fetch(`/api/files?${params.toString()}`);
+      const res = await apiFetch(`/api/files?${params.toString()}`);
       const data = await res.json();
       if (data.success) setFiles(data.data);
     } catch (err) {
@@ -87,7 +88,7 @@ export default function FileVault() {
         const formData = new FormData();
         formData.append('file', file);
 
-        await fetch('/api/files', { method: 'POST', body: formData });
+        await apiFetch('/api/files', { method: 'POST', body: formData });
         uploaded++;
       } catch (err) {
         console.error(`Failed to upload ${file.name}:`, err);
@@ -114,7 +115,7 @@ export default function FileVault() {
   async function handleDelete(id) {
     if (!confirm('Delete this file?')) return;
     try {
-      await fetch(`/api/files/${id}`, { method: 'DELETE' });
+      await apiFetch(`/api/files/${id}`, { method: 'DELETE' });
       fetchFiles();
     } catch (err) {
       console.error('Delete failed:', err);
@@ -123,7 +124,7 @@ export default function FileVault() {
 
   async function handlePin(id, pinned) {
     try {
-      await fetch(`/api/files/${id}`, {
+      await apiFetch(`/api/files/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isPinned: pinned }),

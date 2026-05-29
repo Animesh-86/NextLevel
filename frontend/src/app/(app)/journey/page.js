@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { apiFetch } from '@/lib/api';
 import {
   Map, Briefcase, BarChart3, Plus, ChevronDown, ChevronRight,
   CheckCircle2, Circle, Clock, Trash2, Loader2, Play, Pause,
@@ -43,16 +44,16 @@ export default function JourneyPage() {
     try {
       if (tab === 'roadmaps') {
         const [r, t] = await Promise.all([
-          fetch('/api/roadmaps').then(r => r.json()),
-          fetch('/api/roadmaps?templates=true').then(r => r.json()),
+          apiFetch('/api/roadmaps').then(r => r.json()),
+          apiFetch('/api/roadmaps?templates=true').then(r => r.json()),
         ]);
         if (r.success) setRoadmaps(r.data);
         if (t.success) setTemplates(t.data);
       } else if (tab === 'applications') {
-        const r = await fetch('/api/applications').then(r => r.json());
+        const r = await apiFetch('/api/applications').then(r => r.json());
         if (r.success) setApps(r.data);
       } else {
-        const r = await fetch('/api/analytics').then(r => r.json());
+        const r = await apiFetch('/api/analytics').then(r => r.json());
         if (r.success) setAnalytics(r.data);
       }
     } catch (err) { console.error(err); }
@@ -62,7 +63,7 @@ export default function JourneyPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   async function createFromTemplate(idx) {
-    await fetch('/api/roadmaps', {
+    await apiFetch('/api/roadmaps', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ templateIndex: idx }),
     });
@@ -71,7 +72,7 @@ export default function JourneyPage() {
   }
 
   async function toggleTask(roadmapId, milestoneId, taskId) {
-    await fetch(`/api/roadmaps/${roadmapId}`, {
+    await apiFetch(`/api/roadmaps/${roadmapId}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ toggleTask: { milestoneId, taskId } }),
     });
@@ -79,13 +80,13 @@ export default function JourneyPage() {
   }
 
   async function deleteRoadmap(id) {
-    await fetch(`/api/roadmaps/${id}`, { method: 'DELETE' });
+    await apiFetch(`/api/roadmaps/${id}`, { method: 'DELETE' });
     fetchData();
   }
 
   async function createApp() {
     if (!appForm.company || !appForm.role) return;
-    await fetch('/api/applications', {
+    await apiFetch('/api/applications', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(appForm),
     });
@@ -95,7 +96,7 @@ export default function JourneyPage() {
   }
 
   async function updateAppStatus(id, status) {
-    await fetch(`/api/applications/${id}`, {
+    await apiFetch(`/api/applications/${id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     });
@@ -103,7 +104,7 @@ export default function JourneyPage() {
   }
 
   async function deleteApp(id) {
-    await fetch(`/api/applications/${id}`, { method: 'DELETE' });
+    await apiFetch(`/api/applications/${id}`, { method: 'DELETE' });
     fetchData();
   }
 

@@ -1,5 +1,6 @@
 'use client';
 import { createContext, useContext, useState, useEffect } from 'react';
+import { apiFetch } from './api';
 
 const AuthContext = createContext({ session: null, loading: true });
 
@@ -10,7 +11,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     async function loadSession() {
       try {
-        const res = await fetch('/api/user/profile');
+        const res = await apiFetch('/api/user/profile');
         const data = await res.json();
         if (data.success && data.data) {
           setSession({ user: data.data });

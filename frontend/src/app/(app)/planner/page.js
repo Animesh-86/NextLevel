@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { apiFetch } from '@/lib/api';
 import {
   ChevronLeft, ChevronRight, Plus, CalendarDays,
   Clock, CheckCircle2, BarChart3, X, Loader2
@@ -73,7 +74,7 @@ export default function StudyPlanner() {
     try {
       const start = weekStart.toISOString();
       const end = weekEnd.toISOString();
-      const res = await fetch(`/api/planner?start=${start}&end=${end}`);
+      const res = await apiFetch(`/api/planner?start=${start}&end=${end}`);
       const data = await res.json();
       if (data.success) setTasks(data.data);
     } catch (err) {
@@ -109,7 +110,7 @@ export default function StudyPlanner() {
 
   async function handleStatusToggle(id, newStatus) {
     try {
-      await fetch(`/api/planner/${id}`, {
+      await apiFetch(`/api/planner/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
@@ -122,7 +123,7 @@ export default function StudyPlanner() {
 
   async function handleDelete(id) {
     try {
-      await fetch(`/api/planner/${id}`, { method: 'DELETE' });
+      await apiFetch(`/api/planner/${id}`, { method: 'DELETE' });
       fetchTasks();
     } catch (err) {
       console.error('Delete failed:', err);
@@ -133,7 +134,7 @@ export default function StudyPlanner() {
     if (!newTask.title.trim()) return;
     setSaving(true);
     try {
-      await fetch('/api/planner', {
+      await apiFetch('/api/planner', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

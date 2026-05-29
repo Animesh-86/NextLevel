@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import EmptyState from '@/components/EmptyState';
+import { apiFetch } from '@/lib/api';
 import { Search, Upload, Plus, Trash2, Edit2, FileText, File, CheckCircle, AlertCircle, X } from 'lucide-react';
 
 export default function ManageQuestions() {
@@ -32,7 +33,7 @@ export default function ManageQuestions() {
 
   async function fetchExams() {
     try {
-      const res = await fetch('/api/exams');
+      const res = await apiFetch('/api/exams');
       const data = await res.json();
       if (data.success) {
         setExams(data.data);
@@ -52,7 +53,7 @@ export default function ManageQuestions() {
       if (selectedModule !== 'all') params.set('module', selectedModule);
       if (searchQuery) params.set('search', searchQuery);
 
-      const res = await fetch(`/api/questions?${params}`);
+      const res = await apiFetch(`/api/questions?${params}`);
       const data = await res.json();
       if (data.success) setQuestions(data.data);
     } catch (err) {
@@ -63,7 +64,7 @@ export default function ManageQuestions() {
   async function handleDelete() {
     if (!deleteTarget) return;
     try {
-      const res = await fetch(`/api/questions/${deleteTarget._id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/questions/${deleteTarget._id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         toast.success('Question deleted');
@@ -95,7 +96,7 @@ export default function ManageQuestions() {
         return;
       }
 
-      const res = await fetch('/api/import', { method: 'POST', body: formData });
+      const res = await apiFetch('/api/import', { method: 'POST', body: formData });
       const data = await res.json();
 
       if (data.success) {
@@ -118,7 +119,7 @@ export default function ManageQuestions() {
   async function handleImportConfirm() {
     if (!importPreview?.length) return;
     try {
-      const res = await fetch('/api/questions', {
+      const res = await apiFetch('/api/questions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(importPreview),
