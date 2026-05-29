@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/components/Toast';
+import { apiFetch } from '@/lib/api';
 import { BrainCircuit, Check, X, Clock, Play, Flag, AlertTriangle, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 
 export default function FocusTest() {
@@ -37,7 +38,7 @@ export default function FocusTest() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch('/api/exams');
+        const res = await apiFetch('/api/exams');
         const data = await res.json();
         if (data.success && data.data.length > 0) {
           setExams(data.data);
@@ -92,7 +93,7 @@ export default function FocusTest() {
     if (!selectedExam) { toast.error('Select an exam'); return; }
 
     try {
-      const res = await fetch(`/api/questions?examId=${selectedExam}&limit=${questionCount}`);
+      const res = await apiFetch(`/api/questions?examId=${selectedExam}&limit=${questionCount}`);
       const data = await res.json();
 
       if (!data.success || data.data.length === 0) {
@@ -200,7 +201,7 @@ export default function FocusTest() {
     const passed = scorePercent >= (exam?.passPercentage || 75);
 
     try {
-      const res = await fetch('/api/results', {
+      const res = await apiFetch('/api/results', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import EmptyState from '@/components/EmptyState';
+import { apiFetch } from '@/lib/api';
 import { Plus, Edit2, Trash2, BookOpen, Clock, Target, Users } from 'lucide-react';
 
 export default function ExamsPage() {
@@ -26,7 +27,7 @@ export default function ExamsPage() {
 
   async function fetchExams() {
     try {
-      const res = await fetch('/api/exams');
+      const res = await apiFetch('/api/exams');
       const data = await res.json();
       if (data.success) setExams(data.data);
     } catch (err) {
@@ -42,7 +43,7 @@ export default function ExamsPage() {
       const url = editingExam ? `/api/exams/${editingExam._id}` : '/api/exams';
       const method = editingExam ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -66,7 +67,7 @@ export default function ExamsPage() {
   async function handleDelete() {
     if (!deleteTarget) return;
     try {
-      const res = await fetch(`/api/exams/${deleteTarget._id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/exams/${deleteTarget._id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         toast.success('Exam deleted');

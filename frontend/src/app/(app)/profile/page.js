@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/Toast';
 import { useSession } from '@/lib/useAuth';
+import { apiFetch } from '@/lib/api';
 import { SkeletonCard } from '@/components/SkeletonLoader';
 import { User, Mail, Calendar, Flame, BookOpen, HelpCircle, Clock, Award, Save, Lock, Eye, EyeOff } from 'lucide-react';
 
@@ -20,7 +21,7 @@ export default function ProfilePage() {
   useEffect(() => {
     async function fetchProfile() {
       try {
-        const res = await fetch('/api/user/profile');
+        const res = await apiFetch('/api/user/profile');
         const data = await res.json();
         if (data.success) {
           setProfile(data.data);
@@ -36,7 +37,7 @@ export default function ProfilePage() {
 
   async function handleSaveName() {
     try {
-      const res = await fetch('/api/user/profile', {
+      const res = await apiFetch('/api/user/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: nameInput }),
@@ -60,7 +61,7 @@ export default function ProfilePage() {
       return;
     }
     try {
-      const res = await fetch('/api/user/profile', {
+      const res = await apiFetch('/api/user/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
