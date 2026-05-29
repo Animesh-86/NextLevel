@@ -1,5 +1,5 @@
-import { requireAuth } from '@/lib/auth';
 import { NextResponse } from 'next/server';
+import { jwtVerify } from 'jose';
 
 // Basic in-memory rate limiter for serverless (per-instance)
 const rateLimitMap = new Map();
@@ -27,6 +27,34 @@ function applyRateLimit(ip) {
   return currentData.count <= RATE_LIMIT;
 }
 
+/**
+ * Verify JWT directly from the request cookies.
+ * This avoids using `cookies()` from next/headers which does NOT work
+ * reliably in middleware context.
+ */
+async function verifyTokenFromRequest(req) {
+  const token = req.cookies.get('token')?.value;
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const secret = new TextEncoder().encode(
+      process.env.JWT_SECRET || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+    );
+    const { payload } = await jwtVerify(token, secret);
+
+    return {
+      id: payload.sub,
+      email: payload.email,
+      role: payload.role,
+    };
+  } catch (err) {
+    return null;
+  }
+}
+
 async function handleProxy(req) {
   // 1. Rate Limiting Check
   const ip = req.ip || req.headers.get('x-forwarded-for') || '127.0.0.1';
@@ -34,10 +62,7 @@ async function handleProxy(req) {
     return new NextResponse('Too Many Requests. Please slow down.', { status: 429 });
   }
 
-  const result = await requireAuth();
-  const session = result.user ? { user: result.user } : null;
   const { pathname } = req.nextUrl;
-  const isLoggedIn = !!session;
 
   // Public paths that don't require auth
   const publicPaths = ['/login', '/api/auth', '/'];
@@ -46,17 +71,21 @@ async function handleProxy(req) {
     return pathname.startsWith(path);
   });
 
+  // For public paths, only do the JWT check if we need to redirect logged-in users away from /login
   if (isPublicPath) {
-    // Allow logged-in users to visit landing page if they want
-    // Redirect logged-in users from login page to dashboard
-    if (isLoggedIn && pathname === '/login') {
-      return NextResponse.redirect(new URL('/dashboard', req.url));
+    if (pathname === '/login') {
+      const user = await verifyTokenFromRequest(req);
+      if (user) {
+        return NextResponse.redirect(new URL('/dashboard', req.url));
+      }
     }
     return NextResponse.next();
   }
 
-  // Protect all other routes
-  if (!isLoggedIn) {
+  // Protected routes: verify JWT from request cookies
+  const user = await verifyTokenFromRequest(req);
+
+  if (!user) {
     const loginUrl = new URL('/login', req.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);
@@ -65,7 +94,7 @@ async function handleProxy(req) {
   // Admin-only routes
   const adminPaths = ['/manage', '/exams'];
   const isAdminPath = adminPaths.some(path => pathname.startsWith(path));
-  if (isAdminPath && session?.user?.role !== 'admin') {
+  if (isAdminPath && user.role !== 'admin') {
     return NextResponse.redirect(new URL('/dashboard', req.url));
   }
 
