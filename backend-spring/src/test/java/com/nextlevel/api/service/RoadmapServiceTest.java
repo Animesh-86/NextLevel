@@ -64,6 +64,7 @@ class RoadmapServiceTest {
     @Test
     void testGetRoadmapNotFound() {
         when(roadmapRepository.findByIdAndUserId("r1", "u1")).thenReturn(Optional.empty());
-        assertThrows(ResponseStatusException.class, () -> roadmapService.getRoadmap("r1", "u1"));
+        Optional<Roadmap> result = roadmapService.getRoadmap("r1", "u1");
+        assertTrue(result.isEmpty());
     }
 }

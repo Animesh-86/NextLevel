@@ -46,6 +46,12 @@ class CaptureControllerTest {
     @MockBean
     private OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
 
+    @MockBean
+    private com.nextlevel.api.service.CaptureProcessingService captureProcessingService;
+
+    @MockBean
+    private org.jobrunr.scheduling.JobScheduler jobScheduler;
+
     @Test
     void testCreateCaptureValidationFail() throws Exception {
         // Missing rawContent which has @NotBlank
