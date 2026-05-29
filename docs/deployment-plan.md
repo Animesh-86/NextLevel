@@ -52,6 +52,9 @@ This document outlines a complete, production-ready deployment plan for the Next
 - `APP_PORT` — backend port (default 8080)
 - `APP_JWT_SECRET` — 32+ byte secret for JWT signing
 - `GEMINI_API_KEY` — provider API key (if using Gemini embedding/LLM)
+- `APP_FRONTEND_URL` — public Vercel URL used by Spring OAuth success redirects, for example `https://your-app.vercel.app`
+- `CORS_ALLOWED_ORIGINS` — comma-separated frontend origins allowed to call the backend, for example `https://your-app.vercel.app,https://www.your-app.vercel.app`
+- `NEXT_PUBLIC_API_BASE_URL` — public backend URL used by the frontend to call Spring endpoints, for example `https://your-backend.onrender.com`
 - `SENTRY_DSN` (optional) — error monitoring
 - `LOG_LEVEL` — e.g., `INFO` or `DEBUG` for staging
 - `SPRING_PROFILES_ACTIVE` — set `prod` for production settings

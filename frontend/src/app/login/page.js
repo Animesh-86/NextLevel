@@ -1,24 +1,18 @@
 'use client';
 import { useState } from 'react';
 
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { LogIn, UserPlus, Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { apiFetch, getApiBaseUrl } from '@/lib/api';
 
 export default function LoginPage() {
-  const [mode, setMode] = useState('login');
+  const searchParams = useSearchParams();
+  const [mode, setMode] = useState(searchParams.get('mode') === 'register' ? 'register' : 'login');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('mode') === 'register') {
-      setMode('register');
-    }
-  }, []);
 
   const [form, setForm] = useState({
     name: '',
@@ -45,9 +39,9 @@ export default function LoginPage() {
           return;
         }
 
-        const res = await fetch('/api/auth/register', {
+        const res = await apiFetch('/api/auth/register', {
+          auth: false,
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: form.name,
             email: form.email,
@@ -63,9 +57,9 @@ export default function LoginPage() {
         }
 
         // Auto-login after registration
-        const loginRes = await fetch('/api/auth/login', {
+        const loginRes = await apiFetch('/api/auth/login', {
+          auth: false,
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: form.email,
             password: form.password,
@@ -82,9 +76,9 @@ export default function LoginPage() {
         }
         setLoading(false);
       } else {
-        const res = await fetch('/api/auth/login', {
+        const res = await apiFetch('/api/auth/login', {
+          auth: false,
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: form.email,
             password: form.password,
@@ -263,7 +257,7 @@ export default function LoginPage() {
         </div>
 
         <a
-          href={process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/oauth2/authorization/google` : 'http://localhost:8080/oauth2/authorization/google'}
+          href={`${getApiBaseUrl()}/oauth2/authorization/google`}
           className="btn btn-secondary"
           style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', textDecoration: 'none' }}
         >
