@@ -45,7 +45,7 @@ export default function LoginPage() {
           return;
         }
 
-        const res = await fetch('http://localhost:8080/api/auth/register', {
+        const res = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -63,7 +63,7 @@ export default function LoginPage() {
         }
 
         // Auto-login after registration
-        const loginRes = await fetch('http://localhost:8080/api/auth/login', {
+        const loginRes = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -82,7 +82,7 @@ export default function LoginPage() {
         }
         setLoading(false);
       } else {
-        const res = await fetch('http://localhost:8080/api/auth/login', {
+        const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -263,7 +263,7 @@ export default function LoginPage() {
         </div>
 
         <a
-          href="http://localhost:8080/oauth2/authorization/google"
+          href={process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/oauth2/authorization/google` : 'http://localhost:8080/oauth2/authorization/google'}
           className="btn btn-secondary"
           style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', textDecoration: 'none' }}
         >
