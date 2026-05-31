@@ -1,5 +1,5 @@
 'use client';
-import { CheckCircle2, Circle, Clock, Trash2, GripVertical, FileText, Inbox } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, Trash2, GripVertical, FileText, Inbox, Play } from 'lucide-react';
 
 const priorityColors = {
   high: '#ef4444',
@@ -74,13 +74,26 @@ export default function PlannerTaskCard({ task, onStatusToggle, onDelete }) {
         </div>
       </div>
 
-      <button
-        className="icon-btn planner-task-delete"
-        onClick={() => onDelete(task._id)}
-        title="Delete"
-      >
-        <Trash2 size={12} />
-      </button>
+      <div className="flex gap-1">
+        <button
+          className="icon-btn planner-task-play hover:text-primary transition-colors"
+          onClick={() => {
+            if (window.startFocusTimer) {
+              window.startFocusTimer(task.duration || 25, task._id);
+            }
+          }}
+          title="Start Focus Timer"
+        >
+          <Play size={12} />
+        </button>
+        <button
+          className="icon-btn planner-task-delete hover:text-destructive transition-colors"
+          onClick={() => onDelete(task._id)}
+          title="Delete"
+        >
+          <Trash2 size={12} />
+        </button>
+      </div>
     </div>
   );
 }

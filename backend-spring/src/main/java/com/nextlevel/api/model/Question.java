@@ -24,6 +24,10 @@ public class Question {
     private String explanation;
     private Integer timesTested = 0;
     private Integer timesFailed = 0;
+    private Double easeFactor = 2.5;
+    private Integer interval = 0;
+    private Instant nextReviewDate;
+    private Integer repetitions = 0;
     private Instant createdAt;
     private Instant updatedAt;
 }

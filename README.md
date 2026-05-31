@@ -27,11 +27,11 @@ graph TD
         
         subgraph "AI & Processing Core"
             JobRunr -->|Scrapes| Jina[Jina AI Reader]
-            JobRunr -->|Analyzes via Resilience4j| Gemini[Google Gemini 2.0 Flash]
-            JobRunr -->|Vectorizes| Embeddings[Google text-embedding-004]
+            JobRunr -->|Analyzes via Resilience4j| LLM[Groq Llama 3.3]
+            JobRunr -->|Vectorizes| Embeddings[Embedding Model]
         end
         
-        API -->|Rate Limited via Bucket4j| Gemini
+        API -->|Rate Limited via Bucket4j| LLM
     end
 
     subgraph "Data Persistence"
@@ -65,7 +65,7 @@ NextLevel is built with a focus on reliability, scalability, and modern engineer
 ### Infrastructure & Database
 *   **Database**: MongoDB Atlas (Document Store)
 *   **Search**: MongoDB Atlas Vector Search
-*   **AI Integration**: Spring AI (Google Gemini Chat & Embedding Models)
+*   **AI Integration**: Spring AI (Groq API, Llama-3.3)
 
 ---
 
@@ -83,13 +83,14 @@ NextLevel is built with a focus on reliability, scalability, and modern engineer
 *   **Auto-Triage**: The AI engine automatically detects if a captured input is an exam, project, deadline, or general resource.
 *   **Urgency Detection**: Flags critical notes and deadlines automatically, integrating them into user workflows.
 
-### 4. Automated Learning Roadmaps
-*   **Path Generation**: Generates structured, milestone-driven learning roadmaps for complex topics based on user prompts.
-*   **Tracking**: Maintains progress state across AI-generated milestones and tasks.
+### 4. Spaced Repetition & Gamification
+*   **Algorithmic Review**: Implements the SM-2 spaced repetition algorithm to schedule optimal review intervals based on user recall quality.
+*   **Engagement Engine**: Gamification system awarding XP and dynamic level progression for completed study sessions and flashcards.
 
-### 5. Exam & Assessment Engine
-*   **Mock Assessments**: Provides a comprehensive engine for taking practice exams.
-*   **Performance Analytics**: Calculates pass rates, identifies weak areas, and flags questions requiring review using optimized MongoDB aggregation pipelines.
+### 5. Interactive Knowledge Graph & AI Chat
+*   **Visual Topography**: 2D force-directed knowledge graph mapping semantic connections between isolated captures.
+*   **SSE Streaming Chat**: Real-time contextual AI assistant using Server-Sent Events (SSE) for low-latency RAG conversations.
+*   **Deep Focus**: Integrated Pomodoro study timer with automated background session logging.
 
 ---
 
@@ -114,7 +115,7 @@ cd NextLevel
 Configure the environment variables in `backend-spring/src/main/resources/application.yml` or via system environment variables:
 ```env
 MONGODB_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/nextlevel
-GEMINI_API_KEY=your_google_api_key
+GROQ_API_KEY=your_groq_api_key
 GOOGLE_CLIENT_ID=your_oauth_client_id
 GOOGLE_CLIENT_SECRET=your_oauth_client_secret
 JWT_SECRET=your_secure_jwt_secret

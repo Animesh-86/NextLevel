@@ -140,6 +140,20 @@ export default function ProfilePage() {
                 <Calendar size={14} /> Joined {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
               </span>
             </div>
+            <div style={{ marginTop: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                <span>Level {profile.level || 1}</span>
+                <span style={{ color: 'var(--primary)' }}>{profile.xp || 0} / {(profile.level || 1) * 100} XP</span>
+              </div>
+              <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--bg-accent)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ 
+                  height: '100%', 
+                  backgroundColor: 'var(--primary)', 
+                  width: `${((profile.xp || 0) % 100)}%`,
+                  transition: 'width 0.5s ease-out'
+                }}></div>
+              </div>
+            </div>
           </div>
         </div>
 

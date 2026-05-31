@@ -6,9 +6,10 @@ import { useState } from 'react';
 import {
   LayoutDashboard, BookOpen, Play, Trophy, Home,
   UserCircle, Settings, LogOut, Menu, X, ChevronRight, Inbox,
-  FolderOpen, CalendarDays, Map, Link2
+  FolderOpen, CalendarDays, Map, Link2, Share2, Sparkles
 } from 'lucide-react';
 import ReminderBell from '@/components/ReminderBell';
+import AiChatModal from '@/components/AiChatModal';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -16,6 +17,7 @@ const navItems = [
   { href: '/vault', label: 'File Vault', icon: FolderOpen },
   { href: '/planner', label: 'Planner', icon: CalendarDays },
   { href: '/journey', label: 'Journey', icon: Map },
+  { href: '/graph', label: 'Knowledge Graph', icon: Share2 },
   { href: '/links', label: 'Links', icon: Link2 },
   { href: '/exams', label: 'Exams', icon: BookOpen, adminOnly: true },
   { href: '/manage', label: 'Question Bank', icon: Settings, adminOnly: true },
@@ -28,6 +30,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const user = session?.user;
   const isAdmin = user?.role === 'admin';
 
@@ -97,6 +100,16 @@ export default function Sidebar() {
           })}
         </nav>
 
+        <div className="px-4 py-2">
+          <button 
+            onClick={() => setChatOpen(true)}
+            className="w-full flex items-center justify-center space-x-2 py-2 px-4 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+          >
+            <Sparkles size={16} />
+            <span className="font-medium">Ask AI</span>
+          </button>
+        </div>
+
         <div className="sidebar-footer">
           {user && (
             <div className="sidebar-user">
@@ -122,6 +135,8 @@ export default function Sidebar() {
           </button>
         </div>
       </aside>
+
+      <AiChatModal isOpen={chatOpen} onClose={() => setChatOpen(false)} />
     </>
   );
 }

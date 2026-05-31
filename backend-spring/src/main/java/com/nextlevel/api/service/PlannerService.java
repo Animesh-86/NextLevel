@@ -18,9 +18,11 @@ public class PlannerService {
 
     private static final Logger log = LoggerFactory.getLogger(PlannerService.class);
     private final PlannerTaskRepository plannerTaskRepository;
+    private final GamificationService gamificationService;
 
-    public PlannerService(PlannerTaskRepository plannerTaskRepository) {
+    public PlannerService(PlannerTaskRepository plannerTaskRepository, GamificationService gamificationService) {
         this.plannerTaskRepository = plannerTaskRepository;
+        this.gamificationService = gamificationService;
     }
 
     public List<PlannerTask> listTasks(String userId, Instant start, Instant end) {
@@ -63,7 +65,12 @@ public class PlannerService {
             if (request.duration() != null) task.setDuration(request.duration());
             if (request.category() != null) task.setCategory(request.category());
             if (request.priority() != null) task.setPriority(request.priority());
-            if (request.status() != null) task.setStatus(request.status());
+            if (request.status() != null) {
+                if (!"completed".equals(task.getStatus()) && "completed".equals(request.status())) {
+                    gamificationService.awardXp(userId, 20, "Completed a task");
+                }
+                task.setStatus(request.status());
+            }
             if (request.linkedCaptureId() != null) task.setLinkedCaptureId(request.linkedCaptureId());
             if (request.linkedFileId() != null) task.setLinkedFileId(request.linkedFileId());
             if (request.isRecurring() != null) task.setIsRecurring(request.isRecurring());

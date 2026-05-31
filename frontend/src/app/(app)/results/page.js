@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Trophy, Calendar, Target, Filter, ChevronRight, Award } from 'lucide-react';
 import { SkeletonCard } from '@/components/SkeletonLoader';
 import EmptyState from '@/components/EmptyState';
+import { apiFetch } from '@/lib/api';
 
 export default function ResultsPage() {
   const [results, setResults] = useState([]);
@@ -17,7 +18,7 @@ export default function ResultsPage() {
 
   async function fetchResults() {
     try {
-      const res = await fetch(`/api/results?page=${page}&limit=15`);
+      const res = await apiFetch(`/api/results?page=${page}&limit=15`);
       const data = await res.json();
       if (data.success) {
         setResults(data.data);

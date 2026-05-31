@@ -24,9 +24,11 @@ public class CaptureService {
 
     private static final Logger log = LoggerFactory.getLogger(CaptureService.class);
     private final CaptureRepository captureRepository;
+    private final GamificationService gamificationService;
 
-    public CaptureService(CaptureRepository captureRepository) {
+    public CaptureService(CaptureRepository captureRepository, GamificationService gamificationService) {
         this.captureRepository = captureRepository;
+        this.gamificationService = gamificationService;
     }
 
     public Page<Capture> listCaptures(String userId, String status, Pageable pageable) {
@@ -54,8 +56,9 @@ public class CaptureService {
         capture.setCreatedAt(now);
         capture.setUpdatedAt(now);
 
-        return captureRepository.save(capture);
-    }
+        Capture saved = captureRepository.save(capture);
+        gamificationService.awardXp(userId, 10, "Created a new capture");
+        return saved;    }
 
     public Optional<Capture> getCapture(String id, String userId) {
         return captureRepository.findByIdAndUserId(id, userId);

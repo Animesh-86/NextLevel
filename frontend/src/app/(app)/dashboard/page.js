@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from '@/lib/useAuth';
 import { apiFetch } from '@/lib/api';
+import DailyDigestCard from '@/components/DailyDigestCard';
 import Link from 'next/link';
 import {
   Flame, Target, BookOpen, Clock, Play, Map, Briefcase, FolderOpen,
@@ -54,6 +55,8 @@ export default function Dashboard() {
           <div className="dash-streak"><Flame size={18} /> {analytics.streak}-Day Streak</div>
         )}
       </header>
+
+      <DailyDigestCard />
 
       {loading ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>

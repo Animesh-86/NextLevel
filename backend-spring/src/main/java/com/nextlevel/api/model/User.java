@@ -1,6 +1,9 @@
 package com.nextlevel.api.model;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
@@ -34,6 +37,9 @@ public class User {
     private Instant lastActiveDate;
     private Integer totalStudyMinutes = 0;
     private Integer questionsAnswered = 0;
+    private Integer xp = 0;
+    private Integer level = 1;
+    private List<Map<String, Object>> achievements = new ArrayList<>();
     private Instant createdAt;
     private Instant updatedAt;
 }
