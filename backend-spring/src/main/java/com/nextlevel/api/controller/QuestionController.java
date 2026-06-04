@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.nextlevel.api.dto.ApiResponse;
+import com.nextlevel.api.dto.TestQuestionDto;
 import com.nextlevel.api.model.Question;
 import com.nextlevel.api.repository.QuestionRepository;
 import com.nextlevel.api.security.CurrentUser;
@@ -37,6 +38,7 @@ public class QuestionController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<Map<String, Object>>> list(
+            @AuthenticationPrincipal CurrentUser currentUser,
             @RequestParam(required = false) String examId,
             @RequestParam(required = false) String module,
             @RequestParam(required = false) String search,
@@ -44,7 +46,9 @@ public class QuestionController {
             @RequestParam(defaultValue = "50") int limit) {
 
         PageRequest pageable = PageRequest.of(Math.max(page - 1, 0), Math.max(limit, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Question> questionPage = examId == null ? questionRepository.findAll(pageable) : questionRepository.findByExamId(examId, pageable);
+        Page<Question> questionPage = examId == null ? 
+            questionRepository.findByUserId(currentUser.getUserId(), pageable) : 
+            questionRepository.findByExamIdAndUserId(examId, currentUser.getUserId(), pageable);
 
         List<Question> filtered = questionPage.getContent().stream()
                 .filter(q -> module == null || "all".equals(module) || module.equals(q.getModule()))
@@ -60,15 +64,34 @@ public class QuestionController {
                         "pages", questionPage.getTotalPages()))));
     }
 
+    @GetMapping("/test")
+    public ResponseEntity<ApiResponse<List<TestQuestionDto>>> getTestQuestions(
+            @RequestParam String examId) {
+        
+        // Find all questions for the exam (could be paginated if huge, but typically tests are fetched whole)
+        PageRequest pageable = PageRequest.of(0, 1000); 
+        List<Question> questions = questionRepository.findByExamId(examId, pageable).getContent();
+        
+        List<TestQuestionDto> dtos = questions.stream().map(q -> new TestQuestionDto(
+                q.getId(),
+                q.getExamId(),
+                q.getModule(),
+                q.getType(),
+                q.getScenario(),
+                q.getOptions(),
+                q.getChooseCount()
+        )).toList();
+        
+        return ResponseEntity.ok(ApiResponse.success(dtos));
+    }
+
     @PostMapping
     public ResponseEntity<ApiResponse<Object>> create(@AuthenticationPrincipal CurrentUser currentUser, @RequestBody Object body) {
-        if (!"admin".equals(currentUser.getRole())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Forbidden"));
-        }
 
         Instant now = Instant.now();
         if (body instanceof List<?> list) {
             List<Question> questions = list.stream().filter(Map.class::isInstance).map(Map.class::cast).map(this::fromMap).peek(q -> {
+                q.setUserId(currentUser.getUserId());
                 q.setCreatedAt(now);
                 q.setUpdatedAt(now);
             }).toList();
@@ -79,6 +102,7 @@ public class QuestionController {
             @SuppressWarnings("unchecked")
             Map<String, Object> map = (Map<String, Object>) mapObj;
             Question q = fromMap(map);
+            q.setUserId(currentUser.getUserId());
             q.setCreatedAt(now);
             q.setUpdatedAt(now);
             return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(questionRepository.save(q)));
@@ -90,21 +114,27 @@ public class QuestionController {
     @DeleteMapping
     public ResponseEntity<ApiResponse<Object>> bulkDelete(@AuthenticationPrincipal CurrentUser currentUser,
             @RequestParam(required = false) String examId) {
-        if (!"admin".equals(currentUser.getRole())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Forbidden"));
-        }
         if (examId == null || examId.isBlank()) {
             return ResponseEntity.badRequest().body(ApiResponse.error("examId required for bulk delete"));
         }
 
-        questionRepository.findAll().stream().filter(q -> examId.equals(q.getExamId())).forEach(questionRepository::delete);
+        if ("admin".equals(currentUser.getRole())) {
+            questionRepository.deleteByExamId(examId);
+        } else {
+            questionRepository.deleteByExamIdAndUserId(examId, currentUser.getUserId());
+        }
         return ResponseEntity.ok(ApiResponse.success("Cleared questions for exam"));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<Question>> getById(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<Question>> getById(@AuthenticationPrincipal CurrentUser currentUser, @PathVariable String id) {
         Question question = questionRepository.findById(id).orElse(null);
         if (question == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error("Question not found"));
+        
+        if (!currentUser.getUserId().equals(question.getUserId()) && !"admin".equals(currentUser.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Forbidden"));
+        }
+        
         return ResponseEntity.ok(ApiResponse.success(question));
     }
 
@@ -113,12 +143,13 @@ public class QuestionController {
             @AuthenticationPrincipal CurrentUser currentUser,
             @PathVariable String id,
             @RequestBody Map<String, Object> body) {
-        if (!"admin".equals(currentUser.getRole())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Forbidden"));
-        }
 
         Question q = questionRepository.findById(id).orElse(null);
         if (q == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error("Question not found"));
+        
+        if (!currentUser.getUserId().equals(q.getUserId()) && !"admin".equals(currentUser.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Forbidden"));
+        }
 
         if (Boolean.TRUE.equals(body.get("_srsUpdate"))) {
             if (Boolean.TRUE.equals(body.get("incrementTested"))) q.setTimesTested((q.getTimesTested() == null ? 0 : q.getTimesTested()) + 1);
@@ -135,12 +166,13 @@ public class QuestionController {
     public ResponseEntity<ApiResponse<Map<String, String>>> delete(
             @AuthenticationPrincipal CurrentUser currentUser,
             @PathVariable String id) {
-        if (!"admin".equals(currentUser.getRole())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Forbidden"));
-        }
 
         Question question = questionRepository.findById(id).orElse(null);
         if (question == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error("Question not found"));
+        
+        if (!currentUser.getUserId().equals(question.getUserId()) && !"admin".equals(currentUser.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Forbidden"));
+        }
 
         questionRepository.delete(question);
         return ResponseEntity.ok(ApiResponse.success(Map.of("message", "Question deleted")));

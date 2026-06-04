@@ -26,12 +26,15 @@ public class SpacedRepetitionService {
         this.gamificationService = gamificationService;
     }
 
-    public List<Question> getDueReviews(int limit) {
+    public List<Question> getDueReviews(String userId, int limit) {
         Query query = new Query();
-        Criteria criteria = new Criteria().orOperator(
-                Criteria.where("nextReviewDate").lte(Instant.now()),
-                Criteria.where("nextReviewDate").exists(false),
-                Criteria.where("nextReviewDate").is(null)
+        Criteria criteria = new Criteria().andOperator(
+            Criteria.where("userId").is(userId),
+            new Criteria().orOperator(
+                    Criteria.where("nextReviewDate").lte(Instant.now()),
+                    Criteria.where("nextReviewDate").exists(false),
+                    Criteria.where("nextReviewDate").is(null)
+            )
         );
         query.addCriteria(criteria);
         query.limit(limit);
@@ -40,6 +43,9 @@ public class SpacedRepetitionService {
 
     public Question processReview(String questionId, int quality, String userId) {
         Question question = questionRepository.findById(questionId).orElseThrow(() -> new RuntimeException("Question not found"));
+        if (!question.getUserId().equals(userId)) {
+            throw new SecurityException("Forbidden");
+        }
 
         int repetitions = question.getRepetitions() == null ? 0 : question.getRepetitions();
         double easeFactor = question.getEaseFactor() == null ? 2.5 : question.getEaseFactor();

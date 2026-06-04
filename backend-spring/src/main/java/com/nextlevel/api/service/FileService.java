@@ -5,10 +5,17 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.UUID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import jakarta.annotation.PostConstruct;
 
 import com.nextlevel.api.dto.FilePatchRequest;
 import com.nextlevel.api.model.StudyFile;
@@ -20,8 +27,20 @@ public class FileService {
     private static final Logger log = LoggerFactory.getLogger(FileService.class);
     private final StudyFileRepository studyFileRepository;
 
+    @Value("${app.upload.dir:data/uploads}")
+    private String uploadDir;
+
     public FileService(StudyFileRepository studyFileRepository) {
         this.studyFileRepository = studyFileRepository;
+    }
+
+    @PostConstruct
+    public void init() {
+        try {
+            Files.createDirectories(Paths.get(uploadDir));
+        } catch (Exception e) {
+            log.error("Could not create upload directory", e);
+        }
     }
 
     public List<StudyFile> listFiles(String userId, String category, String fileType, String search) {
@@ -44,8 +63,13 @@ public class FileService {
         }
 
         String mimeType = file.getContentType() == null ? "application/octet-stream" : file.getContentType();
-        String base64 = Base64.getEncoder().encodeToString(file.getBytes());
-        String dataUri = "data:" + mimeType + ";base64," + base64;
+        String extension = "";
+        if (file.getOriginalFilename() != null && file.getOriginalFilename().contains(".")) {
+            extension = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf("."));
+        }
+        String generatedName = UUID.randomUUID().toString() + extension;
+        Path targetPath = Paths.get(uploadDir).resolve(generatedName);
+        Files.copy(file.getInputStream(), targetPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 
         StudyFile sf = new StudyFile();
         sf.setUserId(userId);
@@ -53,7 +77,7 @@ public class FileService {
         sf.setFileType(detectType(mimeType));
         sf.setMimeType(mimeType);
         sf.setFileSize(file.getSize());
-        sf.setFileData(dataUri);
+        sf.setFilePath(targetPath.toString());
         sf.setTitle(title == null || title.isBlank() ? file.getOriginalFilename() : title);
         sf.setSummary("");
         sf.setCategory(category == null ? "other" : category);
@@ -83,7 +107,16 @@ public class FileService {
 
     public void deleteFile(String id, String userId) {
         log.info("Deleting file {} for user {}", id, userId);
-        studyFileRepository.findByIdAndUserId(id, userId).ifPresent(studyFileRepository::delete);
+        studyFileRepository.findByIdAndUserId(id, userId).ifPresent(f -> {
+            if (f.getFilePath() != null) {
+                try {
+                    Files.deleteIfExists(Paths.get(f.getFilePath()));
+                } catch (Exception e) {
+                    log.error("Failed to delete local file {}", f.getFilePath(), e);
+                }
+            }
+            studyFileRepository.delete(f);
+        });
     }
 
     private String detectType(String mimeType) {

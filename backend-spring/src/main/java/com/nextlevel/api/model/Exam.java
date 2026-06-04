@@ -17,6 +17,7 @@ public class Exam {
     private String description;
     private Integer timeLimit;
     private Integer passPercentage;
+    private String userId;
     private Instant createdAt;
     private Instant updatedAt;
 }

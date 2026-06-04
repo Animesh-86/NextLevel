@@ -24,22 +24,26 @@ public class ChatService {
 
     public Flux<String> streamChat(String userId, String query) {
         // Retrieve context using existing semantic search
-        List<Capture> relatedCaptures = semanticSearchService.search(userId, query);
+        List<Capture> relatedCaptures = semanticSearchService.search(userId, query).stream().limit(5).toList();
         
-        String contextText = relatedCaptures.stream()
-                .limit(5)
-                .map(c -> "Title: " + c.getTitle() + "\nCategory: " + c.getCategory() + "\nContent: " + 
-                        (c.getDescription() != null && !c.getDescription().isEmpty() ? c.getDescription() : c.getRawContent()))
-                .collect(Collectors.joining("\n\n---\n\n"));
+        StringBuilder contextBuilder = new StringBuilder();
+        for (int i = 0; i < relatedCaptures.size(); i++) {
+            Capture c = relatedCaptures.get(i);
+            contextBuilder.append("[").append(i + 1).append("] Title: ").append(c.getTitle())
+                    .append("\nCategory: ").append(c.getCategory())
+                    .append("\nContent: ").append(c.getDescription() != null && !c.getDescription().isEmpty() ? c.getDescription() : c.getRawContent())
+                    .append("\n\n---\n\n");
+        }
 
         String systemPrompt = """
                 You are NextLevel AI, a helpful knowledge assistant.
                 You answer the user's questions based strictly on their personal knowledge base context provided below.
                 If the context does not contain the answer, say "I couldn't find that in your knowledge base."
-                Be concise, structured, and helpful.
+                You MUST cite your sources using bracketed numbers corresponding to the source document (e.g., [1], [2]).
+                Do not hallucinate information. Be concise, structured, and helpful.
 
                 Context:
-                """ + contextText;
+                """ + contextBuilder.toString();
 
         return chatClient.prompt()
                 .system(s -> s.text(systemPrompt))

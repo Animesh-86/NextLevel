@@ -16,7 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import com.nextlevel.api.dto.ResultCreateRequest;
+import com.nextlevel.api.dto.ExamGradingRequest;
 import com.nextlevel.api.model.Exam;
 import com.nextlevel.api.model.Question;
 import com.nextlevel.api.model.Result;
@@ -52,24 +52,53 @@ public class ResultService {
         return resultRepository.findByUserIdAndExamId(userId, examId, pageable);
     }
 
-    public Result createResult(String userId, ResultCreateRequest request) {
-        log.info("Creating result for user: {}, exam: {}", userId, request.getExamId());
+    public Result createResult(String userId, ExamGradingRequest request) {
+        log.info("Creating graded result for user: {}, exam: {}", userId, request.getExamId());
+        
+        Exam exam = examRepository.findById(request.getExamId()).orElseThrow(() -> new IllegalArgumentException("Exam not found"));
+        List<Question> questions = questionRepository.findByExamId(request.getExamId());
+        
+        int correctCount = 0;
+        int wrongCount = 0;
+        int skippedCount = 0;
+        int totalCount = questions.size();
+        
+        Map<String, List<Integer>> userAnswers = request.getUserAnswers();
+        
+        for (Question q : questions) {
+            List<Integer> given = userAnswers.get(q.getId());
+            if (given == null || given.isEmpty()) {
+                skippedCount++;
+            } else {
+                List<Integer> expected = q.getAnswer() == null ? List.of() : q.getAnswer();
+                boolean isCorrect = given.size() == expected.size() && given.containsAll(expected);
+                if (isCorrect) {
+                    correctCount++;
+                } else {
+                    wrongCount++;
+                }
+            }
+        }
+        
+        double scorePercent = totalCount == 0 ? 0.0 : ((double) correctCount / totalCount) * 100.0;
+        boolean passed = scorePercent >= exam.getPassPercentage();
+        
         Result result = new Result();
         result.setUserId(userId);
         result.setExamId(request.getExamId());
-        result.setScorePercent(request.getScorePercent());
-        result.setCorrectCount(request.getCorrectCount());
-        result.setWrongCount(request.getWrongCount());
-        result.setSkippedCount(request.getSkippedCount());
-        result.setTotalCount(request.getTotalCount());
-        result.setPassed(request.getPassed());
-        result.setTimeTaken(request.getTimeTaken() == null ? Integer.valueOf(0) : request.getTimeTaken());
-        result.setUserAnswers(request.getUserAnswers());
+        result.setScorePercent(scorePercent);
+        result.setCorrectCount(correctCount);
+        result.setWrongCount(wrongCount);
+        result.setSkippedCount(skippedCount);
+        result.setTotalCount(totalCount);
+        result.setPassed(passed);
+        result.setTimeTaken(request.getTimeTaken() == null ? Integer.valueOf(0) : (int) Math.round(request.getTimeTaken()));
+        result.setUserAnswers(userAnswers);
         result.setCreatedAt(Instant.now());
 
         Result saved = resultRepository.save(result);
         try {
-            updateUserStats(userId, request);
+            updateUserStats(userId, totalCount, result.getTimeTaken());
         } catch (Exception ex) {
             log.error("Failed to update user stats for user: {}", userId, ex);
         }
@@ -85,7 +114,7 @@ public class ResultService {
         return examRepository.findById(examId);
     }
 
-    private void updateUserStats(String userId, ResultCreateRequest request) {
+    private void updateUserStats(String userId, int totalCount, Integer timeTaken) {
         Optional<User> userOpt = userRepository.findById(userId);
         if (userOpt.isEmpty()) return;
 
@@ -105,10 +134,10 @@ public class ResultService {
         }
 
         user.setLastActiveDate(today.atStartOfDay().toInstant(ZoneOffset.UTC));
-        user.setQuestionsAnswered(safeInt(user.getQuestionsAnswered()) + request.getTotalCount());
+        user.setQuestionsAnswered(safeInt(user.getQuestionsAnswered()) + totalCount);
 
-        if (request.getTimeTaken() != null) {
-            int addMinutes = Math.round(request.getTimeTaken() / 60.0f);
+        if (timeTaken != null) {
+            int addMinutes = Math.round(timeTaken / 60.0f);
             user.setTotalStudyMinutes(safeInt(user.getTotalStudyMinutes()) + addMinutes);
         }
 

@@ -68,6 +68,29 @@ public class FileController {
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error("File not found")));
     }
 
+    @GetMapping("/{id}/download")
+    public ResponseEntity<org.springframework.core.io.Resource> download(@AuthenticationPrincipal CurrentUser currentUser, @PathVariable String id) {
+        return fileService.getFile(id, currentUser.getUserId()).map(f -> {
+            try {
+                if (f.getFilePath() == null) {
+                    return ResponseEntity.status(HttpStatus.NOT_FOUND).<org.springframework.core.io.Resource>build();
+                }
+                java.nio.file.Path path = java.nio.file.Paths.get(f.getFilePath());
+                org.springframework.core.io.Resource resource = new org.springframework.core.io.UrlResource(path.toUri());
+                if (resource.exists() || resource.isReadable()) {
+                    return ResponseEntity.ok()
+                            .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + f.getFileName() + "\"")
+                            .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, f.getMimeType())
+                            .body(resource);
+                } else {
+                    return ResponseEntity.status(HttpStatus.NOT_FOUND).<org.springframework.core.io.Resource>build();
+                }
+            } catch (Exception e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).<org.springframework.core.io.Resource>build();
+            }
+        }).orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+    }
+
     @JsonView(Views.Public.class)
     @PatchMapping("/{id}")
     public ResponseEntity<ApiResponse<StudyFile>> patch(@AuthenticationPrincipal CurrentUser currentUser,

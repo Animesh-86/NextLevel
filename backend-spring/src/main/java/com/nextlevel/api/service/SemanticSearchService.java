@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.bson.Document;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -74,16 +75,16 @@ public class SemanticSearchService {
     }
 
     private List<Capture> keywordFallback(String userId, String query) {
-        String lowered = query.toLowerCase();
+        String quotedQuery = Pattern.quote(query);
         List<Capture> captures = mongoTemplate.find(
                 org.springframework.data.mongodb.core.query.Query.query(
                         org.springframework.data.mongodb.core.query.Criteria.where("userId").is(userId)
                                 .and("status").ne("archived")
                                 .orOperator(
-                                        org.springframework.data.mongodb.core.query.Criteria.where("title").regex(query, "i"),
-                                        org.springframework.data.mongodb.core.query.Criteria.where("description").regex(query, "i"),
-                                        org.springframework.data.mongodb.core.query.Criteria.where("rawContent").regex(query, "i"),
-                                        org.springframework.data.mongodb.core.query.Criteria.where("tags").regex(query, "i"))),
+                                        org.springframework.data.mongodb.core.query.Criteria.where("title").regex(quotedQuery, "i"),
+                                        org.springframework.data.mongodb.core.query.Criteria.where("description").regex(quotedQuery, "i"),
+                                        org.springframework.data.mongodb.core.query.Criteria.where("rawContent").regex(quotedQuery, "i"),
+                                        org.springframework.data.mongodb.core.query.Criteria.where("tags").regex(quotedQuery, "i"))),
                 Capture.class);
 
         List<Capture> limited = new ArrayList<>(captures.stream()

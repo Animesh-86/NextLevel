@@ -12,6 +12,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
 import com.nextlevel.api.dto.CaptureCreateRequest;
@@ -25,16 +29,52 @@ public class CaptureService {
     private static final Logger log = LoggerFactory.getLogger(CaptureService.class);
     private final CaptureRepository captureRepository;
     private final GamificationService gamificationService;
+    private final MongoTemplate mongoTemplate;
 
-    public CaptureService(CaptureRepository captureRepository, GamificationService gamificationService) {
+    public CaptureService(CaptureRepository captureRepository, GamificationService gamificationService, MongoTemplate mongoTemplate) {
         this.captureRepository = captureRepository;
         this.gamificationService = gamificationService;
+        this.mongoTemplate = mongoTemplate;
     }
 
-    public Page<Capture> listCaptures(String userId, String status, Pageable pageable) {
+    public Page<Capture> listCaptures(String userId, String status, String category, String urgency, String pinned, String search, Pageable pageable) {
         log.info("Listing captures for user: {}, status: {}", userId, status);
         String effectiveStatus = "all".equals(status) ? "active" : status;
-        return captureRepository.findByUserIdAndStatus(userId, effectiveStatus, pageable);
+        
+        Query query = new Query();
+        query.addCriteria(Criteria.where("userId").is(userId));
+        
+        if (!"all".equals(effectiveStatus)) {
+            query.addCriteria(Criteria.where("status").is(effectiveStatus));
+        }
+        
+        if (category != null && !"all".equals(category)) {
+            query.addCriteria(Criteria.where("category").is(category));
+        }
+        
+        if (urgency != null && !"all".equals(urgency)) {
+            query.addCriteria(Criteria.where("urgency").is(urgency));
+        }
+        
+        if ("true".equals(pinned)) {
+            query.addCriteria(Criteria.where("isPinned").is(true));
+        }
+        
+        if (search != null && !search.isBlank()) {
+            String quoted = java.util.regex.Pattern.quote(search);
+            query.addCriteria(new Criteria().orOperator(
+                Criteria.where("title").regex(quoted, "i"),
+                Criteria.where("description").regex(quoted, "i"),
+                Criteria.where("rawContent").regex(quoted, "i"),
+                Criteria.where("tags").regex(quoted, "i")
+            ));
+        }
+        
+        long total = mongoTemplate.count(query, Capture.class);
+        query.with(pageable);
+        List<Capture> captures = mongoTemplate.find(query, Capture.class);
+        
+        return new PageImpl<>(captures, pageable, total);
     }
 
     public Capture createCapture(String userId, CaptureCreateRequest request) {

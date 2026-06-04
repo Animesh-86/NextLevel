@@ -32,11 +32,17 @@ public class KnowledgeGraphService {
 
     public Map<String, Object> getGraphData(String userId) {
         List<Capture> captures = captureRepository.findByUserId(userId).stream()
-                .filter(c -> !"archived".equals(c.getStatus())).toList();
+                .filter(c -> !"archived".equals(c.getStatus()))
+                .limit(100)
+                .toList();
         List<StudyFile> files = studyFileRepository.findByUserId(userId).stream()
-                .filter(f -> !Boolean.TRUE.equals(f.getIsArchived())).toList();
+                .filter(f -> !Boolean.TRUE.equals(f.getIsArchived()))
+                .limit(50)
+                .toList();
         List<Roadmap> roadmaps = roadmapRepository.findByUserId(userId).stream()
-                .filter(r -> !"archived".equals(r.getStatus())).toList();
+                .filter(r -> !"archived".equals(r.getStatus()))
+                .limit(50)
+                .toList();
 
         List<Map<String, Object>> nodes = new ArrayList<>();
         List<Map<String, Object>> links = new ArrayList<>();
@@ -158,11 +164,17 @@ public class KnowledgeGraphService {
         List<Map<String, Object>> related = new ArrayList<>();
         
         List<Capture> captures = captureRepository.findByUserId(userId).stream()
-                .filter(c -> !"archived".equals(c.getStatus())).toList();
+                .filter(c -> !"archived".equals(c.getStatus()))
+                .limit(100)
+                .toList();
         List<StudyFile> files = studyFileRepository.findByUserId(userId).stream()
-                .filter(f -> !Boolean.TRUE.equals(f.getIsArchived())).toList();
+                .filter(f -> !Boolean.TRUE.equals(f.getIsArchived()))
+                .limit(50)
+                .toList();
         List<Roadmap> roadmaps = roadmapRepository.findByUserId(userId).stream()
-                .filter(r -> !"archived".equals(r.getStatus())).toList();
+                .filter(r -> !"archived".equals(r.getStatus()))
+                .limit(50)
+                .toList();
 
         if ("capture".equals(type)) {
             Capture target = captures.stream().filter(c -> c.getId().equals(itemId)).findFirst().orElse(null);

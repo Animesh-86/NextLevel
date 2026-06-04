@@ -25,6 +25,7 @@ export default function FocusTest() {
   const [answers, setAnswers] = useState({});
   const [flagged, setFlagged] = useState(new Set());
   const [checked, setChecked] = useState(new Set());
+  const [checkedResults, setCheckedResults] = useState({}); // stores correct answer/explanation for checked questions
   const [timeLeft, setTimeLeft] = useState(0);
   const [testStartTime, setTestStartTime] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -93,7 +94,8 @@ export default function FocusTest() {
     if (!selectedExam) { toast.error('Select an exam'); return; }
 
     try {
-      const res = await apiFetch(`/api/questions?examId=${selectedExam}&limit=${questionCount}`);
+      const endpoint = isStudy ? `/api/questions?examId=${selectedExam}&limit=${questionCount}` : `/api/questions/test?examId=${selectedExam}`;
+      const res = await apiFetch(endpoint);
       const data = await res.json();
 
       if (!data.success || data.data.length === 0) {
@@ -108,8 +110,13 @@ export default function FocusTest() {
       setAnswers({});
       setFlagged(new Set());
       setChecked(new Set());
+      const savedAnswers = localStorage.getItem(`test_answers_${selectedExam}`);
+      if (savedAnswers && !isStudy) {
+        try { setAnswers(JSON.parse(savedAnswers)); } catch (e) {}
+      }
+
       setTimeLeft(timeMinutes * 60);
-      setTestStartTime(Date.now());
+      setTestStartTime(performance.now());
       setPhase('testing');
     } catch (err) {
       toast.error('Failed to load questions');
@@ -135,13 +142,31 @@ export default function FocusTest() {
       updated = current.includes(optIdx) ? [] : [optIdx];
     }
 
-    setAnswers({ ...answers, [qId]: updated });
+    const nextAnswers = { ...answers, [qId]: updated };
+    setAnswers(nextAnswers);
+    if (!isStudy) {
+      localStorage.setItem(`test_answers_${selectedExam}`, JSON.stringify(nextAnswers));
+    }
   }
 
-  function handleCheck() {
-    if (!currentQ) return;
-    setChecked(new Set([...checked, currentQ._id]));
-    setShowExplanation(true);
+  async function handleCheck() {
+    if (!currentQ || checked.has(currentQ._id)) return;
+    
+    try {
+      const res = await apiFetch('/api/reviews/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionId: currentQ._id, userAnswer: answers[currentQ._id] || [] })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCheckedResults({ ...checkedResults, [currentQ._id]: data.data });
+        setChecked(new Set([...checked, currentQ._id]));
+        setShowExplanation(true);
+      }
+    } catch (err) {
+      toast.error('Failed to check answer');
+    }
   }
 
   function toggleFlag() {
@@ -178,27 +203,10 @@ export default function FocusTest() {
     setSubmitting(true);
     clearInterval(timerRef.current);
 
-    const timeTaken = Math.round((Date.now() - testStartTime) / 1000);
-    let correct = 0, wrong = 0, skipped = 0;
-
-    const userAnswerMap = {};
-    for (const q of questions) {
-      const ua = answers[q._id] || [];
-      userAnswerMap[q._id] = ua;
-
-      if (ua.length === 0) {
-        skipped++;
-      } else {
-        const isCorrect = ua.length === q.answer.length && ua.every(a => q.answer.includes(a));
-        if (isCorrect) correct++;
-        else wrong++;
-      }
-    }
-
-    const totalCount = questions.length;
-    const scorePercent = Math.round((correct / totalCount) * 100);
-    const exam = exams.find(e => e._id === selectedExam);
-    const passed = scorePercent >= (exam?.passPercentage || 75);
+    const timeTaken = (performance.now() - testStartTime) / 1000;
+    
+    // Clear auto-save
+    localStorage.removeItem(`test_answers_${selectedExam}`);
 
     try {
       const res = await apiFetch('/api/results', {
@@ -206,14 +214,8 @@ export default function FocusTest() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           examId: selectedExam,
-          scorePercent,
-          correctCount: correct,
-          wrongCount: wrong,
-          skippedCount: skipped,
-          totalCount,
-          passed,
           timeTaken,
-          userAnswers: userAnswerMap,
+          userAnswers: answers,
         }),
       });
 
@@ -337,6 +339,7 @@ export default function FocusTest() {
   if (!currentQ) return null;
   const questionAnswer = answers[currentQ._id] || [];
   const isChecked = checked.has(currentQ._id);
+  const checkResult = checkedResults[currentQ._id];
   const isFlagged = flagged.has(currentIdx);
 
   return (
@@ -442,7 +445,7 @@ export default function FocusTest() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {currentQ.options.map((opt, i) => {
               const isSelected = questionAnswer.includes(i);
-              const isCorrectOption = currentQ.answer.includes(i);
+              const isCorrectOption = isStudy && checkResult ? checkResult.correctAnswer.includes(i) : (currentQ.answer?.includes(i) || false);
               const isMSQ = currentQ.type === 'MSQ';
 
               let style = {
@@ -490,10 +493,10 @@ export default function FocusTest() {
           </div>
 
           {/* Explanation */}
-          {isStudy && isChecked && showExplanation && currentQ.explanation && (
+          {isStudy && isChecked && showExplanation && checkResult?.explanation && (
             <div style={{ marginTop: '1.5rem', padding: '1.25rem', backgroundColor: 'var(--bg-surface)', borderLeft: '4px solid var(--text-primary)', borderRadius: 'var(--radius-sm)', animation: 'fadeIn 0.2s' }}>
               <h4 style={{ fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Explanation</h4>
-              <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{currentQ.explanation}</p>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{checkResult.explanation}</p>
             </div>
           )}
         </div>

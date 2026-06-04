@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.nextlevel.api.dto.ApiResponse;
-import com.nextlevel.api.dto.ResultCreateRequest;
+import com.nextlevel.api.dto.ExamGradingRequest;
 import com.nextlevel.api.model.Result;
 import com.nextlevel.api.security.CurrentUser;
 import com.nextlevel.api.service.ResultService;
@@ -91,7 +91,7 @@ public class ResultController {
     @PostMapping
     public ResponseEntity<ApiResponse<Result>> createResult(
             @AuthenticationPrincipal CurrentUser currentUser,
-            @Validated @RequestBody ResultCreateRequest request) {
+            @Validated @RequestBody ExamGradingRequest request) {
 
         Result saved = resultService.createResult(currentUser.getUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(saved));

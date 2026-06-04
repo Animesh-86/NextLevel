@@ -8,12 +8,17 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import com.nextlevel.api.dto.ApiResponse;
+import com.nextlevel.api.security.CurrentUser;
 import com.nextlevel.api.dto.LoginRequest;
 import com.nextlevel.api.dto.RegisterRequest;
 import com.nextlevel.api.model.User;
@@ -81,9 +86,51 @@ public class AuthController {
         userData.put("role", user.getRole().name());
 
         Map<String, Object> data = new HashMap<>();
-        data.put("token", token);
         data.put("user", userData);
 
+        ResponseCookie cookie = ResponseCookie.from("token", token)
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(30 * 24 * 60 * 60)
+                .sameSite("Strict")
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(ApiResponse.success(data));
+    }
+    
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> me(@AuthenticationPrincipal CurrentUser currentUser) {
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Unauthorized"));
+        }
+        
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("id", currentUser.getUserId());
+        userData.put("email", currentUser.getEmail());
+        userData.put("role", currentUser.getRole());
+        // In a real app we'd fetch the User entity to get the name, but this is a quick verify
+        
+        Map<String, Object> data = new HashMap<>();
+        data.put("user", userData);
+        
         return ResponseEntity.ok(ApiResponse.success(data));
+    }
+    
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout() {
+        ResponseCookie cookie = ResponseCookie.from("token", "")
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(0)
+                .sameSite("Strict")
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(ApiResponse.message("Logged out successfully"));
     }
 }

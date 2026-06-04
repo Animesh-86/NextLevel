@@ -39,8 +39,8 @@ public class StudyFile {
     @JsonView(Views.Public.class)
     private Long fileSize;
     
-    @JsonView(Views.Internal.class)
-    private String fileData;
+    @JsonView(Views.Public.class)
+    private String filePath;
     
     @JsonView(Views.Public.class)
     private String title;

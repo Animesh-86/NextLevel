@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.Iterator;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -53,7 +54,11 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
         // Periodic cleanup: prevent memory leak from abandoned IPs
         if (buckets.size() > 10_000) {
-            buckets.clear();
+            Iterator<String> it = buckets.keySet().iterator();
+            for (int i = 0; i < 1000 && it.hasNext(); i++) {
+                it.next();
+                it.remove();
+            }
         }
     }
 

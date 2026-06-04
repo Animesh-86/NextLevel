@@ -8,5 +8,6 @@ import com.nextlevel.api.model.Exam;
 
 public interface ExamRepository extends MongoRepository<Exam, String> {
 	List<Exam> findAllByOrderByCreatedAtDesc();
+	List<Exam> findByUserIdOrderByCreatedAtDesc(String userId);
 	boolean existsByTitle(String title);
 }

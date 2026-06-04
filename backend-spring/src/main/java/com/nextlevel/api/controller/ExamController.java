@@ -36,14 +36,13 @@ public class ExamController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> listExams(@AuthenticationPrincipal CurrentUser currentUser) {
-        return ResponseEntity.ok(ApiResponse.success(examService.listExams()));
+        return ResponseEntity.ok(ApiResponse.success(examService.listExams(currentUser)));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<ApiResponse<Exam>> createExam(@AuthenticationPrincipal CurrentUser currentUser,
             @Validated @RequestBody ExamCreateRequest request) {
-        Exam exam = examService.createExam(request);
+        Exam exam = examService.createExam(request, currentUser);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(exam));
     }
 
@@ -54,23 +53,29 @@ public class ExamController {
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error("Exam not found")));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<Exam>> updateExam(@AuthenticationPrincipal CurrentUser currentUser,
             @PathVariable String id,
             @Validated @RequestBody ExamUpdateRequest request) {
-        return examService.updateExam(id, request)
-                .map(exam -> ResponseEntity.ok(ApiResponse.success(exam)))
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error("Exam not found")));
+        try {
+            return examService.updateExam(id, request, currentUser)
+                    .map(exam -> ResponseEntity.ok(ApiResponse.success(exam)))
+                    .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error("Exam not found")));
+        } catch (SecurityException ex) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error(ex.getMessage()));
+        }
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Map<String, String>>> deleteExam(@AuthenticationPrincipal CurrentUser currentUser,
             @PathVariable String id) {
-        if (examService.deleteExam(id)) {
-            return ResponseEntity.ok(ApiResponse.success(Map.of("message", "Exam and its questions deleted")));
+        try {
+            if (examService.deleteExam(id, currentUser)) {
+                return ResponseEntity.ok(ApiResponse.success(Map.of("message", "Exam and its questions deleted")));
+            }
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error("Exam not found"));
+        } catch (SecurityException ex) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error(ex.getMessage()));
         }
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error("Exam not found"));
     }
 }

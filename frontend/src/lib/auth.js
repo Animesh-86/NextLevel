@@ -1,7 +1,6 @@
 import { cookies } from 'next/headers';
-import { decodeJwt } from 'jose';
 
-// Helper to get session in API routes by parsing the token cookie
+// Helper to get session in API routes by calling backend
 export async function requireAuth() {
   const cookieStore = await cookies();
   const token = cookieStore.get('token')?.value;
@@ -11,19 +10,24 @@ export async function requireAuth() {
   }
 
   try {
-    const payload = decodeJwt(token);
-    
-    // The Spring Boot JWT claims typically have: sub (id), email, role
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/auth/me`, {
+      method: 'GET',
+      headers: {
+        'Cookie': `token=${token}`
+      },
+      cache: 'no-store'
+    });
+
+    if (!res.ok) {
+      return { error: 'Invalid Token', status: 401 };
+    }
+
+    const data = await res.json();
     return { 
-      user: {
-        id: payload.sub,
-        email: payload.email,
-        role: payload.role,
-        name: payload.name || payload.email
-      } 
+      user: data.data.user
     };
   } catch (err) {
-    return { error: 'Invalid Token', status: 401 };
+    return { error: 'Internal Server Error', status: 500 };
   }
 }
 

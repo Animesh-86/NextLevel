@@ -16,6 +16,11 @@ import com.nextlevel.api.model.Exam;
 import com.nextlevel.api.repository.ExamRepository;
 import com.nextlevel.api.repository.QuestionRepository;
 import com.nextlevel.api.repository.ResultRepository;
+import com.nextlevel.api.security.CurrentUser;
+import com.nextlevel.api.model.Exam;
+import com.nextlevel.api.repository.ExamRepository;
+import com.nextlevel.api.repository.QuestionRepository;
+import com.nextlevel.api.repository.ResultRepository;
 
 @Service
 public class ExamService {
@@ -31,9 +36,9 @@ public class ExamService {
         this.resultRepository = resultRepository;
     }
 
-    public List<Map<String, Object>> listExams() {
-        log.info("Listing all exams");
-        return examRepository.findAllByOrderByCreatedAtDesc().stream().map(exam -> {
+    public List<Map<String, Object>> listExams(CurrentUser user) {
+        log.info("Listing all exams for user: {}", user.getUserId());
+        return examRepository.findByUserIdOrderByCreatedAtDesc(user.getUserId()).stream().map(exam -> {
             Map<String, Object> row = new HashMap<>();
             row.put("id", exam.getId());
             row.put("title", exam.getTitle());
@@ -47,10 +52,11 @@ public class ExamService {
         }).toList();
     }
 
-    public Exam createExam(ExamCreateRequest request) {
-        log.info("Creating exam: {}", request.title());
+    public Exam createExam(ExamCreateRequest request, CurrentUser user) {
+        log.info("Creating exam: {} for user: {}", request.title(), user.getUserId());
         Instant now = Instant.now();
         Exam exam = new Exam();
+        exam.setUserId(user.getUserId());
         exam.setTitle(request.title().trim());
         exam.setDescription(request.description() != null ? request.description() : "");
         exam.setTimeLimit(request.timeLimit() != null ? request.timeLimit() : 60);
@@ -64,7 +70,7 @@ public class ExamService {
         log.info("Fetching details for exam: {}", id);
         return examRepository.findById(id).map(exam -> {
             long questionCount = questionRepository.countByExamId(id);
-            var all = resultRepository.findAll().stream().filter(r -> id.equals(r.getExamId())).toList();
+            var all = resultRepository.findByExamId(id);
             int timesTaken = all.size();
             double avg = timesTaken == 0 ? 0 : all.stream().mapToDouble(r -> r.getScorePercent() == null ? 0 : r.getScorePercent()).average().orElse(0);
             long passCount = all.stream().filter(r -> Boolean.TRUE.equals(r.getPassed())).count();
@@ -85,9 +91,12 @@ public class ExamService {
         });
     }
 
-    public Optional<Exam> updateExam(String id, ExamUpdateRequest request) {
+    public Optional<Exam> updateExam(String id, ExamUpdateRequest request, CurrentUser user) {
         log.info("Updating exam: {}", id);
         return examRepository.findById(id).map(exam -> {
+            if (!user.getUserId().equals(exam.getUserId()) && !"admin".equals(user.getRole())) {
+                throw new SecurityException("Forbidden: You do not own this exam");
+            }
             if (request.title() != null) exam.setTitle(request.title());
             if (request.description() != null) exam.setDescription(request.description());
             if (request.timeLimit() != null) exam.setTimeLimit(request.timeLimit());
@@ -97,12 +106,16 @@ public class ExamService {
         });
     }
 
-    public boolean deleteExam(String id) {
+    public boolean deleteExam(String id, CurrentUser user) {
         log.info("Deleting exam: {}", id);
-        Optional<Exam> exam = examRepository.findById(id);
-        if (exam.isPresent()) {
-            examRepository.delete(exam.get());
-            questionRepository.findAll().stream().filter(q -> id.equals(q.getExamId())).forEach(questionRepository::delete);
+        Optional<Exam> examOpt = examRepository.findById(id);
+        if (examOpt.isPresent()) {
+            Exam exam = examOpt.get();
+            if (!user.getUserId().equals(exam.getUserId()) && !"admin".equals(user.getRole())) {
+                throw new SecurityException("Forbidden: You do not own this exam");
+            }
+            examRepository.delete(exam);
+            questionRepository.deleteByExamId(id);
             return true;
         }
         return false;

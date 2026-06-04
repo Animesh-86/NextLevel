@@ -69,21 +69,13 @@ public class CaptureController {
                 Math.max(limit, 1),
                 Sort.by(Sort.Order.desc("isPinned"), Sort.Order.desc("createdAt")));
 
-        Page<Capture> capturePage = captureService.listCaptures(currentUser.getUserId(), status, pageable);
-
-        // Note: Filter after query is noted as an antipattern in the technical review.
-        // For Phase 1 we extract it, but in Phase 5 we will fix the repository query.
-        List<Capture> filtered = capturePage.getContent().stream()
-                .filter(c -> category == null || "all".equals(category) || category.equals(c.getCategory()))
-                .filter(c -> urgency == null || "all".equals(urgency) || urgency.equals(c.getUrgency()))
-                .filter(c -> pinned == null || !"true".equals(pinned) || Boolean.TRUE.equals(c.getIsPinned()))
-                .filter(c -> search == null || search.isBlank() || matchesSearch(c, search))
-                .collect(Collectors.toList());
+        Page<Capture> capturePage = captureService.listCaptures(
+                currentUser.getUserId(), status, category, urgency, pinned, search, pageable);
 
         Map<String, Object> data = new HashMap<>();
-        data.put("data", filtered);
+        data.put("data", capturePage.getContent());
         data.put("total", capturePage.getTotalElements());
-        data.put("hasMore", (skip + filtered.size()) < capturePage.getTotalElements());
+        data.put("hasMore", (skip + capturePage.getContent().size()) < capturePage.getTotalElements());
 
         return ResponseEntity.ok(ApiResponse.success(data));
     }
@@ -139,15 +131,5 @@ public class CaptureController {
         return ResponseEntity.ok(ApiResponse.message("Capture deleted"));
     }
 
-    private boolean matchesSearch(Capture capture, String search) {
-        String query = search.toLowerCase();
-        return contains(capture.getTitle(), query)
-                || contains(capture.getRawContent(), query)
-                || contains(capture.getDescription(), query)
-                || (capture.getTags() != null && capture.getTags().stream().anyMatch(tag -> contains(tag, query)));
-    }
 
-    private boolean contains(String source, String query) {
-        return source != null && source.toLowerCase().contains(query);
-    }
 }

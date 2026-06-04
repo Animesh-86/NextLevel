@@ -15,6 +15,7 @@ public class Question {
     @Id
     private String id;
     private String examId;
+    private String userId;
     private String module;
     private String type;
     private String scenario;

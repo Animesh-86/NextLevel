@@ -87,6 +87,7 @@ public class CaptureProcessingService {
             completed.incrementAndGet();
         } catch (Exception ex) {
             failed.incrementAndGet();
+            throw new RuntimeException("Failed to process capture", ex);
         } finally {
             running.decrementAndGet();
         }
@@ -111,7 +112,17 @@ public class CaptureProcessingService {
         }
 
         try {
-            HttpRequest request = HttpRequest.newBuilder(URI.create("https://r.jina.ai/" + content.trim()))
+            URI uri = URI.create("https://r.jina.ai/" + content.trim());
+            // Strict SSRF protection
+            String target = content.trim().toLowerCase();
+            if (!target.startsWith("http://") && !target.startsWith("https://")) {
+                return content; // Skip scraping if not http/https
+            }
+            if (target.matches(".*(?:localhost|127\\.|10\\.|192\\.168\\.|169\\.254\\.|172\\.(?:1[6-9]|2[0-9]|3[0-1])\\.|0\\.0\\.0\\.0).*")) {
+                throw new IllegalArgumentException("Scraping internal or private IPs is forbidden");
+            }
+            
+            HttpRequest request = HttpRequest.newBuilder(uri)
                     .GET()
                     .timeout(Duration.ofSeconds(20))
                     .build();
