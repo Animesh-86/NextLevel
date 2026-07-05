@@ -80,7 +80,7 @@ export default function CaptureCard({ capture, onEdit, onDelete, onPin, onArchiv
         <div className="capture-card-actions">
           <button
             className={`icon-btn ${capture.isPinned ? 'icon-btn-active' : ''}`}
-            onClick={() => onPin?.(capture._id, !capture.isPinned)}
+            onClick={() => onPin?.(capture.id, !capture.isPinned)}
             title={capture.isPinned ? 'Unpin' : 'Pin'}
           >
             {capture.isPinned ? <PinOff size={14} /> : <Pin size={14} />}
@@ -88,7 +88,7 @@ export default function CaptureCard({ capture, onEdit, onDelete, onPin, onArchiv
           <button className="icon-btn" onClick={() => onEdit?.(capture)} title="Edit">
             <Edit3 size={14} />
           </button>
-          <button className="icon-btn icon-btn-danger" onClick={() => onDelete?.(capture._id)} title="Delete">
+          <button className="icon-btn icon-btn-danger" onClick={() => onDelete?.(capture.id)} title="Delete">
             <Trash2 size={14} />
           </button>
         </div>
@@ -160,26 +160,15 @@ export default function CaptureCard({ capture, onEdit, onDelete, onPin, onArchiv
             {reminderText(capture.reminderAt)}
           </span>
         )}
-        <div className="capture-card-footer-actions">
           {capture.status === 'active' && (
-            <>
-              <button
-                className="capture-action-btn"
-                onClick={() => onComplete?.(capture._id)}
-                title="Mark complete"
-              >
-                <CheckCircle size={14} /> Done
-              </button>
-              <button
-                className="capture-action-btn"
-                onClick={() => onArchive?.(capture._id)}
-                title="Archive"
-              >
-                <Archive size={14} />
-              </button>
-            </>
+            <button
+              className="capture-action-btn"
+              onClick={() => onComplete?.(capture.id)}
+              title="Mark complete"
+            >
+              <CheckCircle size={14} /> Done
+            </button>
           )}
-        </div>
       </div>
     </div>
   );

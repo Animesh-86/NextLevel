@@ -32,7 +32,6 @@ const urgencyFilters = [
 const statusTabs = [
   { value: 'active', label: 'Active', icon: Inbox },
   { value: 'completed', label: 'Done', icon: CheckCircle2 },
-  { value: 'all', label: 'Archive', icon: Archive },
 ];
 
 export default function CaptureHub() {

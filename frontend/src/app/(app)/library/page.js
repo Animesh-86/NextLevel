@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { FileText, Link2, Search, Upload, Plus, ExternalLink, FolderOpen } from 'lucide-react';
+import { FileText, Link2, Search, Upload, Plus, ExternalLink, FolderOpen, X, Loader2 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { SkeletonCard } from '@/components/SkeletonLoader';
 
@@ -15,6 +15,113 @@ export default function LibraryPage() {
   const [links, setLinks] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // Modals
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+
+  // File Upload states
+  const [fileToUpload, setFileToUpload] = useState(null);
+  const [uploadTitle, setUploadTitle] = useState('');
+  const [uploadCategory, setUploadCategory] = useState('other');
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
+  const [dragover, setDragover] = useState(false);
+
+  // Link form states
+  const [linkForm, setLinkForm] = useState({ url: '', title: '', description: '', category: 'other', tags: '' });
+  const [savingLink, setSavingLink] = useState(false);
+
+  const fileCategoryOptions = [
+    { value: 'system-design', label: '🏗️ System Design' },
+    { value: 'dsa', label: '🧮 DSA' },
+    { value: 'web-dev', label: '🌐 Web Dev' },
+    { value: 'database', label: '🗄️ Database' },
+    { value: 'devops', label: '⚙️ DevOps' },
+    { value: 'math', label: '📐 Math' },
+    { value: 'college', label: '🎓 College' },
+    { value: 'notes', label: '📝 Notes' },
+    { value: 'other', label: '📌 Other' },
+  ];
+
+  const linkCategoryOptions = [
+    { value: 'tutorial', label: '📖 Tutorial' },
+    { value: 'article', label: '📄 Article' },
+    { value: 'documentation', label: '📚 Docs' },
+    { value: 'tool', label: '🛠️ Tool' },
+    { value: 'job-posting', label: '💼 Job Post' },
+    { value: 'video', label: '🎥 Video' },
+    { value: 'course', label: '🎓 Course' },
+    { value: 'github', label: '💻 GitHub' },
+    { value: 'other', label: '🔗 Other' },
+  ];
+
+  const handleFileUploadSubmit = async (e) => {
+    e.preventDefault();
+    if (!fileToUpload) return;
+    setUploading(true);
+    setUploadProgress(`Uploading ${fileToUpload.name}...`);
+    try {
+      const formData = new FormData();
+      formData.append('file', fileToUpload);
+      if (uploadTitle.trim()) {
+        formData.append('title', uploadTitle.trim());
+      }
+      formData.append('category', uploadCategory);
+
+      const res = await apiFetch('/api/files', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.success) {
+        setUploadModalOpen(false);
+        setFileToUpload(null);
+        setUploadTitle('');
+        setUploadCategory('other');
+        const filesRes = await apiFetch('/api/files');
+        const filesData = await filesRes.json();
+        setFiles(filesData.success ? filesData.data || [] : []);
+      } else {
+        alert(data.error || 'Upload failed');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Upload failed');
+    } finally {
+      setUploading(false);
+      setUploadProgress('');
+    }
+  };
+
+  const handleLinkSubmit = async (e) => {
+    e.preventDefault();
+    if (!linkForm.url || !linkForm.title) return;
+    setSavingLink(true);
+    try {
+      const payload = {
+        ...linkForm,
+        tags: linkForm.tags.split(',').map(t => t.trim()).filter(Boolean)
+      };
+      const res = await apiFetch('/api/links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLinkModalOpen(false);
+        setLinkForm({ url: '', title: '', description: '', category: 'other', tags: '' });
+        const linksRes = await apiFetch('/api/links');
+        const linksData = await linksRes.json();
+        setLinks(linksData.success ? linksData.data || [] : []);
+      } else {
+        alert(data.error || 'Failed to save link');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save link');
+    } finally {
+      setSavingLink(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -80,12 +187,12 @@ export default function LibraryPage() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <Link className="btn btn-secondary" href="/vault">
+          <button className="btn btn-secondary" onClick={() => setUploadModalOpen(true)}>
             <Upload size={16} /> Upload File
-          </Link>
-          <Link className="btn btn-primary" href="/links">
+          </button>
+          <button className="btn btn-primary" onClick={() => setLinkModalOpen(true)}>
             <Plus size={16} /> Add Link
-          </Link>
+          </button>
         </div>
       </header>
 
@@ -174,6 +281,222 @@ export default function LibraryPage() {
               )}
             </div>
           </section>
+        </div>
+      )}
+
+      {/* Upload File Modal */}
+      {uploadModalOpen && (
+        <div className="dialog-overlay" onClick={() => !uploading && setUploadModalOpen(false)}>
+          <div className="capture-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+            <div className="capture-modal-header">
+              <h2 className="capture-modal-title">Upload File</h2>
+              <button className="icon-btn" onClick={() => !uploading && setUploadModalOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleFileUploadSubmit}>
+              <div 
+                className={`vault-dropzone ${dragover ? 'dragover' : ''}`}
+                style={{ 
+                  border: '2px dashed var(--border-strong)', 
+                  borderRadius: 'var(--radius-md)', 
+                  padding: '2rem 1rem', 
+                  textAlign: 'center', 
+                  cursor: 'pointer',
+                  background: dragover ? 'var(--bg-accent)' : 'transparent',
+                  marginBottom: '1rem'
+                }}
+                onDragOver={(e) => { e.preventDefault(); setDragover(true); }}
+                onDragLeave={() => setDragover(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragover(false);
+                  if (e.dataTransfer.files?.length) {
+                    setFileToUpload(e.dataTransfer.files[0]);
+                  }
+                }}
+                onClick={() => document.getElementById('modal-file-input').click()}
+              >
+                <input 
+                  id="modal-file-input"
+                  type="file"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    if (e.target.files?.length) {
+                      setFileToUpload(e.target.files[0]);
+                    }
+                  }}
+                />
+                <Upload size={32} style={{ marginBottom: '0.75rem', color: 'var(--text-muted)' }} />
+                {fileToUpload ? (
+                  <div>
+                    <p style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{fileToUpload.name}</p>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      {(fileToUpload.size / (1024 * 1024)).toFixed(2)} MB
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <p style={{ fontWeight: 500 }}>Drag and drop or click to choose a file</p>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Max file size 10MB</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="capture-field">
+                <label className="capture-label">Custom Title (Optional)</label>
+                <input 
+                  type="text"
+                  className="input"
+                  placeholder={fileToUpload ? fileToUpload.name.split('.').slice(0, -1).join('.') : "Enter custom title"}
+                  value={uploadTitle}
+                  onChange={(e) => setUploadTitle(e.target.value)}
+                  disabled={uploading}
+                />
+              </div>
+
+              <div className="capture-field">
+                <label className="capture-label">Category</label>
+                <select
+                  className="select"
+                  value={uploadCategory}
+                  onChange={(e) => setUploadCategory(e.target.value)}
+                  disabled={uploading}
+                >
+                  {fileCategoryOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="capture-actions" style={{ marginTop: '1.5rem' }}>
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setUploadModalOpen(false)}
+                  disabled={uploading}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={uploading || !fileToUpload}
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 size={16} className="spin" style={{ marginRight: '6px' }} />
+                      Uploading...
+                    </>
+                  ) : 'Upload File'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Link Modal */}
+      {linkModalOpen && (
+        <div className="dialog-overlay" onClick={() => !savingLink && setLinkModalOpen(false)}>
+          <div className="capture-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div className="capture-modal-header">
+              <h2 className="capture-modal-title">Add Link</h2>
+              <button className="icon-btn" onClick={() => !savingLink && setLinkModalOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleLinkSubmit}>
+              <div className="capture-field">
+                <label className="capture-label">URL *</label>
+                <input 
+                  type="url"
+                  className="input"
+                  placeholder="https://example.com"
+                  required
+                  value={linkForm.url}
+                  onChange={(e) => setLinkForm({ ...linkForm, url: e.target.value })}
+                  disabled={savingLink}
+                />
+              </div>
+
+              <div className="capture-field">
+                <label className="capture-label">Title *</label>
+                <input 
+                  type="text"
+                  className="input"
+                  placeholder="Link Title"
+                  required
+                  value={linkForm.title}
+                  onChange={(e) => setLinkForm({ ...linkForm, title: e.target.value })}
+                  disabled={savingLink}
+                />
+              </div>
+
+              <div className="capture-field">
+                <label className="capture-label">Description (Optional)</label>
+                <textarea 
+                  className="textarea"
+                  placeholder="Add details about this link..."
+                  rows={3}
+                  value={linkForm.description}
+                  onChange={(e) => setLinkForm({ ...linkForm, description: e.target.value })}
+                  disabled={savingLink}
+                />
+              </div>
+
+              <div className="capture-field">
+                <label className="capture-label">Category</label>
+                <select
+                  className="select"
+                  value={linkForm.category}
+                  onChange={(e) => setLinkForm({ ...linkForm, category: e.target.value })}
+                  disabled={savingLink}
+                >
+                  {linkCategoryOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="capture-field">
+                <label className="capture-label">Tags (comma-separated)</label>
+                <input 
+                  type="text"
+                  className="input"
+                  placeholder="tag1, tag2, tag3"
+                  value={linkForm.tags}
+                  onChange={(e) => setLinkForm({ ...linkForm, tags: e.target.value })}
+                  disabled={savingLink}
+                />
+              </div>
+
+              <div className="capture-actions" style={{ marginTop: '1.5rem' }}>
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setLinkModalOpen(false)}
+                  disabled={savingLink}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={savingLink || !linkForm.url || !linkForm.title}
+                >
+                  {savingLink ? (
+                    <>
+                      <Loader2 size={16} className="spin" style={{ marginRight: '6px' }} />
+                      Saving...
+                    </>
+                  ) : 'Save Link'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
