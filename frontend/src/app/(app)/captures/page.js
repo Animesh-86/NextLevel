@@ -7,6 +7,7 @@ import {
 import CaptureCard from '@/components/CaptureCard';
 import CaptureModal from '@/components/CaptureModal';
 import { SkeletonCard } from '@/components/SkeletonLoader';
+import { apiFetch } from '@/lib/api';
 
 const categoryFilters = [
   { value: 'all', label: 'All' },
@@ -59,11 +60,11 @@ export default function CaptureHub() {
       if (status !== 'all') params.set('status', status);
       if (search.trim()) params.set('search', search.trim());
 
-      const res = await fetch(`/api/captures?${params.toString()}`);
+      const res = await apiFetch(`/api/captures?${params.toString()}`);
       const data = await res.json();
-      if (data.success) {
-        setCaptures(data.data);
-        setTotal(data.total);
+      if (res.ok && data.success) {
+        setCaptures(data.data.data || []);
+        setTotal(data.data.total || 0);
       }
     } catch (err) {
       console.error('Failed to fetch captures:', err);
@@ -257,7 +258,7 @@ export default function CaptureHub() {
         <div className="capture-grid">
           {captures.map(capture => (
             <CaptureCard
-              key={capture._id}
+              key={capture.id}
               capture={capture}
               onEdit={handleEdit}
               onDelete={handleDelete}

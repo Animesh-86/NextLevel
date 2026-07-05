@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useToast } from '@/components/Toast';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import EmptyState from '@/components/EmptyState';
@@ -23,15 +23,7 @@ export default function ManageQuestions() {
   const fileRef = useRef(null);
   const toast = useToast();
 
-  useEffect(() => {
-    fetchExams();
-  }, []);
-
-  useEffect(() => {
-    if (selectedExam) fetchQuestions();
-  }, [selectedExam, selectedModule, searchQuery]);
-
-  async function fetchExams() {
+  const fetchExams = useCallback(async () => {
     try {
       const res = await apiFetch('/api/exams');
       const data = await res.json();
@@ -45,9 +37,9 @@ export default function ManageQuestions() {
       toast.error('Failed to fetch exams');
     }
     setLoading(false);
-  }
+  }, [selectedExam, toast]);
 
-  async function fetchQuestions() {
+  const fetchQuestions = useCallback(async () => {
     try {
       const params = new URLSearchParams({ examId: selectedExam });
       if (selectedModule !== 'all') params.set('module', selectedModule);
@@ -59,7 +51,17 @@ export default function ManageQuestions() {
     } catch (err) {
       toast.error('Failed to fetch questions');
     }
-  }
+  }, [selectedExam, selectedModule, searchQuery, toast]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchExams();
+  }, [fetchExams]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (selectedExam) fetchQuestions();
+  }, [selectedExam, fetchQuestions]);
 
   async function handleDelete() {
     if (!deleteTarget) return;

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Trophy, Calendar, Target, Filter, ChevronRight, Award } from 'lucide-react';
 import { SkeletonCard } from '@/components/SkeletonLoader';
@@ -12,23 +12,24 @@ export default function ResultsPage() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
 
-  useEffect(() => {
-    fetchResults();
-  }, [page]);
-
-  async function fetchResults() {
+  const fetchResults = useCallback(async () => {
     try {
       const res = await apiFetch(`/api/results?page=${page}&limit=15`);
       const data = await res.json();
-      if (data.success) {
-        setResults(data.data);
-        setPagination(data.pagination);
+      if (data.success && data.data) {
+        setResults(data.data.data || []);
+        setPagination(data.data.pagination);
       }
     } catch (err) {
       console.error('Failed to fetch results:', err);
     }
     setLoading(false);
-  }
+  }, [page]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchResults();
+  }, [fetchResults]);
 
   // Summary stats
   const total = results.length;

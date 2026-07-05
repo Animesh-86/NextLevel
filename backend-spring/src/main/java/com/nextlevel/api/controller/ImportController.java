@@ -50,7 +50,7 @@ public class ImportController {
             @RequestParam(required = false) String text,
             @RequestParam String examId,
             @RequestParam(defaultValue = "General") String module) {
-        if (!"admin".equals(currentUser.getRole())) {
+        if (!currentUser.isAdmin()) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Forbidden"));
         }
 
@@ -59,15 +59,16 @@ public class ImportController {
         }
 
         try {
+            String userId = currentUser.getUserId();
             if (text != null && !text.isBlank()) {
-                jobScheduler.enqueue(() -> processTextImport(text, examId, module));
+                jobScheduler.enqueue(() -> processTextImport(text, examId, module, userId));
                 return ResponseEntity.ok(ApiResponse.success(Map.of("message", "Import job queued successfully")));
             } else if (file != null && !file.isEmpty()) {
                 String originalName = file.getOriginalFilename();
                 String fileName = originalName == null ? "" : originalName.toLowerCase();
                 byte[] bytes = file.getBytes();
                 
-                jobScheduler.enqueue(() -> processFileImport(bytes, fileName, examId, module));
+                jobScheduler.enqueue(() -> processFileImport(bytes, fileName, examId, module, userId));
                 return ResponseEntity.ok(ApiResponse.success(Map.of("message", "Import job queued successfully")));
             } else {
                 return ResponseEntity.unprocessableEntity().body(ApiResponse.error("No file or text content provided"));
@@ -77,12 +78,12 @@ public class ImportController {
         }
     }
 
-    public void processTextImport(String text, String examId, String moduleName) {
+    public void processTextImport(String text, String examId, String moduleName, String userId) {
         List<Question> generated = aiQuestionGeneratorService.generateQuestions(text, examId, moduleName);
-        saveGeneratedQuestions(generated);
+        saveGeneratedQuestions(generated, userId);
     }
 
-    public void processFileImport(byte[] bytes, String fileName, String examId, String moduleName) {
+    public void processFileImport(byte[] bytes, String fileName, String examId, String moduleName, String userId) {
         try {
             List<Question> parsed = new ArrayList<>();
             if (fileName.endsWith(".csv")) {
@@ -97,16 +98,16 @@ public class ImportController {
                 String content = new String(bytes, StandardCharsets.UTF_8);
                 parsed.addAll(aiQuestionGeneratorService.generateQuestions(content, examId, moduleName));
             }
-            saveGeneratedQuestions(parsed);
+            saveGeneratedQuestions(parsed, userId);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void saveGeneratedQuestions(List<Question> questions) {
+    private void saveGeneratedQuestions(List<Question> questions, String userId) {
         if (questions == null || questions.isEmpty()) return;
         for (Question q : questions) {
-            q.setUserId("system");
+            q.setUserId(userId);
             q.setCreatedAt(java.time.Instant.now());
             q.setUpdatedAt(java.time.Instant.now());
         }

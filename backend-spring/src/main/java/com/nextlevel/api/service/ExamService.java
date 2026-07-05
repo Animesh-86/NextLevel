@@ -94,7 +94,7 @@ public class ExamService {
     public Optional<Exam> updateExam(String id, ExamUpdateRequest request, CurrentUser user) {
         log.info("Updating exam: {}", id);
         return examRepository.findById(id).map(exam -> {
-            if (!user.getUserId().equals(exam.getUserId()) && !"admin".equals(user.getRole())) {
+            if (!user.getUserId().equals(exam.getUserId()) && !user.isAdmin()) {
                 throw new SecurityException("Forbidden: You do not own this exam");
             }
             if (request.title() != null) exam.setTitle(request.title());
@@ -111,11 +111,15 @@ public class ExamService {
         Optional<Exam> examOpt = examRepository.findById(id);
         if (examOpt.isPresent()) {
             Exam exam = examOpt.get();
-            if (!user.getUserId().equals(exam.getUserId()) && !"admin".equals(user.getRole())) {
+            if (!user.getUserId().equals(exam.getUserId()) && !user.isAdmin()) {
                 throw new SecurityException("Forbidden: You do not own this exam");
             }
             examRepository.delete(exam);
-            questionRepository.deleteByExamId(id);
+            if (user.isAdmin()) {
+                questionRepository.deleteByExamId(id);
+            } else {
+                questionRepository.deleteByExamIdAndUserId(id, user.getUserId());
+            }
             return true;
         }
         return false;

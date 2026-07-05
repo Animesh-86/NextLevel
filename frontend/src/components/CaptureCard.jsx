@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import {
   Pin, PinOff, Clock, Trash2, Edit3, Archive, CheckCircle,
-  ExternalLink, Image as ImageIcon, AlertTriangle, ChevronDown, ChevronUp
+  ExternalLink, Image as ImageIcon, AlertTriangle, ChevronDown, ChevronUp, Loader2
 } from 'lucide-react';
 
 const urgencyConfig = {
@@ -11,16 +11,6 @@ const urgencyConfig = {
   medium: { color: '#eab308', label: 'MEDIUM', bg: 'rgba(234,179,8,0.12)' },
   low: { color: '#3b82f6', label: 'LOW', bg: 'rgba(59,130,246,0.12)' },
   none: { color: 'var(--text-muted)', label: 'NONE', bg: 'transparent' },
-};
-
-const categoryEmoji = {
-  exam: '📝',
-  project: '🚀',
-  deadline: '⏰',
-  resource: '📚',
-  personal: '💡',
-  college: '🎓',
-  other: '📌',
 };
 
 function timeAgo(date) {
@@ -83,7 +73,7 @@ export default function CaptureCard({ capture, onEdit, onDelete, onPin, onArchiv
       <div className="capture-card-header">
         <div className="capture-card-meta">
           <span className="capture-card-category">
-            {categoryEmoji[capture.category] || '📌'} {capture.category}
+            {capture.category}
           </span>
           <span className="capture-card-time">{timeAgo(capture.createdAt)}</span>
         </div>

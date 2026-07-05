@@ -66,11 +66,10 @@ public class QuestionController {
 
     @GetMapping("/test")
     public ResponseEntity<ApiResponse<List<TestQuestionDto>>> getTestQuestions(
+            @AuthenticationPrincipal CurrentUser currentUser,
             @RequestParam String examId) {
         
-        // Find all questions for the exam (could be paginated if huge, but typically tests are fetched whole)
-        PageRequest pageable = PageRequest.of(0, 1000); 
-        List<Question> questions = questionRepository.findByExamId(examId, pageable).getContent();
+        List<Question> questions = questionRepository.findByExamIdAndUserId(examId, currentUser.getUserId());
         
         List<TestQuestionDto> dtos = questions.stream().map(q -> new TestQuestionDto(
                 q.getId(),

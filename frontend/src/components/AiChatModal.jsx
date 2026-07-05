@@ -95,7 +95,7 @@ export default function AiChatModal({ isOpen, onClose }) {
                     {messages.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-center space-y-4">
                             <Bot className="w-12 h-12 text-primary/50" />
-                            <p>Ask anything about your notes, files, and roadmaps.<br/>I'll find the answers and cite my sources.</p>
+                            <p>Ask anything about your notes, files, and roadmaps.<br/>I&apos;ll find the answers and cite my sources.</p>
                         </div>
                     ) : (
                         messages.map((msg, i) => (

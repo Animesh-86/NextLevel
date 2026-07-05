@@ -5,6 +5,7 @@ import {
   X, Upload, Type, Link2, Camera, Sparkles, Loader2,
   Clock, Tag, AlertTriangle, ChevronDown
 } from 'lucide-react';
+import { compressImage } from '@/lib/imageUtils';
 
 const categories = [
   { value: 'exam', label: '📝 Exam' },
@@ -30,7 +31,6 @@ const urgencies = [
 ];
 
 export default function CaptureModal({ isOpen, onClose, onSave, editingCapture = null }) {
-  const [mode, setMode] = useState(editingCapture ? 'text' : 'text'); // 'text' or 'screenshot'
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -49,6 +49,8 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
   const [previewImage, setPreviewImage] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [aiSuggested, setAiSuggested] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [analysisNotice, setAnalysisNotice] = useState('');
 
   const fileInputRef = useRef(null);
 
@@ -64,7 +66,8 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
     setPreviewImage(null);
     setImageFile(null);
     setAiSuggested(false);
-    setMode('text');
+    setSaveError('');
+    setAnalysisNotice('');
   }, []);
 
   useEffect(() => {
@@ -81,11 +84,10 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
       );
       setReminderRepeats(editingCapture.reminderRepeats || 'none');
       setPreviewImage(editingCapture.imageData || null);
-      setMode(editingCapture.type === 'screenshot' ? 'screenshot' : 'text');
 
       if (editingCapture.type === 'screenshot' && !editingCapture.imageData) {
         setLoading(true);
-        apiFetch(`/api/captures/${editingCapture._id}`)
+        apiFetch(`/api/captures/${editingCapture.id}`)
           .then(res => res.json())
           .then(data => {
             if (active && data.success && data.data) {
@@ -154,45 +156,48 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
     }
 
     setImageFile(file);
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const base64Data = e.target.result;
-      setPreviewImage(base64Data);
+    setSaveError('');
+    setAnalysisNotice('');
+    
+    try {
       setAnalyzing(true);
-      try {
-        const res = await apiFetch('/api/captures/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: base64Data, mimeType: file.type }),
-        });
-        const data = await res.json();
-        if (data.success && data.data) {
-          const a = data.data;
-          if (a.title) setTitle(a.title);
-          if (a.category) setCategory(a.category);
-          if (a.urgency) setUrgency(a.urgency);
-          if (a.tags) setTags(a.tags.join(', '));
-          if (a.summary) setDescription(a.summary);
-          if (a.extractedText) setRawContent(a.extractedText);
-          if (a.extractedLink) {
-            // Append link to description/rawContent
-            setRawContent(prev => prev ? `${prev}\n\nLink: ${a.extractedLink}` : `Link: ${a.extractedLink}`);
-          }
-          if (a.reminderSuggestion) {
-            const localDate = new Date(a.reminderSuggestion);
-            const offset = localDate.getTimezoneOffset();
-            const adjustedDate = new Date(localDate.getTime() - (offset * 60 * 1000));
-            setReminderAt(adjustedDate.toISOString().slice(0, 16));
-          }
-          setAiSuggested(true);
+      // Wait for image to compress
+      const base64Data = await compressImage(file, 1024, 1024, 0.7);
+      setPreviewImage(base64Data);
+      
+      const res = await apiFetch('/api/captures/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64Data, mimeType: 'image/jpeg' }),
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        const a = data.data;
+        if (a.title) setTitle(a.title);
+        if (a.category) setCategory(a.category);
+        if (a.urgency) setUrgency(a.urgency);
+        if (a.tags) setTags(a.tags.join(', '));
+        if (a.summary) setDescription(a.summary);
+        if (a.extractedText) setRawContent(a.extractedText);
+        if (a.extractedLink) {
+          setRawContent(prev => prev ? `${prev}\n\nLink: ${a.extractedLink}` : `Link: ${a.extractedLink}`);
         }
-      } catch (err) {
-        console.error('Image analysis failed:', err);
-      } finally {
-        setAnalyzing(false);
+        if (a.reminderSuggestion) {
+          const localDate = new Date(a.reminderSuggestion);
+          const offset = localDate.getTimezoneOffset();
+          const adjustedDate = new Date(localDate.getTime() - (offset * 60 * 1000));
+          setReminderAt(adjustedDate.toISOString().slice(0, 16));
+        }
+        setAiSuggested(true);
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Image analysis failed:', err);
+      setTitle(prev => prev || file.name.replace(/\.[^.]+$/, '') || 'Screenshot Capture');
+      setDescription(prev => prev || 'Screenshot saved without AI details.');
+      setAnalysisNotice('AI could not read this screenshot. It can still be saved and edited later.');
+    } finally {
+      setAnalyzing(false);
+    }
   };
 
   const handleDrop = (e) => {
@@ -210,7 +215,6 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
         e.preventDefault();
         const file = item.getAsFile();
         if (file) {
-          setMode('screenshot');
           handleFileSelect(file);
         }
         return;
@@ -224,7 +228,7 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
     setLoading(true);
 
     try {
-      if (mode === 'screenshot' && imageFile && !editingCapture) {
+      if (imageFile && !editingCapture) {
         // Upload screenshot with optional manual edits as form data
         const formData = new FormData();
         formData.append('file', imageFile);
@@ -263,7 +267,7 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
         };
 
         const url = editingCapture
-          ? `/api/captures/${editingCapture._id}`
+          ? `/api/captures/${editingCapture.id}`
           : '/api/captures';
 
         const res = await apiFetch(url, {
@@ -301,127 +305,86 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
           </button>
         </div>
 
-        {/* Mode tabs (only for new captures) */}
-        {!editingCapture && (
-          <div className="capture-mode-tabs">
-            <button
-              className={`capture-mode-tab ${mode === 'text' ? 'active' : ''}`}
-              onClick={() => setMode('text')}
-            >
-              <Type size={16} /> Text / Link
-            </button>
-            <button
-              className={`capture-mode-tab ${mode === 'screenshot' ? 'active' : ''}`}
-              onClick={() => setMode('screenshot')}
-            >
-              <Camera size={16} /> Screenshot
-            </button>
-          </div>
-        )}
-
+        {/* Unified Input Area */}
         <form onSubmit={handleSubmit} className="capture-form">
-          {/* Screenshot upload / preview area */}
-          {mode === 'screenshot' && (
-            <div className="capture-screenshot-section" style={{ marginBottom: '1.5rem' }}>
-              {editingCapture ? (
-                previewImage ? (
-                  <div className="capture-preview-container">
-                    <img src={previewImage} alt="Screenshot" className="capture-preview-img" />
-                  </div>
+          <div className="capture-text-input-area" style={{ position: 'relative', marginBottom: '1.5rem' }}>
+            <textarea
+              className="textarea capture-textarea"
+              placeholder="Paste a link, type a note, or dump an image here..."
+              value={rawContent}
+              onChange={(e) => setRawContent(e.target.value)}
+              rows={4}
+              onPaste={handlePaste}
+              style={{ paddingBottom: previewImage ? '150px' : '3.5rem' }}
+            />
+            
+            {rawContent.trim() && !aiSuggested && !previewImage && (
+              <button
+                type="button"
+                className="capture-ai-btn"
+                onClick={handleAnalyze}
+                disabled={analyzing}
+                style={{ position: 'absolute', top: '0.75rem', right: '0.75rem' }}
+              >
+                {analyzing ? (
+                  <><Loader2 size={14} className="auth-spinner" /> Analyzing...</>
                 ) : (
-                  <div className="capture-dropzone" style={{ height: '140px' }}>
-                    <div className="capture-dropzone-content">
-                      <Loader2 className="auth-spinner" size={24} />
-                      <p>Loading screenshot...</p>
-                    </div>
-                  </div>
-                )
-              ) : (
-                <div
-                  className={`capture-dropzone ${dragOver ? 'dragover' : ''} ${previewImage ? 'has-preview' : ''}`}
-                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                  onDragLeave={() => setDragOver(false)}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  {previewImage ? (
-                    <div className="capture-preview-container">
-                      <img src={previewImage} alt="Preview" className="capture-preview-img" />
-                      {analyzing && (
-                        <div className="capture-preview-overlay">
-                          <Loader2 className="auth-spinner" size={24} />
-                          <span>AI Extracting Text & Date...</span>
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        className="capture-preview-remove"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPreviewImage(null);
-                          setImageFile(null);
-                        }}
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="capture-dropzone-content">
-                      <Upload size={32} strokeWidth={1.5} />
-                      <p>Drop screenshot here or click to upload</p>
-                      <span>Also try Ctrl+V to paste from clipboard</span>
-                    </div>
-                  )}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    onChange={(e) => handleFileSelect(e.target.files[0])}
-                  />
-                </div>
-              )}
-            </div>
-          )}
+                  <><Sparkles size={14} /> AI Categorize</>
+                )}
+              </button>
+            )}
 
-          {/* Text/URL input area */}
-          {mode === 'text' && (
-            <div className="capture-text-input-area">
-              <textarea
-                className="textarea capture-textarea"
-                placeholder="Paste a link, type a note, or dump whatever you want to remember..."
-                value={rawContent}
-                onChange={(e) => setRawContent(e.target.value)}
-                rows={4}
-                onPaste={handlePaste}
-              />
-              {rawContent.trim() && !aiSuggested && (
+            {previewImage && (
+              <div className="capture-preview-container" style={{ position: 'absolute', bottom: '1rem', left: '1rem', height: '120px', width: 'auto', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' }}>
+                <img src={previewImage} alt="Preview" className="capture-preview-img" style={{ height: '100%', objectFit: 'cover' }} />
+                {analyzing && (
+                  <div className="capture-preview-overlay" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '12px' }}>
+                    <Loader2 className="auth-spinner" size={24} style={{ marginBottom: '4px' }} />
+                    <span>Analyzing...</span>
+                  </div>
+                )}
                 <button
                   type="button"
-                  className="capture-ai-btn"
-                  onClick={handleAnalyze}
-                  disabled={analyzing}
+                  className="capture-preview-remove"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewImage(null);
+                    setImageFile(null);
+                  }}
+                  style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', color: 'white', padding: '4px', cursor: 'pointer' }}
                 >
-                  {analyzing ? (
-                    <><Loader2 size={14} className="auth-spinner" /> Analyzing...</>
-                  ) : (
-                    <><Sparkles size={14} /> AI Categorize</>
-                  )}
+                  <X size={14} />
                 </button>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={() => fileInputRef.current?.click()}
+              style={{ position: 'absolute', bottom: '0.75rem', right: '0.75rem', background: 'var(--surface)', border: '1px solid var(--border)' }}
+              title="Attach Image"
+            >
+              <Camera size={16} />
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={(e) => handleFileSelect(e.target.files[0])}
+            />
+          </div>
 
           {/* AI suggestion banner */}
-          {aiSuggested && editingCapture && (
+          {aiSuggested && (
             <div className="capture-ai-banner">
               <Sparkles size={14} /> AI suggestions applied — feel free to edit below
             </div>
           )}
 
-          {/* Show manual fields if editing, in text mode, or if screenshot is uploaded */}
-          {(editingCapture || mode === 'text' || previewImage) && (
-            <>
+          {/* Show manual fields always */}
+          <>
               {/* Title */}
               <div className="capture-field">
                 <label className="auth-label">Title</label>
@@ -482,8 +445,6 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
               </div>
 
             </>
-          )}
-
           {/* Reminder (Fixed Date Picker Style) - Always Visible */}
           <div className="capture-field-row">
             <div className="capture-field" style={{ flex: 2 }}>
@@ -513,7 +474,7 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
           <button
             type="submit"
             className="btn btn-primary capture-submit"
-            disabled={loading || (mode === 'text' && !rawContent.trim()) || (mode === 'screenshot' && !imageFile && !editingCapture)}
+            disabled={loading || (!rawContent.trim() && !imageFile && !editingCapture)}
           >
             {loading ? (
               <><Loader2 size={16} className="auth-spinner" /> Saving...</>

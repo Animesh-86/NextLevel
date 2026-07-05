@@ -7,7 +7,7 @@ import Link from 'next/link';
 import {
   Flame, Target, BookOpen, Clock, Play, Map, Briefcase, FolderOpen,
   CalendarDays, Inbox, Link2, TrendingUp, ChevronRight, CheckCircle2,
-  Circle, ArrowRight, Loader2, BarChart3, BrainCircuit
+  Circle, ArrowRight, Loader2, BarChart3, BrainCircuit, Zap
 } from 'lucide-react';
 import { SkeletonCard } from '@/components/SkeletonLoader';
 
@@ -31,7 +31,7 @@ export default function Dashboard() {
         if (statsR.success) setStats(statsR.data);
         if (analyticsR.success) setAnalytics(analyticsR.data);
         if (tasksR.success) setTodayTasks(tasksR.data || []);
-        if (capturesR.success) setRecentCaptures((capturesR.data || []).slice(0, 5));
+        if (capturesR.success) setRecentCaptures((capturesR.data?.data || []).slice(0, 5));
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     }
@@ -169,7 +169,7 @@ export default function Dashboard() {
             <div className="dash-right">
               {/* Quick Actions */}
               <section className="card dash-section">
-                <h2 className="card-title">⚡ Quick Actions</h2>
+                <h2 className="card-title"><Zap size={18} /> Quick Actions</h2>
                 <div className="dash-actions">
                   {[
                     { href: '/test', label: 'Focus Test', icon: Play, desc: 'Timed exam' },
@@ -196,7 +196,7 @@ export default function Dashboard() {
                 {recentCaptures.length > 0 ? (
                   <div className="dash-capture-list">
                     {recentCaptures.map(c => (
-                      <div key={c._id} className="dash-capture-item">
+                      <div key={c.id} className="dash-capture-item">
                         <span className="dash-capture-title">{c.title}</span>
                         <span className="dash-capture-cat">{c.category}</span>
                       </div>

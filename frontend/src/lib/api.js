@@ -36,6 +36,8 @@ export async function apiFetch(path, options = {}) {
   }
 
   return fetch(`${getApiBaseUrl()}${path}`, {
+    credentials: 'include',
+    cache: 'no-store',
     ...init,
     headers: requestHeaders,
   });

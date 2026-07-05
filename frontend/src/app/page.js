@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { requireAuth } from '@/lib/auth';
+import SignOutButton from '@/components/SignOutButton';
 
 export default async function LandingPage() {
   const result = await requireAuth();
@@ -32,11 +33,16 @@ export default async function LandingPage() {
             <a href="#dashboard">Command Center</a>
           </div>
 
-          <div className="landing-nav-actions">
+          <div className="landing-nav-actions" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             {session ? (
-              <Link href="/dashboard" className="btn btn-primary" style={{ padding: '0.5rem 1.25rem' }}>
-                Go to Dashboard
-              </Link>
+              <>
+                <Link href="/dashboard" className="btn btn-primary" style={{ padding: '0.5rem 1.25rem' }}>
+                  Dashboard
+                </Link>
+                <SignOutButton className="btn btn-secondary" style={{ padding: '0.5rem 1.25rem' }}>
+                  Sign Out
+                </SignOutButton>
+              </>
             ) : (
               <>
                 <Link href="/login" className="btn btn-secondary" style={{ padding: '0.5rem 1.25rem' }}>Log In</Link>
@@ -232,8 +238,17 @@ export default async function LandingPage() {
           <div className="landing-footer-links">
             <a href="#features">Features</a>
             <a href="#workflow">Workflow</a>
-            <Link href="/login">Sign In</Link>
-            <Link href="/login?mode=register">Sign Up</Link>
+            {session ? (
+              <>
+                <Link href="/dashboard">Dashboard</Link>
+                <SignOutButton style={{ background: 'none', border: 'none', color: 'inherit', font: 'inherit', padding: 0 }}>Sign Out</SignOutButton>
+              </>
+            ) : (
+              <>
+                <Link href="/login">Sign In</Link>
+                <Link href="/login?mode=register">Sign Up</Link>
+              </>
+            )}
           </div>
           <p className="landing-footer-copy">© 2026 NextLevel. Designed for elite productivity.</p>
         </div>

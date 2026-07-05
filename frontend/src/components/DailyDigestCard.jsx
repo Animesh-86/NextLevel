@@ -63,36 +63,6 @@ export default function DailyDigestCard() {
                     {digest.message}
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-background rounded-lg p-3 border flex items-center space-x-3">
-                        <CheckCircle className="w-5 h-5 text-green-500" />
-                        <div>
-                            <p className="text-2xl font-bold">{digest.taskCount}</p>
-                            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Tasks Today</p>
-                        </div>
-                    </div>
-                    <div className="bg-background rounded-lg p-3 border flex items-center space-x-3">
-                        <Clock className="w-5 h-5 text-orange-500" />
-                        <div>
-                            <p className="text-2xl font-bold">{digest.reminderCount}</p>
-                            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Reminders</p>
-                        </div>
-                    </div>
-                    <div className="bg-background rounded-lg p-3 border flex items-center space-x-3">
-                        <Map className="w-5 h-5 text-blue-500" />
-                        <div>
-                            <p className="text-2xl font-bold">Active</p>
-                            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Roadmaps</p>
-                        </div>
-                    </div>
-                    <div className="bg-background rounded-lg p-3 border flex items-center space-x-3">
-                        <Flame className="w-5 h-5 text-red-500" />
-                        <div>
-                            <p className="text-2xl font-bold">{digest.streak}</p>
-                            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Day Streak</p>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     );

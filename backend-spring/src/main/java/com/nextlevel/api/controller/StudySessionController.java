@@ -9,12 +9,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.nextlevel.api.security.CurrentUser;
 import com.nextlevel.api.dto.ApiResponse;
 import com.nextlevel.api.model.StudySession;
 import com.nextlevel.api.repository.StudySessionRepository;
 import com.nextlevel.api.service.GamificationService;
-
-import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/study")
@@ -31,17 +31,12 @@ public class StudySessionController {
     @PostMapping("/session")
     public ResponseEntity<ApiResponse<StudySession>> logSession(
             @RequestBody Map<String, Object> payload,
-            HttpServletRequest request) {
+            @AuthenticationPrincipal CurrentUser currentUser) {
         
-        String userId = null;
-        if (request.getAttribute("user") != null) {
-            Map<String, Object> userMap = (Map<String, Object>) request.getAttribute("user");
-            userId = (String) userMap.get("id");
-        }
-        
-        if (userId == null) {
+        if (currentUser == null) {
             return ResponseEntity.status(401).body(ApiResponse.error("Unauthorized"));
         }
+        String userId = currentUser.getUserId();
 
         Integer durationMinutes = (Integer) payload.get("durationMinutes");
         if (durationMinutes == null || durationMinutes <= 0) {

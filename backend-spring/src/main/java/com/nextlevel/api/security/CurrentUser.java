@@ -31,6 +31,10 @@ public class CurrentUser implements UserDetails {
         return role;
     }
 
+    public boolean isAdmin() {
+        return role != null && ("admin".equalsIgnoreCase(role) || "role_admin".equalsIgnoreCase(role));
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));

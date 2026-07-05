@@ -20,15 +20,15 @@ import com.nextlevel.api.model.Capture;
 public class SemanticSearchService {
 
     private final MongoTemplate mongoTemplate;
-    private final GeminiService geminiService;
+    private final GroqService groqService;
 
-    public SemanticSearchService(MongoTemplate mongoTemplate, GeminiService geminiService) {
+    public SemanticSearchService(MongoTemplate mongoTemplate, GroqService groqService) {
         this.mongoTemplate = mongoTemplate;
-        this.geminiService = geminiService;
+        this.groqService = groqService;
     }
 
     public List<Capture> search(String userId, String query) {
-        List<Double> embedding = geminiService.generateEmbeddings(query);
+        List<Double> embedding = groqService.generateEmbeddings(query);
         if (embedding == null || embedding.isEmpty()) {
             return keywordFallback(userId, query);
         }
@@ -56,7 +56,7 @@ public class SemanticSearchService {
             @Override
             public Document toDocument(AggregationOperationContext context) {
                 Map<String, Object> vectorSearch = new HashMap<>();
-                vectorSearch.put("index", geminiService.getVectorIndex());
+                vectorSearch.put("index", groqService.getVectorIndex());
                 vectorSearch.put("path", "embedding");
                 vectorSearch.put("queryVector", embedding);
                 vectorSearch.put("numCandidates", 100);

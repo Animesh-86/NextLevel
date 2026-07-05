@@ -8,13 +8,13 @@ import {
 import PlannerTaskCard from '@/components/PlannerTaskCard';
 
 const categoryOptions = [
-  { value: 'study', label: '📖 Study' },
-  { value: 'revision', label: '🔄 Revision' },
-  { value: 'practice', label: '💻 Practice' },
-  { value: 'project', label: '🚀 Project' },
-  { value: 'assignment', label: '📝 Assignment' },
-  { value: 'exam-prep', label: '📚 Exam Prep' },
-  { value: 'other', label: '📌 Other' },
+  { value: 'study', label: 'Study' },
+  { value: 'revision', label: 'Revision' },
+  { value: 'practice', label: 'Practice' },
+  { value: 'project', label: 'Project' },
+  { value: 'assignment', label: 'Assignment' },
+  { value: 'exam-prep', label: 'Exam Prep' },
+  { value: 'other', label: 'Other' },
 ];
 
 const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -278,9 +278,9 @@ export default function StudyPlanner() {
                           value={newTask.priority}
                           onChange={(e) => setNewTask(t => ({ ...t, priority: e.target.value }))}
                         >
-                          <option value="high">🔴 High</option>
-                          <option value="medium">🟡 Medium</option>
-                          <option value="low">🔵 Low</option>
+                          <option value="high">High</option>
+                          <option value="medium">Medium</option>
+                          <option value="low">Low</option>
                         </select>
                       </div>
                       <div className="planner-add-options">

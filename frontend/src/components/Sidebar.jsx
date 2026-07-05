@@ -2,28 +2,50 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from '@/lib/useAuth';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  LayoutDashboard, BookOpen, Play, Trophy, Home,
+  LayoutDashboard, BookOpen, Play, Trophy,
   UserCircle, Settings, LogOut, Menu, X, ChevronRight, Inbox,
-  FolderOpen, CalendarDays, Map, Link2, Share2, Sparkles
+  FolderOpen, CalendarDays, Sparkles, ChevronLeft
 } from 'lucide-react';
 import ReminderBell from '@/components/ReminderBell';
 import AiChatModal from '@/components/AiChatModal';
 
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/captures', label: 'Capture Hub', icon: Inbox },
-  { href: '/vault', label: 'File Vault', icon: FolderOpen },
-  { href: '/planner', label: 'Planner', icon: CalendarDays },
-  { href: '/journey', label: 'Journey', icon: Map },
-  { href: '/graph', label: 'Knowledge Graph', icon: Share2 },
-  { href: '/links', label: 'Links', icon: Link2 },
-  { href: '/exams', label: 'Exams', icon: BookOpen, adminOnly: true },
-  { href: '/manage', label: 'Question Bank', icon: Settings, adminOnly: true },
-  { href: '/test', label: 'Focus Test', icon: Play },
-  { href: '/results', label: 'Results', icon: Trophy },
-  { href: '/profile', label: 'Profile', icon: UserCircle },
+const navGroups = [
+  {
+    label: 'Home',
+    items: [
+      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: 'Library',
+    items: [
+      { href: '/captures', label: 'Capture Hub', icon: Inbox },
+      { href: '/library', label: 'Files & Links', icon: FolderOpen },
+    ],
+  },
+  {
+    label: 'Growth System',
+    items: [
+      { href: '/workspace', label: 'Planner & Knowledge', icon: CalendarDays },
+    ],
+  },
+  {
+    label: 'Practice',
+    items: [
+      { href: '/exams', label: 'Exams', icon: BookOpen, adminOnly: true },
+      { href: '/manage', label: 'Question Bank', icon: Settings, adminOnly: true },
+      { href: '/test', label: 'Focus Test', icon: Play },
+      { href: '/results', label: 'Results', icon: Trophy },
+    ],
+  },
+  {
+    label: 'Account',
+    items: [
+      { href: '/profile', label: 'Profile', icon: UserCircle },
+    ],
+  },
 ];
 
 export default function Sidebar() {
@@ -31,12 +53,25 @@ export default function Sidebar() {
   const { data: session } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const user = session?.user;
   const isAdmin = user?.role === 'admin';
 
-  const filteredNav = navItems.filter(
-    (item) => !item.adminOnly || isAdmin
-  );
+  // Toggle body class for collapse
+  useEffect(() => {
+    if (isCollapsed) {
+      document.body.classList.add('sidebar-collapsed');
+    } else {
+      document.body.classList.remove('sidebar-collapsed');
+    }
+  }, [isCollapsed]);
+
+  const filteredGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.adminOnly || isAdmin),
+    }))
+    .filter((group) => group.items.length > 0);
 
   const getInitials = (name) => {
     if (!name) return '?';
@@ -80,37 +115,43 @@ export default function Sidebar() {
         </div>
 
         <nav className="sidebar-nav">
-          {filteredNav.map((item) => {
-            const isActive = pathname === item.href ||
-              (item.href !== '/' && pathname.startsWith(item.href));
-            const Icon = item.icon;
+          {filteredGroups.map((group) => (
+            <div className="sidebar-nav-group" key={group.label}>
+              <div className="sidebar-nav-label">{group.label}</div>
+              {group.items.map((item) => {
+                const isActive = pathname === item.href ||
+                  (item.href !== '/' && pathname.startsWith(item.href));
+                const Icon = item.icon;
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`sidebar-link ${isActive ? 'sidebar-link-active' : ''}`}
-                onClick={() => setMobileOpen(false)}
-              >
-                <Icon size={20} />
-                <span>{item.label}</span>
-                {isActive && <ChevronRight size={14} className="sidebar-link-indicator" />}
-              </Link>
-            );
-          })}
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`sidebar-link ${isActive ? 'sidebar-link-active' : ''}`}
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <Icon size={20} />
+                    <span>{item.label}</span>
+                    {isActive && <ChevronRight size={14} className="sidebar-link-indicator" />}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
-        <div className="px-4 py-2">
-          <button 
-            onClick={() => setChatOpen(true)}
-            className="w-full flex items-center justify-center space-x-2 py-2 px-4 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
-          >
-            <Sparkles size={16} />
-            <span className="font-medium">Ask AI</span>
-          </button>
-        </div>
+
 
         <div className="sidebar-footer">
+          <button 
+            className="sidebar-collapse-btn" 
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.7rem 0.85rem', color: 'var(--text-muted)', width: '100%', background: 'transparent', border: 'none', cursor: 'pointer', borderRadius: 'var(--radius-md)', marginBottom: '0.5rem' }}
+          >
+            {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+            <span className="sidebar-collapse-text">Collapse</span>
+          </button>
+          
           {user && (
             <div className="sidebar-user">
               <div className="sidebar-avatar">
@@ -118,11 +159,6 @@ export default function Sidebar() {
               </div>
               <div className="sidebar-user-info">
                 <div className="sidebar-user-name">{user.name}</div>
-                <div className="sidebar-user-role">
-                  <span className={`badge ${isAdmin ? 'badge-stark' : ''}`}>
-                    {user.role}
-                  </span>
-                </div>
               </div>
             </div>
           )}

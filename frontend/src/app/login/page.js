@@ -51,7 +51,7 @@ export default function LoginPage() {
 
         const data = await res.json();
         if (!res.ok) {
-          setError(data.message || 'Registration failed');
+          setError(data.error || data.message || 'Registration failed');
           setLoading(false);
           return;
         }
@@ -67,8 +67,9 @@ export default function LoginPage() {
         });
         
         const loginData = await loginRes.json();
-        if (loginRes.ok && loginData.token) {
-           document.cookie = `token=${loginData.token}; path=/; max-age=2592000; SameSite=Lax`;
+        const autoToken = loginData.token || loginData.data?.token;
+        if (loginRes.ok && autoToken) {
+           document.cookie = `token=${autoToken}; path=/; max-age=2592000; SameSite=Lax`;
            router.push('/dashboard');
         } else {
            setError('Registered successfully. Please log in.');
@@ -86,13 +87,14 @@ export default function LoginPage() {
         });
 
         const data = await res.json();
-        if (!res.ok || !data.token) {
+        const token = data.token || data.data?.token;
+        if (!res.ok || !token) {
           setError('Invalid email or password');
           setLoading(false);
           return;
         }
 
-        document.cookie = `token=${data.token}; path=/; max-age=2592000; SameSite=Lax`;
+        document.cookie = `token=${token}; path=/; max-age=2592000; SameSite=Lax`;
         router.push('/dashboard');
         router.refresh();
       }

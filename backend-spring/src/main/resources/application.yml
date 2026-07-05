@@ -21,7 +21,7 @@ spring:
   ai:
     openai:
       api-key: ${GROQ_API_KEY}
-      base-url: "https://api.groq.com/openai/v1"
+      base-url: "https://api.groq.com/openai"
       chat:
         options:
           model: llama-3.3-70b-versatile
@@ -30,14 +30,14 @@ spring:
 
 resilience4j.circuitbreaker:
   instances:
-    geminiApi:
+    groqApi:
       slidingWindowSize: 5
       failureRateThreshold: 50
       waitDurationInOpenState: 10000
       permittedNumberOfCallsInHalfOpenState: 3
 resilience4j.retry:
   instances:
-    geminiApi:
+    groqApi:
       maxAttempts: 3
       waitDuration: 2000
 

@@ -45,7 +45,7 @@ public class AuthController {
         String email = request.getEmail().trim().toLowerCase();
         if (userRepository.existsByEmail(email)) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(ApiResponse.error("An account with this email already exists"));
+                    .body(ApiResponse.error("User already exists with this email. Please sign in."));
         }
 
         Instant now = Instant.now();
@@ -87,13 +87,13 @@ public class AuthController {
 
         Map<String, Object> data = new HashMap<>();
         data.put("user", userData);
+        data.put("token", token);
 
         ResponseCookie cookie = ResponseCookie.from("token", token)
                 .httpOnly(true)
-                .secure(true)
                 .path("/")
                 .maxAge(30 * 24 * 60 * 60)
-                .sameSite("Strict")
+                .sameSite("Lax")
                 .build();
 
         return ResponseEntity.ok()
@@ -123,10 +123,9 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> logout() {
         ResponseCookie cookie = ResponseCookie.from("token", "")
                 .httpOnly(true)
-                .secure(true)
                 .path("/")
                 .maxAge(0)
-                .sameSite("Strict")
+                .sameSite("Lax")
                 .build();
 
         return ResponseEntity.ok()

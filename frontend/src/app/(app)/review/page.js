@@ -74,7 +74,7 @@ export default function ReviewPage() {
                 <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
                     <Check className="w-10 h-10 text-primary" />
                 </div>
-                <h1 className="text-3xl font-bold tracking-tight">You're all caught up!</h1>
+                <h1 className="text-3xl font-bold tracking-tight">You&apos;re all caught up!</h1>
                 <p className="text-muted-foreground">You have reviewed all your due items. Come back tomorrow for more spaced repetition.</p>
             </div>
         );

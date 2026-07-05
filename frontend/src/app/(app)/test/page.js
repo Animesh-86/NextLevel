@@ -54,76 +54,7 @@ export default function FocusTest() {
     load();
   }, []);
 
-  // Timer
-  useEffect(() => {
-    if (phase !== 'testing' || isStudy) return;
-
-    timerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current);
-          handleSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timerRef.current);
-  }, [phase, isStudy]);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    if (phase !== 'testing') return;
-
-    function handleKeyDown(e) {
-      if (e.key === 'ArrowRight' || e.key === 'n') handleNext();
-      else if (e.key === 'ArrowLeft' || e.key === 'p') handlePrev();
-      else if (e.key === 'f') toggleFlag();
-      else if (e.key >= '1' && e.key <= '9') {
-        const optIdx = parseInt(e.key) - 1;
-        if (currentQ && optIdx < currentQ.options.length) toggleOption(optIdx);
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [phase, currentIdx, questions, answers]);
-
-  async function startTest() {
-    if (!selectedExam) { toast.error('Select an exam'); return; }
-
-    try {
-      const endpoint = isStudy ? `/api/questions?examId=${selectedExam}&limit=${questionCount}` : `/api/questions/test?examId=${selectedExam}`;
-      const res = await apiFetch(endpoint);
-      const data = await res.json();
-
-      if (!data.success || data.data.length === 0) {
-        toast.error('No questions found for this exam');
-        return;
-      }
-
-      // Shuffle questions
-      const shuffled = data.data.sort(() => Math.random() - 0.5).slice(0, questionCount);
-      setQuestions(shuffled);
-      setCurrentIdx(0);
-      setAnswers({});
-      setFlagged(new Set());
-      setChecked(new Set());
-      const savedAnswers = localStorage.getItem(`test_answers_${selectedExam}`);
-      if (savedAnswers && !isStudy) {
-        try { setAnswers(JSON.parse(savedAnswers)); } catch (e) {}
-      }
-
-      setTimeLeft(timeMinutes * 60);
-      setTestStartTime(performance.now());
-      setPhase('testing');
-    } catch (err) {
-      toast.error('Failed to load questions');
-    }
-  }
-
-  function toggleOption(optIdx) {
+  const toggleOption = useCallback((optIdx) => {
     if (!currentQ) return;
     const qId = currentQ._id;
 
@@ -147,9 +78,9 @@ export default function FocusTest() {
     if (!isStudy) {
       localStorage.setItem(`test_answers_${selectedExam}`, JSON.stringify(nextAnswers));
     }
-  }
+  }, [currentQ, isStudy, checked, answers, selectedExam]);
 
-  async function handleCheck() {
+  const handleCheck = useCallback(async () => {
     if (!currentQ || checked.has(currentQ._id)) return;
     
     try {
@@ -160,43 +91,45 @@ export default function FocusTest() {
       });
       const data = await res.json();
       if (data.success) {
-        setCheckedResults({ ...checkedResults, [currentQ._id]: data.data });
-        setChecked(new Set([...checked, currentQ._id]));
+        setCheckedResults(prev => ({ ...prev, [currentQ._id]: data.data }));
+        setChecked(prev => new Set([...prev, currentQ._id]));
         setShowExplanation(true);
       }
     } catch (err) {
       toast.error('Failed to check answer');
     }
-  }
+  }, [currentQ, checked, answers, toast]);
 
-  function toggleFlag() {
+  const toggleFlag = useCallback(() => {
     if (!currentQ) return;
-    const newFlagged = new Set(flagged);
-    if (newFlagged.has(currentIdx)) {
-      newFlagged.delete(currentIdx);
-    } else {
-      newFlagged.add(currentIdx);
-    }
-    setFlagged(newFlagged);
-  }
+    setFlagged(prev => {
+      const newFlagged = new Set(prev);
+      if (newFlagged.has(currentIdx)) {
+        newFlagged.delete(currentIdx);
+      } else {
+        newFlagged.add(currentIdx);
+      }
+      return newFlagged;
+    });
+  }, [currentQ, currentIdx]);
 
-  function handleNext() {
+  const handleNext = useCallback(() => {
     if (currentIdx < questions.length - 1) {
-      setCurrentIdx(currentIdx + 1);
+      setCurrentIdx(prev => prev + 1);
       setShowExplanation(false);
     }
-  }
+  }, [currentIdx, questions.length]);
 
-  function handlePrev() {
+  const handlePrev = useCallback(() => {
     if (currentIdx > 0) {
-      setCurrentIdx(currentIdx - 1);
+      setCurrentIdx(prev => prev - 1);
       setShowExplanation(false);
     }
-  }
+  }, [currentIdx]);
 
-  function goToReview() {
+  const goToReview = useCallback(() => {
     setPhase('review');
-  }
+  }, []);
 
   const handleSubmit = useCallback(async () => {
     if (submitting) return;
@@ -230,7 +163,76 @@ export default function FocusTest() {
       toast.error('Failed to submit');
       setSubmitting(false);
     }
-  }, [answers, questions, selectedExam, testStartTime, exams, submitting, router, toast]);
+  }, [submitting, testStartTime, selectedExam, answers, router, toast]);
+
+  // Timer
+  useEffect(() => {
+    if (phase !== 'testing' || isStudy) return;
+
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          handleSubmit();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timerRef.current);
+  }, [phase, isStudy, handleSubmit]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    if (phase !== 'testing') return;
+
+    function handleKeyDown(e) {
+      if (e.key === 'ArrowRight' || e.key === 'n') handleNext();
+      else if (e.key === 'ArrowLeft' || e.key === 'p') handlePrev();
+      else if (e.key === 'f') toggleFlag();
+      else if (e.key >= '1' && e.key <= '9') {
+        const optIdx = parseInt(e.key) - 1;
+        if (currentQ && optIdx < currentQ.options.length) toggleOption(optIdx);
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [phase, currentQ, currentIdx, questions, answers, handleNext, handlePrev, toggleFlag, toggleOption]);
+
+  async function startTest() {
+    if (!selectedExam) { toast.error('Select an exam'); return; }
+
+    try {
+      const endpoint = isStudy ? `/api/questions?examId=${selectedExam}&limit=${questionCount}` : `/api/questions/test?examId=${selectedExam}`;
+      const res = await apiFetch(endpoint);
+      const data = await res.json();
+
+      if (!data.success || data.data.length === 0) {
+        toast.error('No questions found for this exam');
+        return;
+      }
+
+      // Shuffle questions
+      const shuffled = data.data.sort(() => Math.random() - 0.5).slice(0, questionCount);
+      setQuestions(shuffled);
+      setCurrentIdx(0);
+      setAnswers({});
+      setFlagged(new Set());
+      setChecked(new Set());
+      const savedAnswers = localStorage.getItem(`test_answers_${selectedExam}`);
+      if (savedAnswers && !isStudy) {
+        try { setAnswers(JSON.parse(savedAnswers)); } catch (e) {}
+      }
+
+      setTimeLeft(timeMinutes * 60);
+      setTestStartTime(performance.now());
+      setPhase('testing');
+    } catch (err) {
+      toast.error('Failed to load questions');
+    }
+  }
 
   // Format time
   const formatTime = (seconds) => {

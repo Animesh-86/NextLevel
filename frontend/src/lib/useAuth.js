@@ -12,12 +12,15 @@ export function AuthProvider({ children }) {
     async function loadSession() {
       try {
         const res = await apiFetch('/api/user/profile');
+        if (!res.ok) {
+           throw new Error('Not logged in');
+        }
         const data = await res.json();
         if (data.success && data.data) {
           setSession({ user: data.data });
         }
       } catch (err) {
-        // Not logged in
+        // Not logged in or error
       }
       setLoading(false);
     }
@@ -36,7 +39,17 @@ export function useSession() {
   return { data: session, status: loading ? 'loading' : session ? 'authenticated' : 'unauthenticated' };
 }
 
-export function signOut({ callbackUrl = '/login' } = {}) {
-  document.cookie = 'token=; path=/; max-age=0; SameSite=Lax';
-  window.location.href = callbackUrl;
+export async function signOut({ callbackUrl = '/login' } = {}) {
+  try {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+  } catch (err) {
+    console.error('Logout error:', err);
+  }
+  // Also try to clear any non-HttpOnly copies
+  document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  document.cookie = 'token=; path=/; max-age=0';
+  
+  if (typeof window !== 'undefined') {
+    window.location.href = callbackUrl;
+  }
 }

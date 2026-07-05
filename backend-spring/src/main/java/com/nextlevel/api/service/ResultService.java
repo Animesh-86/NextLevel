@@ -56,7 +56,10 @@ public class ResultService {
         log.info("Creating graded result for user: {}, exam: {}", userId, request.getExamId());
         
         Exam exam = examRepository.findById(request.getExamId()).orElseThrow(() -> new IllegalArgumentException("Exam not found"));
-        List<Question> questions = questionRepository.findByExamId(request.getExamId());
+        if (!userId.equals(exam.getUserId())) {
+            throw new IllegalArgumentException("Unauthorized: You do not own this exam");
+        }
+        List<Question> questions = questionRepository.findByExamIdAndUserId(request.getExamId(), userId);
         
         int correctCount = 0;
         int wrongCount = 0;

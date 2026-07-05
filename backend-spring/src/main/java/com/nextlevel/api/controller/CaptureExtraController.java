@@ -21,18 +21,18 @@ import com.nextlevel.api.model.Capture;
 import com.nextlevel.api.repository.CaptureRepository;
 import com.nextlevel.api.security.CurrentUser;
 import com.nextlevel.api.service.AiAnalysisResult;
-import com.nextlevel.api.service.GeminiService;
+import com.nextlevel.api.service.GroqService;
 
 @RestController
 @RequestMapping("/api/captures")
 public class CaptureExtraController {
 
     private final CaptureRepository captureRepository;
-    private final GeminiService geminiService;
+    private final GroqService groqService;
 
-    public CaptureExtraController(CaptureRepository captureRepository, GeminiService geminiService) {
+    public CaptureExtraController(CaptureRepository captureRepository, GroqService groqService) {
         this.captureRepository = captureRepository;
-        this.geminiService = geminiService;
+        this.groqService = groqService;
     }
 
     @GetMapping("/reminders")
@@ -44,7 +44,7 @@ public class CaptureExtraController {
                 .findTop10ByUserIdAndReminderAtLessThanEqualAndIsReminderDismissedAndStatusOrderByReminderAtAsc(
                         currentUser.getUserId(), now, false, "active");
         List<Capture> upcoming = captureRepository
-                .findTop10ByUserIdAndReminderAtGreaterThanAndReminderAtLessThanEqualAndIsReminderDismissedAndStatusOrderByReminderAtAsc(
+                .findUpcomingReminders(
                         currentUser.getUserId(), now, week, false, "active");
         long totalPending = captureRepository
                 .countByUserIdAndReminderAtLessThanEqualAndIsReminderDismissedAndStatus(currentUser.getUserId(), now,
@@ -70,9 +70,9 @@ public class CaptureExtraController {
 
         AiAnalysisResult analysis;
         if (image != null) {
-            analysis = geminiService.analyzeImage(image, mimeType);
+            analysis = groqService.analyzeImage(image, mimeType);
         } else {
-            analysis = geminiService.analyzeText(text);
+            analysis = groqService.analyzeText(text);
         }
 
         return ResponseEntity.ok(ApiResponse.success(analysis.toResponseMap()));
@@ -108,7 +108,7 @@ public class CaptureExtraController {
 
                 AiAnalysisResult analysis = new AiAnalysisResult();
                 if (overrideTitle == null || overrideDescription == null) {
-                analysis = geminiService.analyzeImage(base64, mime);
+                    analysis = groqService.analyzeImage(base64, mime);
                 }
 
                 String finalTitle = overrideTitle != null ? overrideTitle

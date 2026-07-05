@@ -37,7 +37,7 @@
   --glass-bg: rgba(10, 10, 10, 0.6);
   --glass-blur: blur(12px);
 
-  --sidebar-width: 240px;
+  --sidebar-width: 280px;
 }
 
 @media (prefers-color-scheme: light) {
@@ -149,6 +149,7 @@ button { cursor: pointer; font-family: inherit; border: none; background: none; 
   background-color: var(--bg-primary);
   margin-left: var(--sidebar-width);
   min-height: 100vh;
+  transition: margin-left 0.3s ease;
 }
 
 /* ═══════════════════════════
@@ -164,9 +165,35 @@ button { cursor: pointer; font-family: inherit; border: none; background: none; 
   position: fixed;
   top: 0;
   left: 0;
-  left: 0;
   bottom: 0;
   z-index: 100;
+  transition: width 0.3s ease;
+}
+
+body.sidebar-collapsed {
+  --sidebar-width: 80px;
+}
+
+body.sidebar-collapsed .sidebar-brand,
+body.sidebar-collapsed .sidebar-nav-label,
+body.sidebar-collapsed .sidebar-link span,
+body.sidebar-collapsed .sidebar-link-indicator,
+body.sidebar-collapsed .sidebar-user-info,
+body.sidebar-collapsed .sidebar-logout span,
+body.sidebar-collapsed .sidebar-collapse-text {
+  display: none;
+}
+
+body.sidebar-collapsed .sidebar-link,
+body.sidebar-collapsed .sidebar-logo,
+body.sidebar-collapsed .sidebar-user,
+body.sidebar-collapsed .sidebar-logout,
+body.sidebar-collapsed .sidebar-collapse-btn {
+  justify-content: center;
+}
+
+body.sidebar-collapsed .sidebar-link {
+  padding: 0.7rem;
 }
 
 .sidebar-header {
@@ -214,6 +241,15 @@ button { cursor: pointer; font-family: inherit; border: none; background: none; 
   font-size: 0.9rem;
   transition: all 0.2s ease;
   position: relative;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar-link span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
 }
 
 .sidebar-link:hover {
@@ -229,6 +265,7 @@ button { cursor: pointer; font-family: inherit; border: none; background: none; 
 }
 
 .sidebar-link-indicator {
+  flex-shrink: 0;
   margin-left: auto;
   opacity: 0.5;
 }

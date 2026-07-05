@@ -1,10 +1,20 @@
 package com.nextlevel.api.dto;
 
+import com.fasterxml.jackson.annotation.JsonView;
+import com.nextlevel.api.model.Views;
+
 public class ApiResponse<T> {
 
+    @JsonView(Views.Public.class)
     private boolean success;
+    
+    @JsonView(Views.Public.class)
     private T data;
+    
+    @JsonView(Views.Public.class)
     private String error;
+    
+    @JsonView(Views.Public.class)
     private String message;
 
     public static <T> ApiResponse<T> success(T data) {

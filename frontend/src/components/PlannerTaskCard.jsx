@@ -14,16 +14,6 @@ const statusIcons = {
   skipped: Circle,
 };
 
-const categoryEmojis = {
-  study: '📖',
-  revision: '🔄',
-  practice: '💻',
-  project: '🚀',
-  assignment: '📝',
-  'exam-prep': '📚',
-  other: '📌',
-};
-
 export default function PlannerTaskCard({ task, onStatusToggle, onDelete }) {
   const StatusIcon = statusIcons[task.status] || Circle;
   const isDone = task.status === 'done';
@@ -55,7 +45,6 @@ export default function PlannerTaskCard({ task, onStatusToggle, onDelete }) {
 
       <div className="planner-task-content">
         <div className="planner-task-title">
-          <span>{categoryEmojis[task.category] || '📌'}</span>
           <span className={isDone || isSkipped ? 'line-through' : ''}>{task.title}</span>
         </div>
         {task.startTime && (

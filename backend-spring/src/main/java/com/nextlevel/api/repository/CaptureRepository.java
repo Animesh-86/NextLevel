@@ -7,6 +7,7 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
 
 import com.nextlevel.api.model.Capture;
 
@@ -18,14 +19,16 @@ public interface CaptureRepository extends MongoRepository<Capture, String> {
 
     Optional<Capture> findByIdAndUserIdAndStatus(String id, String userId, String status);
 
-        List<Capture> findTop10ByUserIdAndReminderAtLessThanEqualAndIsReminderDismissedAndStatusOrderByReminderAtAsc(
+    List<Capture> findTop10ByUserIdAndReminderAtLessThanEqualAndIsReminderDismissedAndStatusOrderByReminderAtAsc(
             String userId, Instant reminderAt, Boolean isReminderDismissed, String status);
 
-        List<Capture> findTop10ByUserIdAndReminderAtGreaterThanAndReminderAtLessThanEqualAndIsReminderDismissedAndStatusOrderByReminderAtAsc(
+    @Query("{ 'userId': ?0, 'reminderAt': { $gt: ?1, $lte: ?2 }, 'isReminderDismissed': ?3, 'status': ?4 }")
+    List<Capture> findUpcomingReminders(
             String userId, Instant start, Instant end, Boolean isReminderDismissed, String status);
 
-        long countByUserIdAndReminderAtLessThanEqualAndIsReminderDismissedAndStatus(
+    long countByUserIdAndReminderAtLessThanEqualAndIsReminderDismissedAndStatus(
             String userId, Instant reminderAt, Boolean isReminderDismissed, String status);
 
-        List<Capture> findByUserId(String userId);
+    List<Capture> findByUserId(String userId);
 }
+

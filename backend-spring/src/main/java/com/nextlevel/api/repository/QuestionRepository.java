@@ -17,7 +17,8 @@ public interface QuestionRepository extends MongoRepository<Question, String> {
     long countByExamId(String examId);
     void deleteByExamId(String examId);
     void deleteByExamIdAndUserId(String examId, String userId);
+    List<Question> findByExamIdAndUserId(String examId, String userId);
 
-    @org.springframework.data.mongodb.repository.Query("{ $expr: { $gte: [ { $divide: [ '$timesFailed', '$timesTested' ] }, 0.5 ] }, timesTested: { $gt: 0 } }")
+    @org.springframework.data.mongodb.repository.Query(value = "{ $expr: { $gte: [ { $divide: [ '$timesFailed', '$timesTested' ] }, 0.5 ] }, timesTested: { $gt: 0 } }", count = true)
     long countNeedsReview();
 }

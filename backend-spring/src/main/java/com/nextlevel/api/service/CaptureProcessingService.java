@@ -21,7 +21,7 @@ import com.nextlevel.api.repository.CaptureRepository;
 public class CaptureProcessingService {
 
     private final CaptureRepository captureRepository;
-    private final GeminiService geminiService;
+    private final GroqService groqService;
     private final HttpClient httpClient;
 
     private final AtomicLong submitted = new AtomicLong(0);
@@ -29,9 +29,9 @@ public class CaptureProcessingService {
     private final AtomicLong completed = new AtomicLong(0);
     private final AtomicLong failed = new AtomicLong(0);
 
-    public CaptureProcessingService(CaptureRepository captureRepository, GeminiService geminiService) {
+    public CaptureProcessingService(CaptureRepository captureRepository, GroqService groqService) {
         this.captureRepository = captureRepository;
-        this.geminiService = geminiService;
+        this.groqService = groqService;
         this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
     }
 
@@ -52,13 +52,13 @@ public class CaptureProcessingService {
             AiAnalysisResult analysis;
 
             if ("screenshot".equals(type) && capture.getImageData() != null && !capture.getImageData().isBlank()) {
-                analysis = geminiService.analyzeImage(capture.getImageData(), "image/png");
+                analysis = groqService.analyzeImage(capture.getImageData(), "image/png");
             } else {
-                analysis = geminiService.analyzeText(processedContent);
+                analysis = groqService.analyzeText(processedContent);
             }
 
             String textToEmbed = "Title: " + nullSafe(analysis.getTitle()) + "\nSummary: " + nullSafe(analysis.getSummary());
-            List<Double> embedding = geminiService.generateEmbeddings(textToEmbed);
+            List<Double> embedding = groqService.generateEmbeddings(textToEmbed);
 
             if (analysis.getTitle() != null && !analysis.getTitle().isBlank()) {
                 capture.setTitle(analysis.getTitle());

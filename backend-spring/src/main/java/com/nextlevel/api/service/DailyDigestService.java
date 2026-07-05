@@ -77,7 +77,8 @@ public class DailyDigestService {
         promptBuilder.append("- Pending reminders: ").append(pendingReminders.size()).append("\n");
         promptBuilder.append("- Active learning roadmaps: ").append(activeRoadmaps.size()).append("\n");
         
-        promptBuilder.append("\nYour response should sound like an AI assistant (JARVIS/Friday style) giving a quick morning standup. Do not use markdown headers, just plain text with occasional emojis.");
+        promptBuilder.append("\nYour response should sound like an AI assistant (JARVIS style) giving a very quick morning standup. Keep it strictly to 2 short sentences. Absolutely DO NOT use any emojis. Use plain text only.");
+
 
         String message = chatClient.prompt()
                 .user(u -> u.text(promptBuilder.toString()))

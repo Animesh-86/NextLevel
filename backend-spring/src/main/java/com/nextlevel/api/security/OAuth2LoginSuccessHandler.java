@@ -61,14 +61,14 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
         ResponseCookie cookie = ResponseCookie.from("token", token)
                 .httpOnly(true)
-                .secure(true)
                 .path("/")
                 .maxAge(30 * 24 * 60 * 60)
-                .sameSite("Strict")
+                .sameSite("Lax")
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
-        String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/dashboard")
+        String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/login/callback")
+                .queryParam("token", token)
                 .build().toUriString();
 
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
