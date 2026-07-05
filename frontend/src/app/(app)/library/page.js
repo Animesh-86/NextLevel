@@ -295,18 +295,9 @@ export default function LibraryPage() {
               </button>
             </div>
 
-            <form onSubmit={handleFileUploadSubmit}>
+            <form onSubmit={handleFileUploadSubmit} className="capture-form">
               <div 
-                className={`vault-dropzone ${dragover ? 'dragover' : ''}`}
-                style={{ 
-                  border: '2px dashed var(--border-strong)', 
-                  borderRadius: 'var(--radius-md)', 
-                  padding: '2rem 1rem', 
-                  textAlign: 'center', 
-                  cursor: 'pointer',
-                  background: dragover ? 'var(--bg-accent)' : 'transparent',
-                  marginBottom: '1rem'
-                }}
+                className={`capture-dropzone ${dragover ? 'dragover' : ''}`}
                 onDragOver={(e) => { e.preventDefault(); setDragover(true); }}
                 onDragLeave={() => setDragover(false)}
                 onDrop={(e) => {
@@ -328,24 +319,26 @@ export default function LibraryPage() {
                     }
                   }}
                 />
-                <Upload size={32} style={{ marginBottom: '0.75rem', color: 'var(--text-muted)' }} />
-                {fileToUpload ? (
-                  <div>
-                    <p style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{fileToUpload.name}</p>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      {(fileToUpload.size / (1024 * 1024)).toFixed(2)} MB
-                    </p>
-                  </div>
-                ) : (
-                  <div>
-                    <p style={{ fontWeight: 500 }}>Drag and drop or click to choose a file</p>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Max file size 10MB</p>
-                  </div>
-                )}
+                <div className="capture-dropzone-content">
+                  <Upload size={28} />
+                  {fileToUpload ? (
+                    <div>
+                      <p style={{ color: 'var(--text-primary)' }}>{fileToUpload.name}</p>
+                      <span style={{ fontSize: '0.8rem' }}>
+                        {(fileToUpload.size / (1024 * 1024)).toFixed(2)} MB
+                      </span>
+                    </div>
+                  ) : (
+                    <div>
+                      <p>Drag and drop or click to choose a file</p>
+                      <span style={{ fontSize: '0.8rem' }}>Max file size 10MB</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="capture-field">
-                <label className="capture-label">Custom Title (Optional)</label>
+                <label className="auth-label">Custom Title (Optional)</label>
                 <input 
                   type="text"
                   className="input"
@@ -357,7 +350,7 @@ export default function LibraryPage() {
               </div>
 
               <div className="capture-field">
-                <label className="capture-label">Category</label>
+                <label className="auth-label">Category</label>
                 <select
                   className="select"
                   value={uploadCategory}
@@ -370,7 +363,7 @@ export default function LibraryPage() {
                 </select>
               </div>
 
-              <div className="capture-actions" style={{ marginTop: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button 
                   type="button" 
                   className="btn btn-secondary" 
@@ -408,9 +401,9 @@ export default function LibraryPage() {
               </button>
             </div>
 
-            <form onSubmit={handleLinkSubmit}>
+            <form onSubmit={handleLinkSubmit} className="capture-form">
               <div className="capture-field">
-                <label className="capture-label">URL *</label>
+                <label className="auth-label">URL *</label>
                 <input 
                   type="url"
                   className="input"
@@ -423,7 +416,7 @@ export default function LibraryPage() {
               </div>
 
               <div className="capture-field">
-                <label className="capture-label">Title *</label>
+                <label className="auth-label">Title *</label>
                 <input 
                   type="text"
                   className="input"
@@ -436,7 +429,7 @@ export default function LibraryPage() {
               </div>
 
               <div className="capture-field">
-                <label className="capture-label">Description (Optional)</label>
+                <label className="auth-label">Description (Optional)</label>
                 <textarea 
                   className="textarea"
                   placeholder="Add details about this link..."
@@ -448,7 +441,7 @@ export default function LibraryPage() {
               </div>
 
               <div className="capture-field">
-                <label className="capture-label">Category</label>
+                <label className="auth-label">Category</label>
                 <select
                   className="select"
                   value={linkForm.category}
@@ -462,7 +455,7 @@ export default function LibraryPage() {
               </div>
 
               <div className="capture-field">
-                <label className="capture-label">Tags (comma-separated)</label>
+                <label className="auth-label">Tags (comma-separated)</label>
                 <input 
                   type="text"
                   className="input"
@@ -473,7 +466,7 @@ export default function LibraryPage() {
                 />
               </div>
 
-              <div className="capture-actions" style={{ marginTop: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button 
                   type="button" 
                   className="btn btn-secondary" 

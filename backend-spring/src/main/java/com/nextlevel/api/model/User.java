@@ -40,6 +40,8 @@ public class User {
     private Integer xp = 0;
     private Integer level = 1;
     private List<Map<String, Object>> achievements = new ArrayList<>();
+    private String dailyBriefingCache;
+    private String dailyBriefingDate;
     private Instant createdAt;
     private Instant updatedAt;
 }

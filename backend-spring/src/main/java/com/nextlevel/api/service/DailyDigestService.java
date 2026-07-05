@@ -56,9 +56,18 @@ public class DailyDigestService {
         int streak = user != null && user.getStreak() != null ? user.getStreak() : 0;
 
         List<PlannerTask> todaysTasks = plannerTaskRepository.findByUserIdAndScheduledDateBetweenOrderByScheduledDateAscStartTimeAsc(userId, startOfDay, endOfDay);
-        
         List<Capture> pendingReminders = captureRepository.findTop10ByUserIdAndReminderAtLessThanEqualAndIsReminderDismissedAndStatusOrderByReminderAtAsc(userId, now, false, "active");
-        
+
+        String todayStr = today.toString(); // format: YYYY-MM-DD
+        if (user != null && todayStr.equals(user.getDailyBriefingDate()) && user.getDailyBriefingCache() != null) {
+            return Map.of(
+                "message", user.getDailyBriefingCache(),
+                "taskCount", todaysTasks.size(),
+                "reminderCount", pendingReminders.size(),
+                "streak", streak
+            );
+        }
+
         List<Roadmap> activeRoadmaps = roadmapRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
             .filter(r -> "active".equals(r.getStatus())).toList();
             
@@ -79,14 +88,23 @@ public class DailyDigestService {
         
         promptBuilder.append("\nYour response should sound like an AI assistant (JARVIS style) giving a very quick morning standup. Keep it strictly to 2 short sentences. Absolutely DO NOT use any emojis. Use plain text only.");
 
-
         String message = chatClient.prompt()
                 .user(u -> u.text(promptBuilder.toString()))
                 .call()
                 .content();
 
+        if (message == null || message.trim().isEmpty()) {
+            message = "Good morning! Ready to tackle the day?";
+        }
+
+        if (user != null) {
+            user.setDailyBriefingCache(message);
+            user.setDailyBriefingDate(todayStr);
+            userRepository.save(user);
+        }
+
         return Map.of(
-            "message", message != null ? message : "Good morning! Ready to tackle the day?",
+            "message", message,
             "taskCount", todaysTasks.size(),
             "reminderCount", pendingReminders.size(),
             "streak", streak
