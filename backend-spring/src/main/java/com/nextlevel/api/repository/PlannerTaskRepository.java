@@ -12,4 +12,5 @@ public interface PlannerTaskRepository extends MongoRepository<PlannerTask, Stri
     List<PlannerTask> findByUserIdAndScheduledDateBetweenOrderByScheduledDateAscStartTimeAsc(String userId, Instant start, Instant end);
     Optional<PlannerTask> findByIdAndUserId(String id, String userId);
     List<PlannerTask> findByUserId(String userId);
+    List<PlannerTask> findByStatusNot(String status);
 }

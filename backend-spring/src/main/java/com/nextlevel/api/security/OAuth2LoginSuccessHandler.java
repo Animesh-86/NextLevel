@@ -63,7 +63,8 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                 .httpOnly(true)
                 .path("/")
                 .maxAge(30 * 24 * 60 * 60)
-                .sameSite("Lax")
+                .sameSite("None")
+                .secure(true)
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
