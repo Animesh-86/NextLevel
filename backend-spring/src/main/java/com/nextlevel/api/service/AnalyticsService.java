@@ -81,8 +81,16 @@ public class AnalyticsService {
         }
 
         Map<String, Integer> catCounts = new HashMap<>();
-        tasks.forEach(t -> catCounts.merge(t.getCategory(), 1, Integer::sum));
+        Map<String, Integer> catDurations = new HashMap<>();
+        tasks.forEach(t -> {
+            catCounts.merge(t.getCategory(), 1, Integer::sum);
+            if (t.getDuration() != null && "done".equals(t.getStatus())) {
+                catDurations.merge(t.getCategory(), t.getDuration(), Integer::sum);
+            }
+        });
+        
         var categoryData = catCounts.entrySet().stream().map(e -> Map.of("name", e.getKey(), "value", e.getValue())).toList();
+        var timeDistribution = catDurations.entrySet().stream().map(e -> Map.of("name", e.getKey(), "value", e.getValue())).toList();
 
         Map<String, Integer> pipeline = new HashMap<>();
         apps.forEach(a -> pipeline.merge(a.getStatus(), 1, Integer::sum));
@@ -114,6 +122,7 @@ public class AnalyticsService {
         data.put("heatmap", heatmap);
         data.put("weeklyData", weeklyData);
         data.put("categoryData", categoryData);
+        data.put("timeDistribution", timeDistribution);
         data.put("pipeline", pipeline);
         data.put("streak", streak);
         data.put("counts", counts);

@@ -4,12 +4,14 @@ import { useState, useRef, useEffect } from "react";
 import { Sparkles, X, Send, Bot, User, Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import Link from "next/link";
+import { useCurrentContext } from "@/lib/CurrentContext";
 
 export default function AiChatModal({ isOpen, onClose }) {
     const [query, setQuery] = useState("");
     const [messages, setMessages] = useState([]);
     const [loading, setLoading] = useState(false);
     const messagesEndRef = useRef(null);
+    const { activeContext } = useCurrentContext();
 
     useEffect(() => {
         if (messagesEndRef.current) {
@@ -17,11 +19,17 @@ export default function AiChatModal({ isOpen, onClose }) {
         }
     }, [messages]);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!query.trim()) return;
+    const sendQuickAction = (text) => {
+        setQuery(text);
+        // We need to wait for state to update, or just pass text directly to a new internal submit
+        // Since handleSubmit uses event, we can't easily fake it, let's just trigger it manually
+        submitQuery(text);
+    };
 
-        const userQ = query.trim();
+    const submitQuery = async (textToSubmit) => {
+        const userQ = textToSubmit.trim();
+        if (!userQ) return;
+        
         setQuery("");
         setMessages(prev => [...prev, { role: "user", content: userQ }]);
         setLoading(true);
@@ -39,7 +47,11 @@ export default function AiChatModal({ isOpen, onClose }) {
                 return newMsgs;
             });
 
-            const response = await apiFetch(`/api/chat/stream?query=${encodeURIComponent(userQ)}`);
+            let streamUrl = `/api/chat/stream?query=${encodeURIComponent(userQ)}`;
+            if (activeContext) {
+                streamUrl += `&context=${encodeURIComponent(activeContext)}`;
+            }
+            const response = await apiFetch(streamUrl);
             const reader = response.body.getReader();
             const decoder = new TextDecoder("utf-8");
 
@@ -72,6 +84,11 @@ export default function AiChatModal({ isOpen, onClose }) {
         }
     };
 
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        submitQuery(query);
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -96,6 +113,16 @@ export default function AiChatModal({ isOpen, onClose }) {
                                 <br />
                                 I&apos;ll find the answers and cite my sources.
                             </p>
+                            {activeContext && (
+                                <div className="ai-chat-quick-actions" style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                    <button onClick={() => sendQuickAction("Summarize the page I am currently looking at.")} className="btn-secondary" style={{ fontSize: '12px', padding: '4px 12px' }}>
+                                        Summarize Page
+                                    </button>
+                                    <button onClick={() => sendQuickAction("Generate 5 practice flashcard questions based on the page I am currently looking at.")} className="btn-secondary" style={{ fontSize: '12px', padding: '4px 12px' }}>
+                                        Generate Flashcards
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         messages.map((msg, i) => (

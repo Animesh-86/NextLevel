@@ -4,8 +4,10 @@ import { useToast } from '@/components/Toast';
 import { useSession, signOut } from '@/lib/useAuth';
 import { apiFetch } from '@/lib/api';
 import { SkeletonCard } from '@/components/SkeletonLoader';
-import { User, Mail, Calendar, Flame, BookOpen, HelpCircle, Clock, Award, Save, Lock, Eye, EyeOff, BarChart3, ChevronRight, LogOut } from 'lucide-react';
+import { User, Mail, Calendar, Flame, BookOpen, HelpCircle, Clock, Award, Save, Lock, Eye, EyeOff, BarChart3, ChevronRight, LogOut, PieChart as PieChartIcon } from 'lucide-react';
 import Link from 'next/link';
+import SubjectHeatmap from '@/components/charts/SubjectHeatmap';
+import TimeDistributionPie from '@/components/charts/TimeDistributionPie';
 
 export default function ProfilePage() {
   const { data: session } = useSession();
@@ -249,6 +251,33 @@ export default function ProfilePage() {
               </div>
             </section>
           )}
+
+          {/* New Charts Section */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+            <section className="dash-panel">
+              <div className="dash-panel-head">
+                <div className="dash-panel-title-group">
+                  <BarChart3 size={16} />
+                  <h2>Subject Mastery</h2>
+                </div>
+              </div>
+              <div style={{ marginTop: '1rem' }}>
+                <SubjectHeatmap data={analytics?.categoryData || []} />
+              </div>
+            </section>
+
+            <section className="dash-panel">
+              <div className="dash-panel-head">
+                <div className="dash-panel-title-group">
+                  <PieChartIcon size={16} />
+                  <h2>Time Distribution</h2>
+                </div>
+              </div>
+              <div style={{ marginTop: '1rem' }}>
+                <TimeDistributionPie data={analytics?.timeDistribution || []} />
+              </div>
+            </section>
+          </div>
 
           {/* Achievements */}
           <section className="dash-panel">

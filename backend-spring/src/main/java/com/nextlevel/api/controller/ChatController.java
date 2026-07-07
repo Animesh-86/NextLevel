@@ -31,8 +31,9 @@ public class ChatController {
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> streamChat(
             @AuthenticationPrincipal CurrentUser currentUser,
-            @RequestParam String query) {
-        return chatService.streamChat(currentUser.getUserId(), query);
+            @RequestParam String query,
+            @RequestParam(required = false) String context) {
+        return chatService.streamChat(currentUser.getUserId(), query, context);
     }
     
     @GetMapping("/sources")

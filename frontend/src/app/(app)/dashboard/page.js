@@ -10,6 +10,7 @@ import {
   Circle, BarChart3, BrainCircuit, Zap, ArrowUpRight
 } from 'lucide-react';
 import { SkeletonCard } from '@/components/SkeletonLoader';
+import { useCurrentContext } from '@/lib/CurrentContext';
 
 const METRICS = [
   { key: 'exams', label: 'Exams Taken', icon: BookOpen, getValue: (stats) => stats?.totalExamsTaken || 0 },
@@ -44,6 +45,12 @@ export default function Dashboard() {
   const [todayTasks, setTodayTasks] = useState([]);
   const [recentCaptures, setRecentCaptures] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { setActiveContext } = useCurrentContext();
+
+  useEffect(() => {
+    setActiveContext("The user is viewing their main Dashboard, including quick actions, daily digest, and tasks for today.");
+    return () => setActiveContext("");
+  }, [setActiveContext]);
 
   useEffect(() => {
     async function loadAll() {

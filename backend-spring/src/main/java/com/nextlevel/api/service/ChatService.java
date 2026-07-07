@@ -22,7 +22,7 @@ public class ChatService {
         this.semanticSearchService = semanticSearchService;
     }
 
-    public Flux<String> streamChat(String userId, String query) {
+    public Flux<String> streamChat(String userId, String query, String activeContext) {
         // Retrieve context using existing semantic search
         List<Capture> relatedCaptures = semanticSearchService.search(userId, query).stream().limit(5).toList();
         
@@ -45,8 +45,14 @@ public class ChatService {
                 Context:
                 """ + contextBuilder.toString();
 
+        if (activeContext != null && !activeContext.isEmpty()) {
+            systemPrompt = "The user is currently looking at the following page/context: " + activeContext + "\n\n" + systemPrompt;
+        }
+
+        final String finalSystemPrompt = systemPrompt;
+
         return chatClient.prompt()
-                .system(s -> s.text(systemPrompt))
+                .system(s -> s.text(finalSystemPrompt))
                 .user(u -> u.text(query))
                 .stream()
                 .content();

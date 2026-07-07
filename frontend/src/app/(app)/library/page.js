@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { FileText, Link2, Search, Upload, Plus, ExternalLink, FolderOpen, X, Loader2 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { SkeletonCard } from '@/components/SkeletonLoader';
+import { useCurrentContext } from '@/lib/CurrentContext';
 
 function itemId(item) {
   return item._id || item.id;
@@ -15,6 +16,12 @@ export default function LibraryPage() {
   const [links, setLinks] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const { setActiveContext } = useCurrentContext();
+
+  useEffect(() => {
+    setActiveContext("The user is viewing their Library (Files & Links)");
+    return () => setActiveContext("");
+  }, [setActiveContext]);
 
   // Modals
   const [uploadModalOpen, setUploadModalOpen] = useState(false);

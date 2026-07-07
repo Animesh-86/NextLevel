@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api";
 import { ArrowLeft, Edit3, Loader2 } from "lucide-react";
 import CaptureModal from "@/components/CaptureModal";
 import RelatedSidebar from "@/components/RelatedSidebar";
+import { useCurrentContext } from "@/lib/CurrentContext";
 
 const urgencyLabels = {
     critical: 'CRITICAL',
@@ -20,6 +21,11 @@ export default function CaptureDetailPage() {
     const [capture, setCapture] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
+    const { setActiveContext } = useCurrentContext();
+
+    useEffect(() => {
+        return () => setActiveContext("");
+    }, [setActiveContext]);
 
     useEffect(() => {
         const loadCapture = async () => {
@@ -28,6 +34,7 @@ export default function CaptureDetailPage() {
                 const data = await res.json();
                 if (data.success) {
                     setCapture(data.data);
+                    setActiveContext(`Capture: ${data.data.title}`);
                 }
             } catch (err) {
                 console.error("Failed to load capture", err);
