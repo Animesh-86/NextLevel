@@ -11,23 +11,23 @@ import { SkeletonCard } from '@/components/SkeletonLoader';
 
 const categoryFilters = [
   { value: 'all', label: 'All' },
-  { value: 'system-design', label: '🏗️ System Design' },
-  { value: 'dsa', label: '🧮 DSA' },
-  { value: 'web-dev', label: '🌐 Web Dev' },
-  { value: 'database', label: '🗄️ Database' },
-  { value: 'devops', label: '⚙️ DevOps' },
-  { value: 'math', label: '📐 Math' },
-  { value: 'college', label: '🎓 College' },
-  { value: 'notes', label: '📝 Notes' },
-  { value: 'other', label: '📌 Other' },
+  { value: 'system-design', label: 'System Design' },
+  { value: 'dsa', label: 'DSA' },
+  { value: 'web-dev', label: 'Web Dev' },
+  { value: 'database', label: 'Database' },
+  { value: 'devops', label: 'DevOps' },
+  { value: 'math', label: 'Math' },
+  { value: 'college', label: 'College' },
+  { value: 'notes', label: 'Notes' },
+  { value: 'other', label: 'Other' },
 ];
 
 const typeFilters = [
   { value: 'all', label: 'All Types' },
-  { value: 'pdf', label: '📄 PDF' },
-  { value: 'image', label: '🖼️ Image' },
-  { value: 'doc', label: '📝 Doc' },
-  { value: 'spreadsheet', label: '📊 Sheet' },
+  { value: 'pdf', label: 'PDF' },
+  { value: 'image', label: 'Image' },
+  { value: 'doc', label: 'Doc' },
+  { value: 'spreadsheet', label: 'Sheet' },
 ];
 
 export default function FileVault() {

@@ -7,6 +7,13 @@ import { ArrowLeft, Edit3, Loader2 } from "lucide-react";
 import CaptureModal from "@/components/CaptureModal";
 import RelatedSidebar from "@/components/RelatedSidebar";
 
+const urgencyLabels = {
+    critical: 'CRITICAL',
+    high: 'HIGH',
+    medium: 'MEDIUM',
+    low: 'LOW',
+};
+
 export default function CaptureDetailPage() {
     const params = useParams();
     const router = useRouter();
@@ -35,79 +42,72 @@ export default function CaptureDetailPage() {
 
     if (loading) {
         return (
-            <div className="flex h-64 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="capture-detail-loading">
+                <Loader2 size={32} className="spin" />
             </div>
         );
     }
 
     if (!capture) {
         return (
-            <div className="p-8 text-center text-muted-foreground">
+            <div className="capture-detail-empty">
                 Capture not found.
             </div>
         );
     }
 
     return (
-        <div className="p-6 max-w-6xl mx-auto">
-            <button 
-                onClick={() => router.back()} 
-                className="flex items-center text-sm text-muted-foreground hover:text-foreground mb-6"
+        <div className="capture-detail-page" style={{ animation: 'fadeIn 0.5s ease-out' }}>
+            <button
+                type="button"
+                onClick={() => router.back()}
+                className="capture-detail-back"
             >
-                <ArrowLeft size={16} className="mr-2" /> Back
+                <ArrowLeft size={16} /> Back
             </button>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-card text-card-foreground border rounded-lg p-6 shadow-sm">
-                        <div className="flex justify-between items-start mb-4">
-                            <h1 className="text-2xl font-bold tracking-tight">{capture.title}</h1>
-                            <button 
+            <div className="capture-detail-grid">
+                <div>
+                    <div className="capture-detail-card">
+                        <div className="capture-detail-header">
+                            <h1 className="capture-detail-title">{capture.title}</h1>
+                            <button
+                                type="button"
                                 onClick={() => setIsEditing(true)}
-                                className="p-2 hover:bg-accent rounded-md transition-colors"
+                                className="icon-btn"
+                                aria-label="Edit capture"
                             >
                                 <Edit3 size={18} />
                             </button>
                         </div>
-                        
-                        <div className="flex flex-wrap gap-2 mb-6">
-                            <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                                {capture.category}
-                            </span>
+
+                        <div className="capture-detail-tags">
+                            <span className="badge badge-stark">{capture.category}</span>
                             {capture.urgency !== 'none' && (
-                                <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                    capture.urgency === 'critical' ? 'bg-red-500/10 text-red-500' :
-                                    capture.urgency === 'high' ? 'bg-orange-500/10 text-orange-500' :
-                                    'bg-yellow-500/10 text-yellow-500'
-                                }`}>
-                                    {capture.urgency}
-                                </span>
+                                <span className="capture-urgency-badge">{urgencyLabels[capture.urgency] || capture.urgency}</span>
                             )}
                             {capture.tags?.map(tag => (
-                                <span key={tag} className="px-2.5 py-0.5 rounded-full bg-secondary text-secondary-foreground text-xs">
-                                    #{tag}
-                                </span>
+                                <span key={tag} className="capture-tag">#{tag}</span>
                             ))}
                         </div>
 
                         {capture.type === 'screenshot' && capture.imageData && (
-                            <div className="mb-6 rounded-md overflow-hidden border">
-                                <img src={capture.imageData} alt="Screenshot" className="w-full h-auto" />
+                            <div className="capture-detail-image">
+                                <img src={capture.imageData} alt="Screenshot" />
                             </div>
                         )}
 
                         {capture.description && (
-                            <div className="mb-6">
-                                <h3 className="text-sm font-medium text-muted-foreground mb-2">Description</h3>
-                                <p className="text-sm whitespace-pre-wrap">{capture.description}</p>
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <h3 className="capture-detail-section-label">Description</h3>
+                                <p style={{ fontSize: '0.875rem', whiteSpace: 'pre-wrap' }}>{capture.description}</p>
                             </div>
                         )}
 
                         {capture.rawContent && (
                             <div>
-                                <h3 className="text-sm font-medium text-muted-foreground mb-2">Content</h3>
-                                <div className="p-4 bg-muted/50 rounded-md text-sm whitespace-pre-wrap font-mono">
+                                <h3 className="capture-detail-section-label">Content</h3>
+                                <div className="capture-detail-content">
                                     {capture.rawContent}
                                 </div>
                             </div>
@@ -115,14 +115,14 @@ export default function CaptureDetailPage() {
                     </div>
                 </div>
 
-                <div className="space-y-6">
+                <div>
                     <RelatedSidebar itemId={capture.id || capture._id} type="capture" />
                 </div>
             </div>
 
-            <CaptureModal 
-                isOpen={isEditing} 
-                onClose={() => setIsEditing(false)} 
+            <CaptureModal
+                isOpen={isEditing}
+                onClose={() => setIsEditing(false)}
                 editingCapture={capture}
                 onSave={() => window.location.reload()}
             />

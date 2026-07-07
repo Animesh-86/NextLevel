@@ -2,9 +2,9 @@
 import { CheckCircle2, Circle, Clock, Trash2, GripVertical, FileText, Inbox, Play } from 'lucide-react';
 
 const priorityColors = {
-  high: '#ef4444',
-  medium: '#eab308',
-  low: '#3b82f6',
+  high: 'var(--urgency-critical)',
+  medium: 'var(--urgency-medium)',
+  low: 'var(--urgency-low)',
 };
 
 const statusIcons = {
@@ -37,8 +37,8 @@ export default function PlannerTaskCard({ task, onStatusToggle, onDelete }) {
         <StatusIcon
           size={16}
           style={{
-            color: isDone ? '#22c55e' : priorityColors[task.priority],
-            fill: isDone ? '#22c55e' : 'transparent',
+            color: isDone ? 'var(--text-primary)' : priorityColors[task.priority],
+            fill: isDone ? 'var(--text-primary)' : 'transparent',
           }}
         />
       </button>
@@ -63,9 +63,9 @@ export default function PlannerTaskCard({ task, onStatusToggle, onDelete }) {
         </div>
       </div>
 
-      <div className="flex gap-1">
+      <div className="planner-task-actions">
         <button
-          className="icon-btn planner-task-play hover:text-primary transition-colors"
+          className="icon-btn planner-task-play"
           onClick={() => {
             if (window.startFocusTimer) {
               window.startFocusTimer(task.duration || 25, task._id);
@@ -76,7 +76,7 @@ export default function PlannerTaskCard({ task, onStatusToggle, onDelete }) {
           <Play size={12} />
         </button>
         <button
-          className="icon-btn planner-task-delete hover:text-destructive transition-colors"
+          className="icon-btn planner-task-delete"
           onClick={() => onDelete(task._id)}
           title="Delete"
         >

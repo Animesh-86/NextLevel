@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { FileText, Map, Image as ImageIcon, Link as LinkIcon } from "lucide-react";
+import { FileText, Map, Link as LinkIcon, Sparkles } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+
 export default function RelatedSidebar({ itemId, type }) {
     const [related, setRelated] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -30,15 +31,15 @@ export default function RelatedSidebar({ itemId, type }) {
 
     if (loading) {
         return (
-            <div className="p-4 border rounded-lg bg-card text-card-foreground">
-                <h3 className="font-semibold text-sm mb-4">Related Intelligence</h3>
-                <div className="space-y-3">
+            <div className="related-sidebar">
+                <h3 className="related-sidebar-title">Related Intelligence</h3>
+                <div className="related-sidebar-skeleton">
                     {[1, 2, 3].map(i => (
-                        <div key={i} className="animate-pulse flex space-x-3 items-center">
-                            <div className="rounded-full bg-muted h-8 w-8"></div>
-                            <div className="flex-1 space-y-2 py-1">
-                                <div className="h-2 bg-muted rounded w-3/4"></div>
-                                <div className="h-2 bg-muted rounded w-1/2"></div>
+                        <div key={i} className="related-sidebar-skeleton-row">
+                            <div className="related-sidebar-skeleton-avatar" />
+                            <div className="related-sidebar-skeleton-lines">
+                                <div className="related-sidebar-skeleton-line" />
+                                <div className="related-sidebar-skeleton-line short" />
                             </div>
                         </div>
                     ))}
@@ -52,9 +53,9 @@ export default function RelatedSidebar({ itemId, type }) {
     }
 
     const getIcon = (itemType) => {
-        if (itemType === 'roadmap') return <Map className="w-4 h-4 text-orange-500" />;
-        if (itemType === 'file') return <FileText className="w-4 h-4 text-green-500" />;
-        return <LinkIcon className="w-4 h-4 text-blue-500" />;
+        if (itemType === 'roadmap') return <Map size={16} />;
+        if (itemType === 'file') return <FileText size={16} />;
+        return <LinkIcon size={16} />;
     };
 
     const getLink = (itemType, id) => {
@@ -64,26 +65,26 @@ export default function RelatedSidebar({ itemId, type }) {
     };
 
     return (
-        <div className="p-4 border rounded-lg bg-card text-card-foreground shadow-sm">
-            <h3 className="font-semibold text-sm mb-4 flex items-center">
-                <span className="bg-primary/10 text-primary p-1 rounded mr-2">✨</span>
+        <div className="related-sidebar">
+            <h3 className="related-sidebar-title">
+                <Sparkles size={14} style={{ color: 'var(--text-muted)' }} />
                 Related Intelligence
             </h3>
-            <div className="space-y-3">
+            <div className="related-sidebar-list">
                 {related.map(item => (
-                    <Link 
-                        key={item.id} 
+                    <Link
+                        key={item.id}
                         href={getLink(item.type, item.id)}
-                        className="flex items-start space-x-3 p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors group"
+                        className="related-sidebar-item"
                     >
-                        <div className="mt-0.5 p-1.5 bg-background rounded-md border group-hover:border-primary/20">
+                        <div className="related-sidebar-icon">
                             {getIcon(item.type)}
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                            <p className="related-sidebar-item-title">
                                 {item.title || "Untitled"}
                             </p>
-                            <p className="text-xs text-muted-foreground capitalize">
+                            <p className="related-sidebar-item-meta">
                                 {item.type} • {(item.score * 100).toFixed(0)}% match
                             </p>
                         </div>

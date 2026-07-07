@@ -6,19 +6,17 @@ import { apiFetch } from "@/lib/api";
 
 export default function FocusTimer() {
     const [isOpen, setIsOpen] = useState(false);
-    const [timeLeft, setTimeLeft] = useState(25 * 60); // 25 mins default
+    const [timeLeft, setTimeLeft] = useState(25 * 60);
     const [isActive, setIsActive] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [initialTime, setInitialTime] = useState(25 * 60);
 
     useEffect(() => {
-        // Expose a global method to start the timer from anywhere (e.g. planner)
         window.startFocusTimer = (minutes, taskId) => {
             setIsOpen(true);
             setTimeLeft(minutes * 60);
             setInitialTime(minutes * 60);
             setIsActive(true);
-            // Optionally store taskId if we want to log it
             window._currentFocusTaskId = taskId;
         };
         return () => {
@@ -34,7 +32,7 @@ export default function FocusTimer() {
             }, 1000);
         } else if (timeLeft === 0 && isActive) {
             setIsActive(false);
-            handleStop(); // Auto save when done
+            handleStop();
         }
         return () => clearInterval(interval);
     }, [isActive, timeLeft]);
@@ -45,7 +43,6 @@ export default function FocusTimer() {
         setIsActive(false);
         const focusedSeconds = initialTime - timeLeft;
         if (focusedSeconds < 60) {
-            // Less than a minute, don't save
             setIsOpen(false);
             return;
         }
@@ -54,13 +51,13 @@ export default function FocusTimer() {
         try {
             const durationMinutes = Math.floor(focusedSeconds / 60);
             const taskId = window._currentFocusTaskId;
-            
+
             const res = await apiFetch("/api/study/session", {
                 method: "POST",
                 body: JSON.stringify({ durationMinutes, taskId })
             });
             const data = await res.json();
-            
+
             if (data.success && window.showGamificationToast) {
                 const xp = Math.floor(durationMinutes / 5) * 5;
                 if (xp > 0) {
@@ -83,38 +80,42 @@ export default function FocusTimer() {
     const progress = ((initialTime - timeLeft) / initialTime) * 100;
 
     return (
-        <div className="fixed bottom-24 right-4 z-[90] animate-in slide-in-from-right-8 fade-in duration-300">
-            <div className="bg-card text-card-foreground p-4 rounded-2xl shadow-xl border w-64 relative overflow-hidden group">
-                <button 
-                    onClick={() => setIsOpen(false)} 
-                    className="absolute top-2 right-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity rounded-full hover:bg-muted"
+        <div className="focus-timer">
+            <div className="focus-timer-card">
+                <button
+                    type="button"
+                    onClick={() => setIsOpen(false)}
+                    className="focus-timer-close"
+                    aria-label="Close focus timer"
                 >
-                    <X className="w-4 h-4 text-muted-foreground" />
+                    <X size={16} />
                 </button>
-                
-                <h4 className="font-semibold text-sm mb-2 text-center">Focus Session</h4>
-                <div className="text-4xl font-mono font-bold text-center mb-4 tracking-tighter">
-                    {mins}:{secs}
-                </div>
-                
-                <div className="h-1 w-full bg-muted rounded-full mb-4 overflow-hidden">
-                    <div className="h-full bg-primary transition-all duration-1000" style={{ width: `${progress}%` }}></div>
+
+                <h4 className="focus-timer-title">Focus Session</h4>
+                <div className="focus-timer-display">{mins}:{secs}</div>
+
+                <div className="focus-timer-track">
+                    <div className="focus-timer-fill" style={{ width: `${progress}%` }} />
                 </div>
 
-                <div className="flex justify-center gap-2">
-                    <button 
+                <div className="focus-timer-actions">
+                    <button
+                        type="button"
                         onClick={toggleTimer}
                         disabled={isSaving}
-                        className="p-3 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                        className="focus-timer-btn focus-timer-btn-primary"
+                        aria-label={isActive ? 'Pause' : 'Play'}
                     >
-                        {isActive ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current" />}
+                        {isActive ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}
                     </button>
-                    <button 
+                    <button
+                        type="button"
                         onClick={handleStop}
                         disabled={isSaving}
-                        className="p-3 bg-destructive/10 text-destructive rounded-full hover:bg-destructive/20 disabled:opacity-50 transition-colors"
+                        className="focus-timer-btn focus-timer-btn-stop"
+                        aria-label="Stop and save"
                     >
-                        {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Square className="w-5 h-5 fill-current" />}
+                        {isSaving ? <Loader2 size={20} className="spin" /> : <Square size={20} fill="currentColor" />}
                     </button>
                 </div>
             </div>

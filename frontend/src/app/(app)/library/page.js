@@ -33,27 +33,27 @@ export default function LibraryPage() {
   const [savingLink, setSavingLink] = useState(false);
 
   const fileCategoryOptions = [
-    { value: 'system-design', label: '🏗️ System Design' },
-    { value: 'dsa', label: '🧮 DSA' },
-    { value: 'web-dev', label: '🌐 Web Dev' },
-    { value: 'database', label: '🗄️ Database' },
-    { value: 'devops', label: '⚙️ DevOps' },
-    { value: 'math', label: '📐 Math' },
-    { value: 'college', label: '🎓 College' },
-    { value: 'notes', label: '📝 Notes' },
-    { value: 'other', label: '📌 Other' },
+    { value: 'system-design', label: 'System Design' },
+    { value: 'dsa', label: 'DSA' },
+    { value: 'web-dev', label: 'Web Dev' },
+    { value: 'database', label: 'Database' },
+    { value: 'devops', label: 'DevOps' },
+    { value: 'math', label: 'Math' },
+    { value: 'college', label: 'College' },
+    { value: 'notes', label: 'Notes' },
+    { value: 'other', label: 'Other' },
   ];
 
   const linkCategoryOptions = [
-    { value: 'tutorial', label: '📖 Tutorial' },
-    { value: 'article', label: '📄 Article' },
-    { value: 'documentation', label: '📚 Docs' },
-    { value: 'tool', label: '🛠️ Tool' },
-    { value: 'job-posting', label: '💼 Job Post' },
-    { value: 'video', label: '🎥 Video' },
-    { value: 'course', label: '🎓 Course' },
-    { value: 'github', label: '💻 GitHub' },
-    { value: 'other', label: '🔗 Other' },
+    { value: 'tutorial', label: 'Tutorial' },
+    { value: 'article', label: 'Article' },
+    { value: 'documentation', label: 'Documentation' },
+    { value: 'tool', label: 'Tool' },
+    { value: 'job-posting', label: 'Job Posting' },
+    { value: 'video', label: 'Video' },
+    { value: 'course', label: 'Course' },
+    { value: 'github', label: 'GitHub' },
+    { value: 'other', label: 'Other' },
   ];
 
   const handleFileUploadSubmit = async (e) => {
@@ -179,10 +179,10 @@ export default function LibraryPage() {
 
   return (
     <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
-      <header className="capture-hub-header">
+      <header className="page-header">
         <div>
-          <h1 className="capture-hub-title">Library</h1>
-          <p className="capture-hub-subtitle">
+          <h1 className="page-title">Library</h1>
+          <p className="page-subtitle">
             Files and saved links in one searchable place.
           </p>
         </div>
@@ -234,7 +234,7 @@ export default function LibraryPage() {
         </div>
       ) : (
         <div className="dash-main-grid">
-          <section className="card">
+          <section className="dash-section">
             <div className="card-title-row">
               <h2 className="card-title">Files</h2>
               <Link className="dash-see-all" href="/vault">Manage files</Link>
@@ -255,7 +255,7 @@ export default function LibraryPage() {
             </div>
           </section>
 
-          <section className="card">
+          <section className="dash-section">
             <div className="card-title-row">
               <h2 className="card-title">Links</h2>
               <Link className="dash-see-all" href="/links">Manage links</Link>

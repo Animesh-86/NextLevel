@@ -8,25 +8,25 @@ import {
 import { compressImage } from '@/lib/imageUtils';
 
 const categories = [
-  { value: 'exam', label: '📝 Exam' },
-  { value: 'project', label: '🚀 Project' },
-  { value: 'deadline', label: '⏰ Deadline' },
-  { value: 'resource', label: '📚 Resource' },
-  { value: 'personal', label: '💡 Personal' },
-  { value: 'college', label: '🎓 College' },
-  { value: 'work', label: '💼 Work' },
-  { value: 'job-posting', label: '🎯 Job Post' },
-  { value: 'tutorial', label: '📖 Tutorial' },
-  { value: 'code', label: '💻 Code' },
-  { value: 'idea', label: '✨ Idea' },
-  { value: 'other', label: '📌 Other' },
+  { value: 'exam', label: 'Exam' },
+  { value: 'project', label: 'Project' },
+  { value: 'deadline', label: 'Deadline' },
+  { value: 'resource', label: 'Resource' },
+  { value: 'personal', label: 'Personal' },
+  { value: 'college', label: 'College' },
+  { value: 'work', label: 'Work' },
+  { value: 'job-posting', label: 'Job Posting' },
+  { value: 'tutorial', label: 'Tutorial' },
+  { value: 'code', label: 'Code' },
+  { value: 'idea', label: 'Idea' },
+  { value: 'other', label: 'Other' },
 ];
 
 const urgencies = [
-  { value: 'critical', label: 'Critical', color: '#ef4444' },
-  { value: 'high', label: 'High', color: '#f97316' },
-  { value: 'medium', label: 'Medium', color: '#eab308' },
-  { value: 'low', label: 'Low', color: '#3b82f6' },
+  { value: 'critical', label: 'Critical', color: 'var(--urgency-critical)' },
+  { value: 'high', label: 'High', color: 'var(--urgency-high)' },
+  { value: 'medium', label: 'Medium', color: 'var(--urgency-medium)' },
+  { value: 'low', label: 'Low', color: 'var(--urgency-low)' },
   { value: 'none', label: 'None', color: 'var(--text-muted)' },
 ];
 
@@ -335,7 +335,7 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
             )}
 
             {previewImage && (
-              <div className="capture-preview-container" style={{ position: 'absolute', bottom: '1rem', left: '1rem', height: '120px', width: 'auto', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' }}>
+              <div className="capture-preview-container" style={{ position: 'absolute', bottom: '1rem', left: '1rem', height: '120px', width: 'auto', border: '1px solid var(--border-strong)', borderRadius: '6px', overflow: 'hidden' }}>
                 <img src={previewImage} alt="Preview" className="capture-preview-img" style={{ height: '100%', objectFit: 'cover' }} />
                 {analyzing && (
                   <div className="capture-preview-overlay" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '12px' }}>
@@ -362,7 +362,7 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
               type="button"
               className="icon-btn"
               onClick={() => fileInputRef.current?.click()}
-              style={{ position: 'absolute', bottom: '0.75rem', right: '0.75rem', background: 'var(--surface)', border: '1px solid var(--border)' }}
+              style={{ position: 'absolute', bottom: '0.75rem', right: '0.75rem', background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}
               title="Attach Image"
             >
               <Camera size={16} />

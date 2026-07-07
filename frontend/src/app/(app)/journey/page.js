@@ -8,17 +8,17 @@ import {
 } from 'lucide-react';
 
 const categoryColors = {
-  dsa: '#ef4444', 'system-design': '#3b82f6', 'web-dev': '#22c55e',
-  devops: '#a855f7', project: '#f59e0b', career: '#ec4899', 'ml-ai': '#06b6d4', other: '#9ca3af',
+  dsa: '#fafafa', 'system-design': '#dddddd', 'web-dev': '#bbbbbb',
+  devops: '#999999', project: '#777777', career: '#666666', 'ml-ai': '#555555', other: '#444444',
 };
 const categoryEmojis = {
   dsa: '', 'system-design': '', 'web-dev': '', devops: '',
   project: '', career: '', 'ml-ai': '', other: '',
 };
 const statusColors = {
-  bookmarked: '#6b7280', applied: '#3b82f6', screening: '#f59e0b',
-  technical: '#a855f7', onsite: '#ec4899', offer: '#22c55e',
-  accepted: '#10b981', rejected: '#ef4444', ghosted: '#6b7280',
+  bookmarked: '#444444', applied: '#555555', screening: '#666666',
+  technical: '#777777', onsite: '#888888', offer: '#aaaaaa',
+  accepted: '#fafafa', rejected: '#555555', ghosted: '#333333',
 };
 const statusLabels = {
   bookmarked: 'Saved', applied: 'Applied', screening: 'Screening',
@@ -205,10 +205,10 @@ export default function JourneyPage() {
                             return (
                               <div key={m._id} className={`roadmap-node ${m.status}`}>
                                 <div className="roadmap-node-dot" style={{
-                                  borderColor: m.status === 'completed' ? '#22c55e' : m.status === 'in-progress' ? '#f59e0b' : 'var(--border-strong)',
-                                  background: m.status === 'completed' ? '#22c55e' : 'var(--bg-primary)',
+                                  borderColor: m.status === 'completed' ? 'var(--text-primary)' : m.status === 'in-progress' ? 'var(--text-secondary)' : 'var(--border-strong)',
+                                  background: m.status === 'completed' ? 'var(--text-primary)' : 'var(--bg-primary)',
                                 }}>
-                                  {m.status === 'completed' && <CheckCircle2 size={12} color="#000" />}
+                                  {m.status === 'completed' && <CheckCircle2 size={12} color="var(--text-inverse)" />}
                                   {m.status === 'in-progress' && <Play size={10} />}
                                 </div>
                                 <span className="roadmap-node-label">{m.title}</span>
@@ -228,7 +228,7 @@ export default function JourneyPage() {
                                   {m.tasks.map(t => (
                                     <button key={t._id} className={`roadmap-task ${t.done ? 'done' : ''}`}
                                       onClick={() => toggleTask(r._id, m._id, t._id)}>
-                                      {t.done ? <CheckCircle2 size={14} color="#22c55e" /> : <Circle size={14} />}
+                                      {t.done ? <CheckCircle2 size={14} /> : <Circle size={14} />}
                                       <span>{t.title}</span>
                                     </button>
                                   ))}
@@ -344,7 +344,6 @@ export default function JourneyPage() {
 
 function AnalyticsPanel({ data }) {
   const { heatmap, weeklyData, categoryData, pipeline, counts, roadmapSummaries, streak } = data;
-  const COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#ec4899', '#06b6d4'];
 
   // Heatmap
   const heatmapEntries = Object.entries(heatmap).sort((a, b) => a[0].localeCompare(b[0]));
@@ -376,7 +375,7 @@ function AnalyticsPanel({ data }) {
         <div className="analytics-heatmap">
           {heatmapEntries.map(([date, count]) => (
             <div key={date} className="heatmap-cell" title={`${date}: ${count} actions`}
-              style={{ opacity: count === 0 ? 0.1 : 0.2 + (count / maxActivity) * 0.8, background: count > 0 ? '#22c55e' : 'var(--border-light)' }} />
+              style={{ opacity: count === 0 ? 0.08 : 0.2 + (count / maxActivity) * 0.8, background: count > 0 ? 'var(--text-primary)' : 'var(--border-light)' }} />
           ))}
         </div>
       </div>
@@ -389,7 +388,7 @@ function AnalyticsPanel({ data }) {
             {weeklyData.map((w, i) => (
               <div key={i} className="analytics-bar-group">
                 <div className="analytics-bar-container">
-                  <div className="analytics-bar" style={{ height: `${w.total > 0 ? (w.done / w.total) * 100 : 0}%`, background: '#22c55e' }} />
+                  <div className="analytics-bar" style={{ height: `${w.total > 0 ? (w.done / w.total) * 100 : 0}%`, background: 'var(--text-primary)' }} />
                 </div>
                 <span className="analytics-bar-label">{w.week}</span>
                 <span className="analytics-bar-value">{w.done}/{w.total}</span>

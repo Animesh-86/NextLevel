@@ -1,14 +1,16 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useToast } from '@/components/Toast';
-import { useSession } from '@/lib/useAuth';
+import { useSession, signOut } from '@/lib/useAuth';
 import { apiFetch } from '@/lib/api';
 import { SkeletonCard } from '@/components/SkeletonLoader';
-import { User, Mail, Calendar, Flame, BookOpen, HelpCircle, Clock, Award, Save, Lock, Eye, EyeOff } from 'lucide-react';
+import { User, Mail, Calendar, Flame, BookOpen, HelpCircle, Clock, Award, Save, Lock, Eye, EyeOff, BarChart3, ChevronRight, LogOut } from 'lucide-react';
+import Link from 'next/link';
 
 export default function ProfilePage() {
   const { data: session } = useSession();
   const [profile, setProfile] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
@@ -19,21 +21,49 @@ export default function ProfilePage() {
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
 
   useEffect(() => {
-    async function fetchProfile() {
+    async function loadData() {
       try {
-        const res = await apiFetch('/api/user/profile');
-        const data = await res.json();
-        if (data.success) {
-          setProfile(data.data);
-          setNameInput(data.data.name);
+        const [profileRes, analyticsRes] = await Promise.all([
+          apiFetch('/api/user/profile').then(r => r.json()).catch(() => ({ success: false })),
+          apiFetch('/api/analytics').then(r => r.json()).catch(() => ({ success: false }))
+        ]);
+        
+        if (profileRes.success) {
+          setProfile(profileRes.data);
+          setNameInput(profileRes.data.name);
+        } else {
+          toast.error('Failed to load profile');
+        }
+
+        if (analyticsRes.success) {
+          setAnalytics(analyticsRes.data);
         }
       } catch (err) {
-        toast.error('Failed to load profile');
+        toast.error('Failed to load data');
       }
       setLoading(false);
     }
-    fetchProfile();
+    loadData();
   }, []);
+
+  const heatmapDays = useMemo(() => {
+    if (!analytics?.heatmap) return [];
+    const days = [];
+    const today = new Date();
+    const hmap = analytics.heatmap || {};
+    for (let i = 89; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(today.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      days.push({ date: dateStr, count: hmap[dateStr] || 0 });
+    }
+    return days;
+  }, [analytics?.heatmap]);
+
+  const heatmapMax = useMemo(
+    () => Math.max(...Object.values(analytics?.heatmap || {}), 1),
+    [analytics?.heatmap]
+  );
 
   async function handleSaveName() {
     try {
@@ -84,14 +114,14 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
+      <div className="dash-page">
         <SkeletonCard height="200px" />
-        <div style={{ marginTop: '1.5rem' }}><SkeletonCard height="150px" /></div>
+        <SkeletonCard height="150px" />
       </div>
     );
   }
 
-  if (!profile) return <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '4rem' }}>Failed to load profile.</div>;
+  if (!profile) return <div className="dash-empty-mini">Failed to load profile.</div>;
 
   const formatMinutes = (min) => {
     if (min < 60) return `${min}m`;
@@ -99,145 +129,221 @@ export default function ProfilePage() {
   };
 
   return (
-    <div style={{ animation: 'fadeIn 0.5s ease-out', maxWidth: '800px' }}>
-      <header style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.02em' }}>Profile</h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Your account, stats, and achievements.</p>
+    <div className="dash-page">
+      <header className="dash-hero-premium">
+        <div className="dash-hero-grid" aria-hidden />
+        <div className="dash-hero-inner">
+          <div className="dash-hero-top">
+            <span className="dash-date-pill">Profile & Settings</span>
+            <span className="dash-streak-pill">{profile.role || 'USER'}</span>
+          </div>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+            <div style={{
+              width: '96px', height: '96px', borderRadius: '50%',
+              backgroundColor: 'var(--bg-surface)', border: '1px solid rgba(255, 255, 255, 0.1)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '2.5rem', fontWeight: 800, color: 'var(--text-primary)'
+            }}>
+              {profile.name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)}
+            </div>
+            
+            <div style={{ flex: 1 }}>
+              {editing ? (
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                  <input className="input" value={nameInput} onChange={e => setNameInput(e.target.value)} style={{ maxWidth: '300px' }} />
+                  <button className="btn btn-primary" onClick={handleSaveName}><Save size={16} /></button>
+                  <button className="btn btn-secondary" onClick={() => { setEditing(false); setNameInput(profile.name); }}>Cancel</button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <h1 className="dash-hero-display" style={{ marginBottom: 0 }}>{profile.name}</h1>
+                  <button onClick={() => setEditing(true)} style={{ color: 'var(--text-muted)', cursor: 'pointer', background: 'none', border: 'none', padding: '0.5rem' }}>
+                    <User size={16} />
+                  </button>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Mail size={15} /> {profile.email}</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Calendar size={15} /> Joined {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </header>
 
-      {/* Profile Card */}
-      <div className="card" style={{ marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-          <div style={{
-            width: '72px', height: '72px', borderRadius: '50%',
-            backgroundColor: 'var(--bg-accent)', border: '2px solid var(--text-primary)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '1.5rem', fontWeight: 800,
-          }}>
-            {profile.name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)}
+      {/* Level & XP Progress */}
+      <section className="dash-panel">
+        <div className="dash-panel-head" style={{ marginBottom: '1rem' }}>
+          <div className="dash-panel-title-group">
+            <Award size={16} />
+            <h2>Level {profile.level || 1}</h2>
           </div>
-          <div style={{ flex: 1 }}>
-            {editing ? (
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <input className="input" value={nameInput} onChange={e => setNameInput(e.target.value)} style={{ maxWidth: '300px' }} />
-                <button className="btn btn-primary" onClick={handleSaveName}><Save size={16} /></button>
-                <button className="btn btn-secondary" onClick={() => { setEditing(false); setNameInput(profile.name); }}>Cancel</button>
+          <span className="dash-roadmap-pct">{profile.xp || 0} / {(profile.level || 1) * 100} XP</span>
+        </div>
+        <div className="dash-roadmap-bar" style={{ height: '10px' }}>
+          <div className="dash-roadmap-fill" style={{ width: `${((profile.xp || 0) % 100)}%` }} />
+        </div>
+      </section>
+
+      {/* Quick Stats Grid */}
+      <div className="dash-metrics-grid">
+        <div className="dash-metric">
+          <div className="dash-metric-icon"><Flame size={18} strokeWidth={1.75} /></div>
+          <div className="dash-metric-body">
+            <span className="dash-metric-value">{profile.streak || 0}</span>
+            <span className="dash-metric-label">Day Streak</span>
+          </div>
+        </div>
+        <div className="dash-metric">
+          <div className="dash-metric-icon"><BookOpen size={18} strokeWidth={1.75} /></div>
+          <div className="dash-metric-body">
+            <span className="dash-metric-value">{profile.totalExams || 0}</span>
+            <span className="dash-metric-label">Exams Taken</span>
+          </div>
+        </div>
+        <div className="dash-metric">
+          <div className="dash-metric-icon"><HelpCircle size={18} strokeWidth={1.75} /></div>
+          <div className="dash-metric-body">
+            <span className="dash-metric-value">{profile.questionsAnswered || 0}</span>
+            <span className="dash-metric-label">Questions</span>
+          </div>
+        </div>
+        <div className="dash-metric">
+          <div className="dash-metric-icon"><Clock size={18} strokeWidth={1.75} /></div>
+          <div className="dash-metric-body">
+            <span className="dash-metric-value">{formatMinutes(profile.totalStudyMinutes || 0)}</span>
+            <span className="dash-metric-label">Study Time</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="dash-bento">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          {/* Activity Heatmap */}
+          {analytics?.heatmap && (
+            <section className="dash-panel dash-panel-heatmap">
+              <div className="dash-panel-head">
+                <div className="dash-panel-title-group">
+                  <BarChart3 size={16} />
+                  <h2>Activity</h2>
+                  <span className="dash-date-pill">90 days</span>
+                </div>
+                <Link href="/journey?tab=analytics" className="dash-panel-link">
+                  Analytics <ChevronRight size={14} />
+                </Link>
+              </div>
+              <div className="dash-heatmap-premium">
+                {heatmapDays.map(({ date, count }) => (
+                  <div
+                    key={date}
+                    className={`heatmap-cell-premium ${count > 0 ? 'active' : ''}`}
+                    title={`${date}: ${count} activities`}
+                    style={{
+                      '--intensity': count === 0 ? 0 : 0.25 + (count / heatmapMax) * 0.75,
+                    }}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Achievements */}
+          <section className="dash-panel">
+            <div className="dash-panel-head">
+              <div className="dash-panel-title-group">
+                <Award size={16} />
+                <h2>Achievements</h2>
+              </div>
+            </div>
+            {profile.achievements?.length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+                {profile.achievements.map((a) => (
+                  <div key={a.id} style={{
+                    padding: '1rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid rgba(255,255,255,0.05)',
+                    background: 'rgba(0,0,0,0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                  }}>
+                    <span style={{ fontSize: '1.5rem' }}>{a.icon}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{a.label}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{a.desc}</div>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
-              <div>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  {profile.name}
-                  <button onClick={() => setEditing(true)} style={{ color: 'var(--text-muted)', cursor: 'pointer', background: 'none', border: 'none', padding: '0.25rem' }}>
-                    <User size={14} />
-                  </button>
-                </h2>
+              <div className="dash-empty-mini">
+                <p>No achievements yet. Keep practicing to unlock badges!</p>
               </div>
             )}
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Mail size={14} /> {profile.email}</span>
-              <span className="badge">{profile.role}</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                <Calendar size={14} /> Joined {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-              </span>
-            </div>
-            <div style={{ marginTop: '1.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>
-                <span>Level {profile.level || 1}</span>
-                <span style={{ color: 'var(--primary)' }}>{profile.xp || 0} / {(profile.level || 1) * 100} XP</span>
-              </div>
-              <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--bg-accent)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ 
-                  height: '100%', 
-                  backgroundColor: 'var(--primary)', 
-                  width: `${((profile.xp || 0) % 100)}%`,
-                  transition: 'width 0.5s ease-out'
-                }}></div>
-              </div>
-            </div>
-          </div>
+          </section>
         </div>
 
-        {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-light)' }}>
-          <StatItem icon={<Flame size={18} />} value={profile.streak || 0} label="Day Streak" />
-          <StatItem icon={<BookOpen size={18} />} value={profile.totalExams || 0} label="Exams Taken" />
-          <StatItem icon={<HelpCircle size={18} />} value={profile.questionsAnswered || 0} label="Questions" />
-          <StatItem icon={<Clock size={18} />} value={formatMinutes(profile.totalStudyMinutes || 0)} label="Study Time" />
-        </div>
-      </div>
-
-      {/* Achievements */}
-      <div className="card" style={{ marginBottom: '1.5rem' }}>
-        <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Award size={20} /> Achievements
-        </h3>
-        {profile.achievements?.length > 0 ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
-            {profile.achievements.map((a) => (
-              <div key={a.id} style={{
-                padding: '1rem',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--border-strong)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-              }}>
-                <span style={{ fontSize: '1.5rem' }}>{a.icon}</span>
+        {/* Security Sidebar */}
+        <div>
+          <section className="dash-panel">
+            <div className="dash-panel-head">
+              <div className="dash-panel-title-group">
+                <Lock size={16} />
+                <h2>Security</h2>
+              </div>
+            </div>
+            {changingPassword ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{a.label}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{a.desc}</div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Current Password</label>
+                  <input type={showPasswords ? 'text' : 'password'} className="input" value={passwordForm.currentPassword} onChange={e => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>New Password</label>
+                  <input type={showPasswords ? 'text' : 'password'} className="input" value={passwordForm.newPassword} onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Confirm New Password</label>
+                  <input type={showPasswords ? 'text' : 'password'} className="input" value={passwordForm.confirmPassword} onChange={e => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} />
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <button type="button" onClick={() => setShowPasswords(!showPasswords)} className="btn btn-secondary" style={{ padding: '0.4rem 0.6rem' }}>
+                    {showPasswords ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => { setChangingPassword(false); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); }}>Cancel</button>
+                  <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleChangePassword}>Save</button>
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>No achievements yet. Keep practicing to unlock badges!</p>
-        )}
-      </div>
+            ) : (
+              <button className="btn btn-secondary" style={{ width: '100%' }} onClick={() => setChangingPassword(true)}>Change Password</button>
+            )}
+          </section>
 
-      {/* Change Password */}
-      <div className="card">
-        <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Lock size={20} /> Security
-        </h3>
-        {changingPassword ? (
-          <div style={{ maxWidth: '400px' }}>
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Current Password</label>
-              <input type={showPasswords ? 'text' : 'password'} className="input" value={passwordForm.currentPassword} onChange={e => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} />
+          <section className="dash-panel" style={{ marginTop: '2rem' }}>
+            <div className="dash-panel-head">
+              <div className="dash-panel-title-group">
+                <LogOut size={16} />
+                <h2>Sign Out</h2>
+              </div>
             </div>
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>New Password</label>
-              <input type={showPasswords ? 'text' : 'password'} className="input" value={passwordForm.newPassword} onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} />
-            </div>
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Confirm New Password</label>
-              <input type={showPasswords ? 'text' : 'password'} className="input" value={passwordForm.confirmPassword} onChange={e => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} />
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1rem' }}>
-              <button type="button" onClick={() => setShowPasswords(!showPasswords)} className="btn btn-secondary" style={{ padding: '0.4rem 0.6rem' }}>
-                {showPasswords ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button className="btn btn-secondary" onClick={() => { setChangingPassword(false); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); }}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleChangePassword}>Change Password</button>
-            </div>
-          </div>
-        ) : (
-          <button className="btn btn-secondary" onClick={() => setChangingPassword(true)}>Change Password</button>
-        )}
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+              You will be returned to the login screen.
+            </p>
+            <button
+              className="btn btn-secondary"
+              style={{ width: '100%', borderColor: 'rgba(255,100,100,0.3)', color: 'rgb(255,150,150)' }}
+              onClick={() => signOut({ callbackUrl: '/login' })}
+            >
+              Sign Out
+            </button>
+          </section>
+        </div>
       </div>
-    </div>
-  );
-}
-
-function StatItem({ icon, value, label }) {
-  return (
-    <div style={{ textAlign: 'center', padding: '0.75rem' }}>
-      <div style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{icon}</div>
-      <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{value}</div>
-      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>{label}</div>
     </div>
   );
 }

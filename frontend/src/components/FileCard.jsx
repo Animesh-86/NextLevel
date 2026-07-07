@@ -6,23 +6,23 @@ import {
 } from 'lucide-react';
 
 const fileTypeIcons = {
-  pdf: { icon: FileText, color: '#ef4444' },
-  image: { icon: Image, color: '#3b82f6' },
-  doc: { icon: FileText, color: '#6366f1' },
-  spreadsheet: { icon: Table, color: '#22c55e' },
-  other: { icon: File, color: '#9ca3af' },
+  pdf: { icon: FileText, color: 'var(--text-primary)' },
+  image: { icon: Image, color: 'var(--text-secondary)' },
+  doc: { icon: FileText, color: 'var(--text-secondary)' },
+  spreadsheet: { icon: Table, color: 'var(--text-muted)' },
+  other: { icon: File, color: 'var(--text-muted)' },
 };
 
 const categoryLabels = {
-  'system-design': '🏗️ System Design',
-  'dsa': '🧮 DSA',
-  'web-dev': '🌐 Web Dev',
-  'database': '🗄️ Database',
-  'devops': '⚙️ DevOps',
-  'math': '📐 Math',
-  'college': '🎓 College',
-  'notes': '📝 Notes',
-  'other': '📌 Other',
+  'system-design': 'System Design',
+  'dsa': 'DSA',
+  'web-dev': 'Web Dev',
+  'database': 'Database',
+  'devops': 'DevOps',
+  'math': 'Math',
+  'college': 'College',
+  'notes': 'Notes',
+  'other': 'Other',
 };
 
 function formatSize(bytes) {
@@ -85,7 +85,7 @@ export default function FileCard({ file, onView, onDelete, onPin, onDownload }) 
 
       <div className="file-card-meta-row">
         <span className="file-card-category">
-          {categoryLabels[file.category] || '📌 Other'}
+          {categoryLabels[file.category] || 'Other'}
         </span>
         <span className="file-card-size">{formatSize(file.fileSize)}</span>
       </div>

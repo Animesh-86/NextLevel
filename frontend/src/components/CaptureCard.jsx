@@ -6,10 +6,10 @@ import {
 } from 'lucide-react';
 
 const urgencyConfig = {
-  critical: { color: '#ef4444', label: 'CRITICAL', bg: 'rgba(239,68,68,0.12)' },
-  high: { color: '#f97316', label: 'HIGH', bg: 'rgba(249,115,22,0.12)' },
-  medium: { color: '#eab308', label: 'MEDIUM', bg: 'rgba(234,179,8,0.12)' },
-  low: { color: '#3b82f6', label: 'LOW', bg: 'rgba(59,130,246,0.12)' },
+  critical: { color: 'var(--urgency-critical)', label: 'CRITICAL', bg: 'var(--bg-accent)' },
+  high: { color: 'var(--urgency-high)', label: 'HIGH', bg: 'transparent' },
+  medium: { color: 'var(--urgency-medium)', label: 'MEDIUM', bg: 'transparent' },
+  low: { color: 'var(--urgency-low)', label: 'LOW', bg: 'transparent' },
   none: { color: 'var(--text-muted)', label: 'NONE', bg: 'transparent' },
 };
 
@@ -98,7 +98,7 @@ export default function CaptureCard({ capture, onEdit, onDelete, onPin, onArchiv
       <div className="capture-card-title-row">
         <h3 className="capture-card-title">
           {capture.title.includes('Processing') && <Loader2 size={16} className="auth-spinner" style={{ display: 'inline', marginRight: '6px', color: 'var(--text-muted)' }} />}
-          {capture.description?.includes('failed') && <AlertTriangle size={16} style={{ display: 'inline', marginRight: '6px', color: '#ef4444' }} />}
+          {capture.description?.includes('failed') && <AlertTriangle size={16} style={{ display: 'inline', marginRight: '6px', color: 'var(--text-primary)' }} />}
           {capture.title}
         </h3>
         {capture.urgency !== 'none' && (

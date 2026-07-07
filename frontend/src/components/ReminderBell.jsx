@@ -5,10 +5,10 @@ import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 
 const urgencyColors = {
-  critical: '#ef4444',
-  high: '#f97316',
-  medium: '#eab308',
-  low: '#3b82f6',
+  critical: 'var(--urgency-critical)',
+  high: 'var(--urgency-high)',
+  medium: 'var(--urgency-medium)',
+  low: 'var(--urgency-low)',
   none: 'var(--text-muted)',
 };
 
@@ -94,7 +94,7 @@ export default function ReminderBell() {
               <div className="reminder-list">
                 {allItems.slice(0, 8).map((item) => (
                   <div
-                    key={item._id}
+                    key={item.id}
                     className={`reminder-item ${item.isOverdue ? 'overdue' : ''}`}
                   >
                     <div

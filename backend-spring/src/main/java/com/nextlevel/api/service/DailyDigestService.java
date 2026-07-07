@@ -21,8 +21,12 @@ import com.nextlevel.api.repository.PlannerTaskRepository;
 import com.nextlevel.api.repository.RoadmapRepository;
 import com.nextlevel.api.repository.UserRepository;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 @Service
 public class DailyDigestService {
+
+    private final ConcurrentHashMap<String, Object> userLocks = new ConcurrentHashMap<>();
 
     private final ChatClient chatClient;
     private final PlannerTaskRepository plannerTaskRepository;
@@ -75,39 +79,54 @@ public class DailyDigestService {
             .filter(a -> "applied".equals(a.getStatus()) || "screening".equals(a.getStatus()))
             .limit(3).toList();
 
-        StringBuilder promptBuilder = new StringBuilder();
-        promptBuilder.append("Write a short, encouraging, 2-paragraph morning briefing for ").append(name).append(".\n");
-        promptBuilder.append("Here is their current status:\n");
-        promptBuilder.append("- Current study streak: ").append(streak).append(" days\n");
-        promptBuilder.append("- Tasks planned for today: ").append(todaysTasks.size()).append("\n");
-        if (!todaysTasks.isEmpty()) {
-            promptBuilder.append("  Highlights: ").append(todaysTasks.get(0).getTitle()).append("\n");
-        }
-        promptBuilder.append("- Pending reminders: ").append(pendingReminders.size()).append("\n");
-        promptBuilder.append("- Active learning roadmaps: ").append(activeRoadmaps.size()).append("\n");
+        Object lock = userLocks.computeIfAbsent(userId, k -> new Object());
         
-        promptBuilder.append("\nYour response should sound like an AI assistant (JARVIS style) giving a very quick morning standup. Keep it strictly to 2 short sentences. Absolutely DO NOT use any emojis. Use plain text only.");
+        synchronized (lock) {
+            // Re-check after acquiring lock (double-checked locking pattern)
+            user = userRepository.findById(userId).orElse(null);
+            if (user != null && todayStr.equals(user.getDailyBriefingDate()) && user.getDailyBriefingCache() != null) {
+                return Map.of(
+                    "message", user.getDailyBriefingCache(),
+                    "taskCount", todaysTasks.size(),
+                    "reminderCount", pendingReminders.size(),
+                    "streak", streak
+                );
+            }
 
-        String message = chatClient.prompt()
-                .user(u -> u.text(promptBuilder.toString()))
-                .call()
-                .content();
+            StringBuilder promptBuilder = new StringBuilder();
+            promptBuilder.append("Write a short, encouraging morning briefing for ").append(name).append(".\n");
+            promptBuilder.append("Here is their current status:\n");
+            promptBuilder.append("- Current study streak: ").append(streak).append(" days\n");
+            promptBuilder.append("- Tasks planned for today: ").append(todaysTasks.size()).append("\n");
+            if (!todaysTasks.isEmpty()) {
+                promptBuilder.append("  Highlights: ").append(todaysTasks.get(0).getTitle()).append("\n");
+            }
+            promptBuilder.append("- Pending reminders: ").append(pendingReminders.size()).append("\n");
+            promptBuilder.append("- Active learning roadmaps: ").append(activeRoadmaps.size()).append("\n");
+            
+            promptBuilder.append("\nCRITICAL CONSTRAINTS: Your response must be EXACTLY ONE SENTENCE. Maximum 20 words. Absolutely DO NOT use any emojis. Use plain text only.");
 
-        if (message == null || message.trim().isEmpty()) {
-            message = "Good morning! Ready to tackle the day?";
+            String message = chatClient.prompt()
+                    .user(u -> u.text(promptBuilder.toString()))
+                    .call()
+                    .content();
+
+            if (message == null || message.trim().isEmpty()) {
+                message = "Good morning! Ready to tackle the day?";
+            }
+
+            if (user != null) {
+                user.setDailyBriefingCache(message);
+                user.setDailyBriefingDate(todayStr);
+                userRepository.save(user);
+            }
+
+            return Map.of(
+                "message", message,
+                "taskCount", todaysTasks.size(),
+                "reminderCount", pendingReminders.size(),
+                "streak", streak
+            );
         }
-
-        if (user != null) {
-            user.setDailyBriefingCache(message);
-            user.setDailyBriefingDate(todayStr);
-            userRepository.save(user);
-        }
-
-        return Map.of(
-            "message", message,
-            "taskCount", todaysTasks.size(),
-            "reminderCount", pendingReminders.size(),
-            "streak", streak
-        );
     }
 }

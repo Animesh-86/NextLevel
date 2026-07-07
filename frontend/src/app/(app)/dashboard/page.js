@@ -1,15 +1,41 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSession } from '@/lib/useAuth';
 import { apiFetch } from '@/lib/api';
 import DailyDigestCard from '@/components/DailyDigestCard';
 import Link from 'next/link';
 import {
   Flame, Target, BookOpen, Clock, Play, Map, Briefcase, FolderOpen,
-  CalendarDays, Inbox, Link2, TrendingUp, ChevronRight, CheckCircle2,
-  Circle, ArrowRight, Loader2, BarChart3, BrainCircuit, Zap
+  CalendarDays, Inbox, Link2, ChevronRight, CheckCircle2,
+  Circle, BarChart3, BrainCircuit, Zap, ArrowUpRight
 } from 'lucide-react';
 import { SkeletonCard } from '@/components/SkeletonLoader';
+
+const METRICS = [
+  { key: 'exams', label: 'Exams Taken', icon: BookOpen, getValue: (stats) => stats?.totalExamsTaken || 0 },
+  { key: 'score', label: 'Avg Score', icon: Target, getValue: (stats) => `${stats?.avgScore || 0}%` },
+  { key: 'tasks', label: 'Tasks Today', icon: CalendarDays, getValue: (_, tasks) => tasks.length },
+  { key: 'hours', label: 'Study Hours', icon: Clock, getValue: (_, __, c) => `${c.totalStudyHours || 0}h` },
+  { key: 'roadmaps', label: 'Roadmaps', icon: Map, getValue: (_, __, c) => c.roadmapsActive || 0 },
+  { key: 'apps', label: 'Applications', icon: Briefcase, getValue: (_, __, c) => c.applications || 0 },
+];
+
+const QUICK_ACTIONS = [
+  { href: '/test', label: 'Focus Test', icon: Play, desc: 'Timed exam session' },
+  { href: '/captures', label: 'Capture', icon: Inbox, desc: 'Save an idea fast' },
+  { href: '/vault', label: 'File Vault', icon: FolderOpen, desc: 'Upload & organize' },
+  { href: '/journey', label: 'Journey', icon: Map, desc: 'Track your growth' },
+  { href: '/links', label: 'Links', icon: Link2, desc: 'Saved bookmarks' },
+  { href: '/planner', label: 'Planner', icon: CalendarDays, desc: 'Plan your week' },
+];
+
+function formatDate() {
+  return new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
+}
 
 export default function Dashboard() {
   const { data: session } = useSession();
@@ -43,186 +69,218 @@ export default function Dashboard() {
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const c = analytics?.counts || {};
 
+  const tasksDone = todayTasks.filter(t => t.status === 'done').length;
+  const taskProgress = todayTasks.length ? Math.round((tasksDone / todayTasks.length) * 100) : 0;
+
+
+
   return (
-    <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
-      {/* Hero Header */}
-      <header className="dash-hero">
-        <div className="dash-hero-text">
-          <h1 className="dash-hero-title">{greeting}, {userName}</h1>
-          <p className="dash-hero-sub">Your learning command center. Everything at a glance.</p>
+    <div className="dash-page">
+      <header className="dash-hero-premium">
+        <div className="dash-hero-grid" aria-hidden />
+        <div className="dash-hero-inner">
+          <div className="dash-hero-top">
+            <span className="dash-date-pill">{formatDate()}</span>
+            {analytics?.streak > 0 && (
+              <span className="dash-streak-pill">
+                <Flame size={14} />
+                {analytics.streak}-day streak
+              </span>
+            )}
+          </div>
+          <h1 className="dash-hero-display">
+            {greeting}, <span className="dash-hero-name">{userName}</span>
+          </h1>
+          <p className="dash-hero-tagline">
+            Your command center — track progress, plan focus, and level up.
+          </p>
         </div>
-        {analytics?.streak > 0 && (
-          <div className="dash-streak"><Flame size={18} /> {analytics.streak}-Day Streak</div>
-        )}
       </header>
 
       <DailyDigestCard />
 
       {loading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-          {Array(6).fill(0).map((_, i) => <SkeletonCard key={i} height="100px" />)}
+        <div className="dash-metrics-grid">
+          {Array(6).fill(0).map((_, i) => (
+            <SkeletonCard key={i} height="120px" />
+          ))}
         </div>
       ) : (
         <>
-          {/* Quick Stats Row */}
-          <div className="dash-stats-row">
-            {[
-              { label: 'Exams Taken', value: stats?.totalExamsTaken || 0, icon: BookOpen, color: '#3b82f6' },
-              { label: 'Avg Score', value: `${stats?.avgScore || 0}%`, icon: Target, color: '#22c55e' },
-              { label: 'Tasks Today', value: todayTasks.length, icon: CalendarDays, color: '#f59e0b' },
-              { label: 'Study Hours', value: `${c.totalStudyHours || 0}h`, icon: Clock, color: '#a855f7' },
-              { label: 'Roadmaps', value: c.roadmapsActive || 0, icon: Map, color: '#ef4444' },
-              { label: 'Applications', value: c.applications || 0, icon: Briefcase, color: '#ec4899' },
-            ].map((s, i) => (
-              <div key={i} className="dash-stat-card">
-                <div className="dash-stat-icon" style={{ color: s.color }}><s.icon size={20} /></div>
-                <div className="dash-stat-value">{s.value}</div>
-                <div className="dash-stat-label">{s.label}</div>
+          <div className="dash-metrics-grid">
+            {METRICS.map((m, i) => (
+              <div key={m.key} className="dash-metric" style={{ animationDelay: `${i * 60}ms` }}>
+                <div className="dash-metric-icon">
+                  <m.icon size={18} strokeWidth={1.75} />
+                </div>
+                <div className="dash-metric-body">
+                  <span className="dash-metric-value">{m.getValue(stats, todayTasks, c)}</span>
+                  <span className="dash-metric-label">{m.label}</span>
+                </div>
               </div>
             ))}
           </div>
 
-          <div className="dash-main-grid">
-            {/* Left Column */}
-            <div className="dash-left">
-              {/* Today's Tasks */}
-              <section className="card dash-section">
-                <div className="card-title-row">
-                  <h2 className="card-title"><CalendarDays size={18} /> Today&apos;s Tasks</h2>
-                  <Link href="/planner" className="dash-see-all">View Planner <ChevronRight size={14} /></Link>
+          <div className="dash-bento">
+            {/* Today's Tasks — large panel */}
+            <section className="dash-panel dash-panel-tasks">
+              <div className="dash-panel-head">
+                <div className="dash-panel-title-group">
+                  <CalendarDays size={16} />
+                  <h2>Today&apos;s Tasks</h2>
                 </div>
-                {todayTasks.length > 0 ? (
+                <Link href="/planner" className="dash-panel-link">
+                  Planner <ChevronRight size={14} />
+                </Link>
+              </div>
+
+              {todayTasks.length > 0 ? (
+                <>
+                  <div className="dash-task-progress">
+                    <div className="dash-task-progress-ring" style={{ '--pct': taskProgress }}>
+                      <svg viewBox="0 0 36 36">
+                        <circle className="dash-ring-bg" cx="18" cy="18" r="15.5" />
+                        <circle className="dash-ring-fill" cx="18" cy="18" r="15.5" />
+                      </svg>
+                      <span className="dash-ring-label">{taskProgress}%</span>
+                    </div>
+                    <div className="dash-task-progress-meta">
+                      <span className="dash-task-progress-count">{tasksDone}/{todayTasks.length} complete</span>
+                      <span className="dash-task-progress-sub">Keep the momentum going</span>
+                    </div>
+                  </div>
                   <div className="dash-task-list">
                     {todayTasks.map(t => (
                       <div key={t._id} className={`dash-task-item ${t.status}`}>
-                        {t.status === 'done' ? <CheckCircle2 size={16} color="#22c55e" /> : <Circle size={16} />}
+                        {t.status === 'done' ? <CheckCircle2 size={15} /> : <Circle size={15} />}
                         <span className={t.status === 'done' ? 'line-through' : ''}>{t.title}</span>
-                        {t.duration > 0 && <span className="dash-task-dur">{t.duration}min</span>}
+                        {t.duration > 0 && <span className="dash-task-dur">{t.duration}m</span>}
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <div className="dash-empty-mini"><CalendarDays size={28} strokeWidth={1} /><p>No tasks for today</p>
-                    <Link href="/planner" className="btn btn-secondary" style={{ fontSize: '0.8rem' }}>Plan your day</Link>
-                  </div>
-                )}
-              </section>
+                </>
+              ) : (
+                <div className="dash-empty-mini">
+                  <CalendarDays size={32} strokeWidth={1} />
+                  <p>Nothing scheduled yet</p>
+                  <Link href="/planner" className="btn btn-primary btn-sm">Plan your day</Link>
+                </div>
+              )}
+            </section>
 
-              {/* Roadmap Progress */}
-              {analytics?.roadmapSummaries?.length > 0 && (
-                <section className="card dash-section">
-                  <div className="card-title-row">
-                    <h2 className="card-title"><Map size={18} /> Active Roadmaps</h2>
-                    <Link href="/journey" className="dash-see-all">All Roadmaps <ChevronRight size={14} /></Link>
+            {/* Quick Actions — tall sidebar panel */}
+            <section className="dash-panel dash-panel-actions">
+              <div className="dash-panel-head">
+                <div className="dash-panel-title-group">
+                  <Zap size={16} />
+                  <h2>Quick Actions</h2>
+                </div>
+              </div>
+              <div className="dash-actions-premium">
+                {QUICK_ACTIONS.map(a => (
+                  <Link key={a.href} href={a.href} className="dash-action-tile">
+                    <div className="dash-action-tile-icon">
+                      <a.icon size={18} strokeWidth={1.75} />
+                    </div>
+                    <div className="dash-action-tile-text">
+                      <span className="dash-action-tile-label">{a.label}</span>
+                      <span className="dash-action-tile-desc">{a.desc}</span>
+                    </div>
+                    <ArrowUpRight size={14} className="dash-action-tile-arrow" />
+                  </Link>
+                ))}
+              </div>
+            </section>
+
+            {/* Roadmaps */}
+            {analytics?.roadmapSummaries?.length > 0 && (
+              <section className="dash-panel dash-panel-roadmaps">
+                <div className="dash-panel-head">
+                  <div className="dash-panel-title-group">
+                    <Map size={16} />
+                    <h2>Active Roadmaps</h2>
                   </div>
-                  <div className="dash-roadmap-list">
-                    {analytics.roadmapSummaries.slice(0, 3).map(r => (
-                      <Link href="/journey" key={r._id} className="dash-roadmap-item">
+                  <Link href="/journey" className="dash-panel-link">
+                    View all <ChevronRight size={14} />
+                  </Link>
+                </div>
+                <div className="dash-roadmap-list">
+                  {analytics.roadmapSummaries.slice(0, 3).map(r => (
+                    <Link href="/journey" key={r._id} className="dash-roadmap-item">
+                      <div className="dash-roadmap-top">
                         <span className="dash-roadmap-name">{r.title}</span>
-                        <div className="dash-roadmap-bar">
-                          <div className="dash-roadmap-fill" style={{ width: `${r.progress}%` }} />
-                        </div>
                         <span className="dash-roadmap-pct">{r.progress}%</span>
-                      </Link>
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* Activity Heatmap */}
-              {analytics?.heatmap && (
-                <section className="card dash-section">
-                  <div className="card-title-row">
-                    <h2 className="card-title"><BarChart3 size={18} /> Activity — 90 Days</h2>
-                    <Link href="/journey?tab=analytics" className="dash-see-all">Full Analytics <ChevronRight size={14} /></Link>
-                  </div>
-                  <div className="dash-heatmap">
-                    {(() => {
-                      const days = [];
-                      const today = new Date();
-                      const hmap = analytics.heatmap || {};
-                      
-                      for (let i = 89; i >= 0; i--) {
-                        const d = new Date();
-                        d.setDate(today.getDate() - i);
-                        const dateStr = d.toISOString().split('T')[0];
-                        days.push({ date: dateStr, count: hmap[dateStr] || 0 });
-                      }
-                      
-                      const max = Math.max(...Object.values(hmap), 1);
-                      return days.map(({ date, count }) => (
-                        <div key={date} className="heatmap-cell" title={`${date}: ${count}`}
-                          style={{
-                            opacity: count === 0 ? 0.05 : 0.25 + (count / max) * 0.75,
-                            background: count > 0 ? '#4ade80' : 'rgba(255, 255, 255, 0.1)',
-                            borderRadius: '4px',
-                            boxShadow: count > 0 ? '0 0 8px rgba(74, 222, 128, 0.4)' : 'none'
-                          }} />
-                      ));
-                    })()}
-                  </div>
-                </section>
-              )}
-            </div>
-
-            {/* Right Column */}
-            <div className="dash-right">
-              {/* Quick Actions */}
-              <section className="card dash-section">
-                <h2 className="card-title"><Zap size={18} /> Quick Actions</h2>
-                <div className="dash-actions">
-                  {[
-                    { href: '/test', label: 'Focus Test', icon: Play, desc: 'Timed exam' },
-                    { href: '/captures', label: 'Capture', icon: Inbox, desc: 'Quick save' },
-                    { href: '/vault', label: 'File Vault', icon: FolderOpen, desc: 'Upload files' },
-                    { href: '/journey', label: 'Journey', icon: Map, desc: 'Track progress' },
-                    { href: '/links', label: 'Links', icon: Link2, desc: 'Bookmarks' },
-                    { href: '/planner', label: 'Planner', icon: CalendarDays, desc: 'Plan week' },
-                  ].map(a => (
-                    <Link key={a.href} href={a.href} className="dash-action-card">
-                      <a.icon size={20} /><span className="dash-action-label">{a.label}</span>
-                      <span className="dash-action-desc">{a.desc}</span>
+                      </div>
+                      <div className="dash-roadmap-bar">
+                        <div className="dash-roadmap-fill" style={{ width: `${r.progress}%` }} />
+                      </div>
                     </Link>
                   ))}
                 </div>
               </section>
+            )}
 
-              {/* Recent Captures */}
-              <section className="card dash-section">
-                <div className="card-title-row">
-                  <h2 className="card-title"><Inbox size={18} /> Recent Captures</h2>
-                  <Link href="/captures" className="dash-see-all">All <ChevronRight size={14} /></Link>
+
+            {/* Recent Captures */}
+            <section className="dash-panel dash-panel-captures">
+              <div className="dash-panel-head">
+                <div className="dash-panel-title-group">
+                  <Inbox size={16} />
+                  <h2>Recent Captures</h2>
                 </div>
-                {recentCaptures.length > 0 ? (
-                  <div className="dash-capture-list">
-                    {recentCaptures.map(c => (
-                      <div key={c.id} className="dash-capture-item">
-                        <span className="dash-capture-title">{c.title}</span>
-                        <span className="dash-capture-cat">{c.category}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="dash-empty-mini"><Inbox size={28} strokeWidth={1} /><p>No captures yet</p></div>
-                )}
-              </section>
-
-              {/* Exam Summary */}
-              {stats && (
-                <section className="card dash-section">
-                  <h2 className="card-title"><BrainCircuit size={18} /> Exam Overview</h2>
-                  <div className="dash-exam-grid">
-                    <div className="dash-exam-stat"><span className="dash-exam-val">{stats.passRate || 0}%</span><span>Pass Rate</span></div>
-                    <div className="dash-exam-stat"><span className="dash-exam-val">{stats.bestScore || 0}%</span><span>Best Score</span></div>
-                    <div className="dash-exam-stat"><span className="dash-exam-val">{stats.needsReview || 0}</span><span>Need Review</span></div>
-                    <div className="dash-exam-stat"><span className="dash-exam-val">{stats.totalQuestions || 0}</span><span>Questions</span></div>
-                  </div>
-                  <Link href="/test" className="btn btn-primary" style={{ width: '100%', marginTop: '0.75rem', justifyContent: 'center' }}>
-                    <Play size={16} /> Take a Test
-                  </Link>
-                </section>
+                <Link href="/captures" className="dash-panel-link">
+                  All <ChevronRight size={14} />
+                </Link>
+              </div>
+              {recentCaptures.length > 0 ? (
+                <div className="dash-capture-list">
+                  {recentCaptures.map(cap => (
+                    <Link key={cap.id} href={`/captures/${cap.id}`} className="dash-capture-item">
+                      <span className="dash-capture-title">{cap.title}</span>
+                      <span className="dash-capture-cat">{cap.category}</span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="dash-empty-mini">
+                  <Inbox size={28} strokeWidth={1} />
+                  <p>No captures yet</p>
+                </div>
               )}
-            </div>
+            </section>
+
+            {/* Exam Overview */}
+            {stats && (
+              <section className="dash-panel dash-panel-exam">
+                <div className="dash-panel-head">
+                  <div className="dash-panel-title-group">
+                    <BrainCircuit size={16} />
+                    <h2>Exam Overview</h2>
+                  </div>
+                </div>
+                <div className="dash-exam-grid">
+                  <div className="dash-exam-stat">
+                    <span className="dash-exam-val">{stats.passRate || 0}%</span>
+                    <span>Pass Rate</span>
+                  </div>
+                  <div className="dash-exam-stat">
+                    <span className="dash-exam-val">{stats.bestScore || 0}%</span>
+                    <span>Best Score</span>
+                  </div>
+                  <div className="dash-exam-stat">
+                    <span className="dash-exam-val">{stats.needsReview || 0}</span>
+                    <span>Need Review</span>
+                  </div>
+                  <div className="dash-exam-stat">
+                    <span className="dash-exam-val">{stats.totalQuestions || 0}</span>
+                    <span>Questions</span>
+                  </div>
+                </div>
+                <Link href="/test" className="btn btn-primary dash-exam-cta">
+                  <Play size={16} /> Start a Focus Test
+                </Link>
+              </section>
+            )}
           </div>
         </>
       )}
