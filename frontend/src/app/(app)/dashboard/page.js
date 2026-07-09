@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from '@/lib/useAuth';
 import { apiFetch } from '@/lib/api';
 import DailyDigestCard from '@/components/DailyDigestCard';
@@ -16,17 +16,13 @@ const METRICS = [
   { key: 'exams', label: 'Exams Taken', icon: BookOpen, getValue: (stats) => stats?.totalExamsTaken || 0 },
   { key: 'score', label: 'Avg Score', icon: Target, getValue: (stats) => `${stats?.avgScore || 0}%` },
   { key: 'tasks', label: 'Tasks Today', icon: CalendarDays, getValue: (_, tasks) => tasks.length },
-  { key: 'hours', label: 'Study Hours', icon: Clock, getValue: (_, __, c) => `${c.totalStudyHours || 0}h` },
-  { key: 'roadmaps', label: 'Roadmaps', icon: Map, getValue: (_, __, c) => c.roadmapsActive || 0 },
-  { key: 'apps', label: 'Applications', icon: Briefcase, getValue: (_, __, c) => c.applications || 0 },
+  { key: 'hours', label: 'Study Hours', icon: Clock, getValue: (_, __, c) => `${c?.totalStudyHours || 0}h` },
 ];
 
 const QUICK_ACTIONS = [
   { href: '/test', label: 'Focus Test', icon: Play, desc: 'Timed exam session' },
   { href: '/captures', label: 'Capture', icon: Inbox, desc: 'Save an idea fast' },
   { href: '/vault', label: 'File Vault', icon: FolderOpen, desc: 'Upload & organize' },
-  { href: '/journey', label: 'Journey', icon: Map, desc: 'Track your growth' },
-  { href: '/links', label: 'Links', icon: Link2, desc: 'Saved bookmarks' },
   { href: '/planner', label: 'Planner', icon: CalendarDays, desc: 'Plan your week' },
 ];
 
@@ -79,218 +75,179 @@ export default function Dashboard() {
   const tasksDone = todayTasks.filter(t => t.status === 'done').length;
   const taskProgress = todayTasks.length ? Math.round((tasksDone / todayTasks.length) * 100) : 0;
 
-
-
   return (
-    <div className="dash-page">
-      <header className="dash-hero-premium">
-        <div className="dash-hero-grid" aria-hidden />
-        <div className="dash-hero-inner">
-          <div className="dash-hero-top">
-            <span className="dash-date-pill">{formatDate()}</span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+      {/* Glass Header Banner */}
+      <header className="glass-panel" style={{ padding: 'var(--space-lg)', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', marginBottom: 'var(--space-md)' }}>
+            <span className="badge badge-stark">{formatDate()}</span>
             {analytics?.streak > 0 && (
-              <span className="dash-streak-pill">
-                <Flame size={14} />
-                {analytics.streak}-day streak
+              <span className="badge" style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.05)' }}>
+                <Flame size={14} style={{ color: 'var(--brand)' }} />
+                {analytics.streak}-Day Streak
               </span>
             )}
           </div>
-          <h1 className="dash-hero-display">
-            {greeting}, <span className="dash-hero-name">{userName}</span>
+          <h1 style={{ fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-0.04em', marginBottom: 'var(--space-xs)' }}>
+            {greeting}, {userName}
           </h1>
-          <p className="dash-hero-tagline">
-            Your command center — track progress, plan focus, and level up.
+          <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', maxWidth: '600px' }}>
+            Your knowledge base is growing. You have {analytics?.counts?.totalCaptures || 0} captures waiting to be synthesized.
           </p>
         </div>
       </header>
 
-      <DailyDigestCard />
+      {/* Main Bento Grid */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
+        gap: 'var(--space-md)' 
+      }}>
+        {/* Left Column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+          
+          {/* Metrics Grid inside a Glass Panel */}
+          <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-md)' }}>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <BarChart3 size={18} /> Performance Metrics
+              </h2>
+            </div>
+            
+            {loading ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
+                {[...Array(4)].map((_, i) => <SkeletonCard key={i} height="80px" />)}
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
+                {METRICS.map((m) => {
+                  const Icon = m.icon;
+                  const val = m.getValue(stats, todayTasks, c);
+                  return (
+                    <div key={m.key} style={{ 
+                      background: 'var(--bg-surface)', 
+                      padding: 'var(--space-sm) var(--space-md)', 
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--border-light)'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                        <Icon size={14} />
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{m.label}</span>
+                      </div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 700, fontFamily: 'var(--font-geist, monospace)' }}>
+                        {val}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
 
-      {loading ? (
-        <div className="dash-metrics-grid">
-          {Array(6).fill(0).map((_, i) => (
-            <SkeletonCard key={i} height="120px" />
-          ))}
+          {/* Quick Actions Bento */}
+          <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: 'var(--space-md)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Zap size={18} /> Quick Actions
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
+              {QUICK_ACTIONS.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <Link href={action.href} key={action.label} style={{
+                    display: 'flex', flexDirection: 'column', padding: 'var(--space-sm)',
+                    background: 'var(--bg-surface)', border: '1px solid var(--border-light)',
+                    borderRadius: 'var(--radius-md)', textDecoration: 'none', color: 'inherit',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--border-strong)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--border-light)';
+                    e.currentTarget.style.transform = 'none';
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      <div style={{ padding: '6px', background: 'var(--bg-accent)', borderRadius: 'var(--radius-sm)' }}>
+                        <Icon size={16} />
+                      </div>
+                      <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{action.label}</span>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{action.desc}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
         </div>
-      ) : (
-        <>
-          <div className="dash-metrics-grid">
-            {METRICS.map((m, i) => (
-              <div key={m.key} className="dash-metric" style={{ animationDelay: `${i * 60}ms` }}>
-                <div className="dash-metric-icon">
-                  <m.icon size={18} strokeWidth={1.75} />
-                </div>
-                <div className="dash-metric-body">
-                  <span className="dash-metric-value">{m.getValue(stats, todayTasks, c)}</span>
-                  <span className="dash-metric-label">{m.label}</span>
-                </div>
-              </div>
-            ))}
-          </div>
 
-          <div className="dash-bento">
-            {/* Today's Tasks — large panel */}
-            <section className="dash-panel dash-panel-tasks">
-              <div className="dash-panel-head">
-                <div className="dash-panel-title-group">
-                  <CalendarDays size={16} />
-                  <h2>Today&apos;s Tasks</h2>
-                </div>
-                <Link href="/planner" className="dash-panel-link">
-                  Planner <ChevronRight size={14} />
-                </Link>
+        {/* Right Column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+          {/* Daily Digest Bento */}
+          <section className="glass-panel" style={{ flex: 1, padding: 'var(--space-md)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-md)' }}>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <BrainCircuit size={18} /> Daily AI Digest
+              </h2>
+            </div>
+            
+            {loading ? (
+              <SkeletonCard height="200px" />
+            ) : (
+              <div style={{ flex: 1, background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: 'var(--space-sm)' }}>
+                 <DailyDigestCard recentCaptures={recentCaptures} />
               </div>
+            )}
+          </section>
 
-              {todayTasks.length > 0 ? (
-                <>
-                  <div className="dash-task-progress">
-                    <div className="dash-task-progress-ring" style={{ '--pct': taskProgress }}>
-                      <svg viewBox="0 0 36 36">
-                        <circle className="dash-ring-bg" cx="18" cy="18" r="15.5" />
-                        <circle className="dash-ring-fill" cx="18" cy="18" r="15.5" />
-                      </svg>
-                      <span className="dash-ring-label">{taskProgress}%</span>
-                    </div>
-                    <div className="dash-task-progress-meta">
-                      <span className="dash-task-progress-count">{tasksDone}/{todayTasks.length} complete</span>
-                      <span className="dash-task-progress-sub">Keep the momentum going</span>
-                    </div>
-                  </div>
-                  <div className="dash-task-list">
-                    {todayTasks.map(t => (
-                      <div key={t._id} className={`dash-task-item ${t.status}`}>
-                        {t.status === 'done' ? <CheckCircle2 size={15} /> : <Circle size={15} />}
-                        <span className={t.status === 'done' ? 'line-through' : ''}>{t.title}</span>
-                        {t.duration > 0 && <span className="dash-task-dur">{t.duration}m</span>}
+          {/* Tasks Bento */}
+          <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-md)' }}>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CheckCircle2 size={18} /> Tasks for Today
+              </h2>
+            </div>
+
+            {loading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {[...Array(3)].map((_, i) => <SkeletonCard key={i} height="60px" />)}
+              </div>
+            ) : todayTasks.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                  <span>{tasksDone} of {todayTasks.length} completed</span>
+                  <span>{taskProgress}%</span>
+                </div>
+                <div style={{ height: '4px', background: 'var(--bg-accent)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${taskProgress}%`, background: 'var(--brand)', transition: 'width 0.3s' }} />
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'var(--space-sm)' }}>
+                  {todayTasks.slice(0, 3).map((task) => (
+                    <div key={task.id} style={{
+                      display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
+                      background: 'var(--bg-surface)', border: '1px solid var(--border-light)',
+                      borderRadius: 'var(--radius-md)', opacity: task.status === 'done' ? 0.6 : 1
+                    }}>
+                      <Circle size={14} style={{ color: task.status === 'done' ? 'var(--brand)' : 'var(--text-muted)' }} />
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{task.title}</span>
                       </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="dash-empty-mini">
-                  <CalendarDays size={32} strokeWidth={1} />
-                  <p>Nothing scheduled yet</p>
-                  <Link href="/planner" className="btn btn-primary btn-sm">Plan your day</Link>
-                </div>
-              )}
-            </section>
-
-            {/* Quick Actions — tall sidebar panel */}
-            <section className="dash-panel dash-panel-actions">
-              <div className="dash-panel-head">
-                <div className="dash-panel-title-group">
-                  <Zap size={16} />
-                  <h2>Quick Actions</h2>
-                </div>
-              </div>
-              <div className="dash-actions-premium">
-                {QUICK_ACTIONS.map(a => (
-                  <Link key={a.href} href={a.href} className="dash-action-tile">
-                    <div className="dash-action-tile-icon">
-                      <a.icon size={18} strokeWidth={1.75} />
                     </div>
-                    <div className="dash-action-tile-text">
-                      <span className="dash-action-tile-label">{a.label}</span>
-                      <span className="dash-action-tile-desc">{a.desc}</span>
-                    </div>
-                    <ArrowUpRight size={14} className="dash-action-tile-arrow" />
-                  </Link>
-                ))}
-              </div>
-            </section>
-
-            {/* Roadmaps */}
-            {analytics?.roadmapSummaries?.length > 0 && (
-              <section className="dash-panel dash-panel-roadmaps">
-                <div className="dash-panel-head">
-                  <div className="dash-panel-title-group">
-                    <Map size={16} />
-                    <h2>Active Roadmaps</h2>
-                  </div>
-                  <Link href="/journey" className="dash-panel-link">
-                    View all <ChevronRight size={14} />
-                  </Link>
-                </div>
-                <div className="dash-roadmap-list">
-                  {analytics.roadmapSummaries.slice(0, 3).map(r => (
-                    <Link href="/journey" key={r._id} className="dash-roadmap-item">
-                      <div className="dash-roadmap-top">
-                        <span className="dash-roadmap-name">{r.title}</span>
-                        <span className="dash-roadmap-pct">{r.progress}%</span>
-                      </div>
-                      <div className="dash-roadmap-bar">
-                        <div className="dash-roadmap-fill" style={{ width: `${r.progress}%` }} />
-                      </div>
-                    </Link>
                   ))}
                 </div>
-              </section>
-            )}
-
-
-            {/* Recent Captures */}
-            <section className="dash-panel dash-panel-captures">
-              <div className="dash-panel-head">
-                <div className="dash-panel-title-group">
-                  <Inbox size={16} />
-                  <h2>Recent Captures</h2>
-                </div>
-                <Link href="/captures" className="dash-panel-link">
-                  All <ChevronRight size={14} />
-                </Link>
               </div>
-              {recentCaptures.length > 0 ? (
-                <div className="dash-capture-list">
-                  {recentCaptures.map(cap => (
-                    <Link key={cap.id} href={`/captures/${cap.id}`} className="dash-capture-item">
-                      <span className="dash-capture-title">{cap.title}</span>
-                      <span className="dash-capture-cat">{cap.category}</span>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className="dash-empty-mini">
-                  <Inbox size={28} strokeWidth={1} />
-                  <p>No captures yet</p>
-                </div>
-              )}
-            </section>
-
-            {/* Exam Overview */}
-            {stats && (
-              <section className="dash-panel dash-panel-exam">
-                <div className="dash-panel-head">
-                  <div className="dash-panel-title-group">
-                    <BrainCircuit size={16} />
-                    <h2>Exam Overview</h2>
-                  </div>
-                </div>
-                <div className="dash-exam-grid">
-                  <div className="dash-exam-stat">
-                    <span className="dash-exam-val">{stats.passRate || 0}%</span>
-                    <span>Pass Rate</span>
-                  </div>
-                  <div className="dash-exam-stat">
-                    <span className="dash-exam-val">{stats.bestScore || 0}%</span>
-                    <span>Best Score</span>
-                  </div>
-                  <div className="dash-exam-stat">
-                    <span className="dash-exam-val">{stats.needsReview || 0}</span>
-                    <span>Need Review</span>
-                  </div>
-                  <div className="dash-exam-stat">
-                    <span className="dash-exam-val">{stats.totalQuestions || 0}</span>
-                    <span>Questions</span>
-                  </div>
-                </div>
-                <Link href="/test" className="btn btn-primary dash-exam-cta">
-                  <Play size={16} /> Start a Focus Test
-                </Link>
-              </section>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 'var(--space-lg) 0', color: 'var(--text-muted)' }}>
+                <CalendarDays size={32} style={{ marginBottom: '12px' }} />
+                <p style={{ fontSize: '0.9rem', marginBottom: '16px' }}>No tasks scheduled for today.</p>
+                <Link href="/planner" className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '6px 12px' }}>Plan Day</Link>
+              </div>
             )}
-          </div>
-        </>
-      )}
+          </section>
+        </div>
+      </div>
     </div>
   );
 }

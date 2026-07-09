@@ -184,70 +184,80 @@ export default function LibraryPage() {
   }, [links, search]);
 
   return (
-    <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Library</h1>
-          <p className="page-subtitle">
-            Files and saved links in one searchable place.
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <button className="btn btn-secondary" onClick={() => setUploadModalOpen(true)}>
-            <Upload size={16} /> Upload File
-          </button>
-          <button className="btn btn-primary" onClick={() => setLinkModalOpen(true)}>
-            <Plus size={16} /> Add Link
-          </button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+      {/* Glass Header Banner */}
+      <header className="glass-panel" style={{ padding: 'var(--space-lg)', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-md)' }}>
+          <div>
+            <h1 style={{ fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-0.04em', marginBottom: 'var(--space-xs)' }}>
+              Library
+            </h1>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', maxWidth: '600px' }}>
+              Files and saved links in one searchable place.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <button className="btn" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', color: 'var(--text-primary)' }} onClick={() => setUploadModalOpen(true)}>
+              <Upload size={16} style={{ marginRight: '8px' }} /> Upload File
+            </button>
+            <button className="btn btn-primary" onClick={() => setLinkModalOpen(true)}>
+              <Plus size={16} style={{ marginRight: '8px' }} /> Add Link
+            </button>
+          </div>
         </div>
       </header>
 
-      <div className="dash-stats-row">
-        <div className="dash-stat-card">
-          <FileText size={22} className="dash-stat-icon" />
-          <span className="dash-stat-value">{files.length}</span>
-          <span className="dash-stat-label">Files</span>
-        </div>
-        <div className="dash-stat-card">
-          <Link2 size={22} className="dash-stat-icon" />
-          <span className="dash-stat-value">{links.length}</span>
-          <span className="dash-stat-label">Links</span>
-        </div>
-        <div className="dash-stat-card">
-          <FolderOpen size={22} className="dash-stat-icon" />
-          <span className="dash-stat-value">{files.length + links.length}</span>
-          <span className="dash-stat-label">Library Items</span>
-        </div>
-      </div>
-
-      <div className="capture-toolbar">
-        <div className="capture-search-wrapper">
-          <Search size={16} className="capture-search-icon" />
-          <input
-            className="input capture-search-input"
-            type="text"
-            placeholder="Search files and links..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="dash-main-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-          <SkeletonCard height="260px" />
-          <SkeletonCard height="260px" />
-        </div>
-      ) : (
-        <div className="dash-main-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-          <section className="dash-section">
-            <div className="card-title-row">
-              <h2 className="card-title">Files</h2>
-              <Link className="dash-see-all" href="/vault">Manage files</Link>
+      {/* Main Bento Grid */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
+        gap: 'var(--space-md)' 
+      }}>
+        {/* Left Column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+          
+          {/* Metrics Grid */}
+          <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--space-sm)' }}>
+              {[
+                { label: 'Files', icon: FileText, value: files.length },
+                { label: 'Links', icon: Link2, value: links.length },
+                { label: 'Total', icon: FolderOpen, value: files.length + links.length },
+              ].map((stat) => (
+                <div key={stat.label} style={{ 
+                  background: 'var(--bg-surface)', 
+                  padding: 'var(--space-sm) var(--space-md)', 
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-light)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                    <stat.icon size={14} />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</span>
+                  </div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 700, fontFamily: 'var(--font-geist, monospace)' }}>
+                    {stat.value}
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="dash-capture-list">
+          </section>
+
+          {/* Files Bento */}
+          <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-md)' }}>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileText size={18} /> Files
+              </h2>
+              <Link href="/vault" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textDecoration: 'none' }}>Manage files</Link>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {filteredFiles.slice(0, 8).map((file) => (
-                <Link key={itemId(file)} className="dash-capture-item" href="/vault">
+                <Link key={itemId(file)} href="/vault" style={{
+                  display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
+                  background: 'var(--bg-surface)', border: '1px solid var(--border-light)',
+                  borderRadius: 'var(--radius-md)', textDecoration: 'none', color: 'inherit'
+                }}>
                   <span className="dash-capture-title">{file.title || file.fileName || 'Untitled file'}</span>
                   <span className="dash-capture-cat">{file.fileType || file.category || 'file'}</span>
                 </Link>
@@ -261,35 +271,41 @@ export default function LibraryPage() {
             </div>
           </section>
 
-          <section className="dash-section">
-            <div className="card-title-row">
-              <h2 className="card-title">Links</h2>
-              <Link className="dash-see-all" href="/links">Manage links</Link>
+        </div>
+
+        {/* Right Column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+          {/* Links Bento */}
+          <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-md)' }}>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Link2 size={18} /> Links
+              </h2>
             </div>
-            <div className="dash-capture-list">
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {filteredLinks.slice(0, 8).map((link) => (
-                <a
-                  key={itemId(link)}
-                  className="dash-capture-item"
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <span className="dash-capture-title">{link.title || link.url || 'Untitled link'}</span>
-                  <span className="dash-capture-cat"><ExternalLink size={12} /></span>
+                <a key={itemId(link)} href={link.url} target="_blank" rel="noopener noreferrer" style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px',
+                  background: 'var(--bg-surface)', border: '1px solid var(--border-light)',
+                  borderRadius: 'var(--radius-md)', textDecoration: 'none', color: 'inherit'
+                }}>
+                  <span style={{ fontSize: '0.95rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {link.title || link.url || 'Untitled link'}
+                  </span>
+                  <ExternalLink size={14} style={{ color: 'var(--text-muted)' }} />
                 </a>
               ))}
               {filteredLinks.length === 0 && (
-                <div className="dash-empty-mini">
-                  <Link2 size={24} />
-                  <p>No links match your search.</p>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 'var(--space-lg) 0', color: 'var(--text-muted)' }}>
+                  <Link2 size={24} style={{ marginBottom: '8px' }} />
+                  <p style={{ fontSize: '0.9rem' }}>No links match your search.</p>
                 </div>
               )}
             </div>
           </section>
         </div>
-      )}
-
+      </div>
       {/* Upload File Modal */}
       {uploadModalOpen && (
         <div className="dialog-overlay" onClick={() => !uploading && setUploadModalOpen(false)}>
