@@ -349,55 +349,61 @@ export default function FocusTest() {
   // ─── CONFIG PHASE ───
   if (phase === 'config') {
     return (
-      <div className="dash-container" style={{ animation: 'fadeIn 0.5s ease-out' }}>
-        <header className="dash-header">
-          <div className="dash-header-title">
-            <h1 className="dash-title">Assessment Hub</h1>
-            <p className="dash-subtitle">Configure your test parameters and document sources.</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+        {/* Glass Header Banner */}
+        <header className="glass-panel" style={{ padding: 'var(--space-lg)', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <h1 style={{ fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-0.04em', marginBottom: 'var(--space-xs)' }}>
+              Assessment Hub
+            </h1>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', maxWidth: '600px' }}>
+              Configure your test parameters and document sources.
+            </p>
           </div>
         </header>
 
-        <div className="dash-bento">
+        {/* Main Bento Grid */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
+          gap: 'var(--space-md)' 
+        }}>
           {/* Main Config Column */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <section className="dash-panel">
-              <div className="dash-panel-head">
-                <div className="dash-panel-title-group">
-                  <BrainCircuit size={18} style={{ color: 'var(--brand)' }} />
-                  <h2>Document Source</h2>
-                </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+            <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-md)' }}>
+                <BrainCircuit size={18} />
+                <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Document Source</h2>
               </div>
-              <div style={{ marginTop: '1rem' }}>
+              <div>
                 <select 
-                  className="input" 
+                  className="select" 
                   value={selectedExam} 
                   onChange={(e) => setSelectedExam(e.target.value)}
-                  style={{ width: '100%', fontSize: '1rem', padding: '0.875rem' }}
+                  style={{ width: '100%', fontSize: '0.95rem' }}
                 >
                   <option value="all">Global Pool (All Questions)</option>
                   {exams.map(ex => (
                     <option key={ex._id || ex.id} value={ex._id || ex.id}>{ex.title}</option>
                   ))}
                 </select>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4', marginTop: '0.75rem' }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4', marginTop: '1rem' }}>
                   Select a specific document to study, or test from your entire question pool. 
                   Documents are automatically created when you upload a PDF or JSON.
                 </p>
               </div>
             </section>
 
-            <section className="dash-panel">
-              <div className="dash-panel-head">
-                <div className="dash-panel-title-group">
-                  <Flag size={18} style={{ color: 'var(--brand)' }} />
-                  <h2>Session Mode</h2>
-                </div>
+            <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-md)' }}>
+                <Flag size={18} />
+                <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Session Mode</h2>
               </div>
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
-                <button onClick={() => setMode('simulation')} className={`btn ${mode === 'simulation' ? 'btn-primary' : 'btn-secondary'}`} style={{ flex: 1, padding: '1rem', fontSize: '1rem' }}>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button onClick={() => setMode('simulation')} className={`btn ${mode === 'simulation' ? 'btn-primary' : ''}`} style={{ flex: 1, padding: '0.8rem', background: mode === 'simulation' ? 'var(--brand-primary)' : 'var(--bg-surface)', color: mode === 'simulation' ? 'var(--brand-inverse)' : 'var(--text-primary)', border: mode === 'simulation' ? 'none' : '1px solid var(--border-light)' }}>
                   Simulation
                 </button>
-                <button onClick={() => setMode('study')} className={`btn ${mode === 'study' ? 'btn-primary' : 'btn-secondary'}`} style={{ flex: 1, padding: '1rem', fontSize: '1rem' }}>
+                <button onClick={() => setMode('study')} className={`btn ${mode === 'study' ? 'btn-primary' : ''}`} style={{ flex: 1, padding: '0.8rem', background: mode === 'study' ? 'var(--brand-primary)' : 'var(--bg-surface)', color: mode === 'study' ? 'var(--brand-inverse)' : 'var(--text-primary)', border: mode === 'study' ? 'none' : '1px solid var(--border-light)' }}>
                   Study (SRS)
                 </button>
               </div>
@@ -408,22 +414,20 @@ export default function FocusTest() {
           </div>
 
           {/* Action Column */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <section className="dash-panel">
-              <div className="dash-panel-head">
-                <div className="dash-panel-title-group">
-                  <Clock size={18} style={{ color: 'var(--brand)' }} />
-                  <h2>Parameters</h2>
-                </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+            <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-md)' }}>
+                <Clock size={18} />
+                <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Parameters</h2>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Time (min)</label>
-                  <input type="number" className="input" value={timeMinutes} onChange={(e) => setTimeMinutes(parseInt(e.target.value) || 60)} disabled={isStudy} style={{ opacity: isStudy ? 0.5 : 1, width: '100%', fontSize: '1rem' }} />
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Time (min)</label>
+                  <input type="number" className="input" value={timeMinutes} onChange={(e) => setTimeMinutes(parseInt(e.target.value) || 60)} disabled={isStudy} style={{ opacity: isStudy ? 0.5 : 1, fontSize: '0.95rem' }} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Questions</label>
-                  <input type="number" className="input" value={questionCount} onChange={(e) => setQuestionCount(parseInt(e.target.value) || 20)} min={1} max={200} style={{ width: '100%', fontSize: '1rem' }} />
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Questions</label>
+                  <input type="number" className="input" value={questionCount} onChange={(e) => setQuestionCount(parseInt(e.target.value) || 20)} min={1} max={200} style={{ fontSize: '0.95rem' }} />
                 </div>
               </div>
 
@@ -432,17 +436,15 @@ export default function FocusTest() {
               </button>
             </section>
 
-            <section className="dash-panel" style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.1)' }}>
-              <div className="dash-panel-head">
-                <div className="dash-panel-title-group">
-                  <Upload size={18} style={{ color: 'var(--brand)' }} />
-                  <h2>Upload Material</h2>
-                </div>
+            <section className="glass-panel" style={{ padding: 'var(--space-md)', background: 'rgba(255,255,255,0.02)', borderStyle: 'dashed' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-sm)' }}>
+                <Upload size={18} />
+                <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Upload Material</h2>
               </div>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5', marginTop: '0.5rem', marginBottom: '1.25rem' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5', marginBottom: '1.25rem' }}>
                 Upload a PDF, Word document, or JSON file. Our AI will extract multiple-choice questions and save them to a new Document group.
               </p>
-              <label className="btn btn-secondary" style={{ display: 'flex', justifyContent: 'center', width: '100%', padding: '1rem', fontSize: '1rem', cursor: 'pointer', background: 'var(--bg-card)' }}>
+              <label className="btn" style={{ display: 'flex', justifyContent: 'center', width: '100%', padding: '1rem', cursor: 'pointer', background: 'var(--bg-surface)', border: '1px solid var(--border-light)', color: 'var(--text-primary)' }}>
                 <Upload size={16} style={{ marginRight: '0.5rem' }} /> Select File...
                 <input type="file" accept=".json,.pdf,.docx,.txt" onChange={handleUploadQuestions} style={{ display: 'none' }} />
               </label>

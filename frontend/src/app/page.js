@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { requireAuth } from '@/lib/auth';
 import SignOutButton from '@/components/SignOutButton';
+import CursorShadowText from '@/components/CursorShadowText';
+import DotGridBackground from '@/components/DotGridBackground';
 
 export default async function LandingPage() {
   const result = await requireAuth();
@@ -10,7 +12,10 @@ export default async function LandingPage() {
     <div className="landing">
       {/* ─── Background ─── */}
       <div className="landing-bg">
-        <div className="landing-grid" />
+        <DotGridBackground 
+          dotColor="rgba(255, 255, 255, 0.15)"
+          style={{ position: 'absolute', inset: 0, zIndex: 0 }}
+        />
         <div className="landing-glow landing-glow-1" />
         <div className="landing-glow landing-glow-2" />
       </div>
@@ -55,19 +60,24 @@ export default async function LandingPage() {
 
       {/* ─── Hero ─── */}
       <section className="landing-hero">
-        <div className="landing-badge">
-          <span className="landing-beacon" />
-          The All-In-One Productivity Platform
-        </div>
 
         <h1 className="landing-headline">
-          Your Ultimate Digital<br />
-          <span className="landing-headline-accent">Command Center.</span>
+          Your Intelligent<br />
+          <CursorShadowText 
+            text="Second Brain." 
+            textColor="var(--text-secondary)" 
+            className="landing-headline-accent"
+            shadowColor1="rgba(126, 87, 194, 0.6)"
+            shadowColor2="rgba(126, 87, 194, 0.3)"
+            shadowCount={2}
+            shadowDistance={2}
+            sensitivity={0.1}
+          />
         </h1>
 
         <p className="landing-subtext">
-          Track roadmaps, manage job applications, capture rapid notes, <br className="landing-br" />
-          and simulate exams — everything unified in one sleek dashboard.
+          Upload documents, generate smart quizzes, capture fleeting thoughts, <br className="landing-br" />
+          and track your growth — all inside a sleek, unified dashboard.
         </p>
 
         <div className="landing-hero-actions">
@@ -241,7 +251,7 @@ export default async function LandingPage() {
             {session ? (
               <>
                 <Link href="/dashboard">Dashboard</Link>
-                <SignOutButton style={{ background: 'none', border: 'none', color: 'inherit', font: 'inherit', padding: 0 }}>Sign Out</SignOutButton>
+                <SignOutButton style={{ background: 'none', border: 'none', color: 'var(--text-muted)', font: 'inherit', padding: 0, cursor: 'pointer' }}>Sign Out</SignOutButton>
               </>
             ) : (
               <>
