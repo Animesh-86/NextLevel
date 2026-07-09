@@ -11,7 +11,22 @@ async function handleProxy(req) {
   });
 
   // Just check if token cookie EXISTS — Spring Boot handles actual verification
-  const token = req.cookies.get('token')?.value;
+  let token = req.cookies.get('token')?.value;
+  console.log(`[PROXY] ${req.method} Request to ${pathname}`);
+  console.log(`[PROXY] req.cookies token =`, token);
+  
+  if (!token) {
+    const cookieHeader = req.headers.get('cookie');
+    console.log(`[PROXY] req.headers.get('cookie') =`, cookieHeader);
+    if (cookieHeader) {
+      const match = cookieHeader.match(/(?:^|;\s*)token=([^;]+)/);
+      if (match) {
+        token = match[1];
+        console.log(`[PROXY] Parsed token from header:`, token ? "PRESENT" : "NULL");
+      }
+    }
+  }
+
   const isLoggedIn = !!token;
 
   if (isPublicPath) {
@@ -21,14 +36,23 @@ async function handleProxy(req) {
     return NextResponse.next();
   }
 
-  // Protected routes: just check cookie exists
-  if (!isLoggedIn) {
+  const requestHeaders = new Headers(req.headers);
+  if (token) {
+    requestHeaders.set('Authorization', `Bearer ${token}`);
+  }
+
+  // Protected routes: redirect to login if no token (except for /api/ which Spring Boot will handle)
+  if (!isLoggedIn && !pathname.startsWith('/api/')) {
     const loginUrl = new URL('/login', req.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next();
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    }
+  });
 }
 
 export { handleProxy as proxy };

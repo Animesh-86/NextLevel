@@ -28,6 +28,8 @@ export async function apiFetch(path, options = {}) {
     const token = getTokenFromCookie();
     if (token) {
       requestHeaders.set('Authorization', `Bearer ${token}`);
+    } else if (typeof window !== 'undefined') {
+      console.warn(`[apiFetch] No token found in document.cookie for path: ${path}. This may cause a 401 error if the backend doesn't receive the HttpOnly cookie.`);
     }
   }
 

@@ -23,17 +23,25 @@ import reactor.core.publisher.Flux;
 public class ChatController {
 
     private final ChatService chatService;
+    private final org.springframework.core.env.Environment env;
 
-    public ChatController(ChatService chatService) {
+    public ChatController(ChatService chatService, org.springframework.core.env.Environment env) {
         this.chatService = chatService;
+        this.env = env;
     }
 
-    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @GetMapping("/debug")
+    public ResponseEntity<String> debugAuth(@AuthenticationPrincipal CurrentUser currentUser) {
+        String key = env.getProperty("GROQ_API_KEY");
+        String maskedKey = key != null && key.length() > 5 ? key.substring(0, 5) + "..." : "null";
+        return ResponseEntity.ok("User: " + (currentUser != null ? currentUser.getUserId() : "null") + ", Key: " + maskedKey);
+    }
+
+    @org.springframework.web.bind.annotation.PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> streamChat(
             @AuthenticationPrincipal CurrentUser currentUser,
-            @RequestParam String query,
-            @RequestParam(required = false) String context) {
-        return chatService.streamChat(currentUser.getUserId(), query, context);
+            @org.springframework.web.bind.annotation.RequestBody com.nextlevel.api.dto.ChatRequest request) {
+        return chatService.streamChat(currentUser.getUserId(), request.getQuery(), request.getContext(), request.getHistory());
     }
     
     @GetMapping("/sources")

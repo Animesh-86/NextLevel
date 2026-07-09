@@ -47,11 +47,21 @@ export default function AiChatModal({ isOpen, onClose }) {
                 return newMsgs;
             });
 
-            let streamUrl = `/api/chat/stream?query=${encodeURIComponent(userQ)}`;
-            if (activeContext) {
-                streamUrl += `&context=${encodeURIComponent(activeContext)}`;
+            const requestBody = {
+                query: userQ,
+                context: activeContext || null,
+                history: messages.map(m => ({ role: m.role, content: m.content }))
+            };
+
+            const response = await apiFetch('/api/chat/stream', {
+                method: 'POST',
+                body: JSON.stringify(requestBody)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-            const response = await apiFetch(streamUrl);
+            
             const reader = response.body.getReader();
             const decoder = new TextDecoder("utf-8");
 
@@ -76,7 +86,13 @@ export default function AiChatModal({ isOpen, onClose }) {
             console.error("Chat error:", err);
             setMessages(prev => {
                 const newMsgs = [...prev];
-                newMsgs[newBotMsgIndex].content = "Sorry, I encountered an error searching your knowledge base.";
+                if (err.message && err.message.includes("401")) {
+                    newMsgs[newBotMsgIndex].content = "⚠️ You are unauthorized. Your login session may have expired or a stale cookie was detected. Please log out, clear your cookies, and log back in.";
+                } else if (err.status === 401) {
+                    newMsgs[newBotMsgIndex].content = "⚠️ You are unauthorized. Your login session may have expired or a stale cookie was detected. Please log out, clear your cookies, and log back in.";
+                } else {
+                    newMsgs[newBotMsgIndex].content = "Sorry, I encountered an error. Please try again later.";
+                }
                 return newMsgs;
             });
         } finally {
@@ -115,11 +131,14 @@ export default function AiChatModal({ isOpen, onClose }) {
                             </p>
                             {activeContext && (
                                 <div className="ai-chat-quick-actions" style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                                    <button onClick={() => sendQuickAction("Summarize the page I am currently looking at.")} className="btn-secondary" style={{ fontSize: '12px', padding: '4px 12px' }}>
-                                        Summarize Page
+                                    <button onClick={() => sendQuickAction("Explain the page I am currently looking at like I am 5 years old.")} className="btn-secondary" style={{ fontSize: '12px', padding: '4px 12px' }}>
+                                        Explain Like I'm 5
                                     </button>
                                     <button onClick={() => sendQuickAction("Generate 5 practice flashcard questions based on the page I am currently looking at.")} className="btn-secondary" style={{ fontSize: '12px', padding: '4px 12px' }}>
                                         Generate Flashcards
+                                    </button>
+                                    <button onClick={() => sendQuickAction("Quiz me on this page with 3 multiple choice questions.")} className="btn-secondary" style={{ fontSize: '12px', padding: '4px 12px' }}>
+                                        Quiz Me
                                     </button>
                                 </div>
                             )}

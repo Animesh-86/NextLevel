@@ -25,6 +25,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+        
+        if (request.getRequestURI().contains("/api/chat/stream")) {
+            logger.info("--- DEBUG JwtAuthenticationFilter for /api/chat/stream ---");
+            logger.info("Cookie header: " + request.getHeader("Cookie"));
+            logger.info("Cookies length: " + (request.getCookies() != null ? request.getCookies().length : 0));
+        }
+
         String authHeader = request.getHeader("Authorization");
         String token = null;
 

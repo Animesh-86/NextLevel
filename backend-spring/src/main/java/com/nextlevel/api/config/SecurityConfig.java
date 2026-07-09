@@ -52,7 +52,11 @@ public class SecurityConfig {
                         .successHandler(oAuth2LoginSuccessHandler))
                 .exceptionHandling(exceptions -> exceptions
                         .defaultAuthenticationEntryPointFor(
-                                new org.springframework.security.web.authentication.HttpStatusEntryPoint(org.springframework.http.HttpStatus.UNAUTHORIZED),
+                                (request, response, authException) -> {
+                                    System.out.println("401 UNAUTHORIZED TRIGGERED FOR: " + request.getRequestURI());
+                                    System.out.println("Exception: " + authException.getMessage());
+                                    response.sendError(org.springframework.http.HttpStatus.UNAUTHORIZED.value(), org.springframework.http.HttpStatus.UNAUTHORIZED.getReasonPhrase());
+                                },
                                 new org.springframework.security.web.util.matcher.AntPathRequestMatcher("/api/**")
                         )
                 )

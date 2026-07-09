@@ -28,12 +28,12 @@ public class SemanticSearchService {
     }
 
     public List<Capture> search(String userId, String query) {
-        List<Double> embedding = groqService.generateEmbeddings(query);
-        if (embedding == null || embedding.isEmpty()) {
-            return keywordFallback(userId, query);
-        }
-
         try {
+            List<Double> embedding = groqService.generateEmbeddings(query);
+            if (embedding == null || embedding.isEmpty()) {
+                return keywordFallback(userId, query);
+            }
+
             Aggregation aggregation = Aggregation.newAggregation(
                     vectorSearchStage(embedding),
                     rawMatch(userId),

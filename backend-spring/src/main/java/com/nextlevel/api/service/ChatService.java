@@ -22,7 +22,7 @@ public class ChatService {
         this.semanticSearchService = semanticSearchService;
     }
 
-    public Flux<String> streamChat(String userId, String query, String activeContext) {
+    public Flux<String> streamChat(String userId, String query, String activeContext, List<java.util.Map<String, String>> history) {
         // Retrieve context using existing semantic search
         List<Capture> relatedCaptures = semanticSearchService.search(userId, query).stream().limit(5).toList();
         
@@ -36,9 +36,9 @@ public class ChatService {
         }
 
         String systemPrompt = """
-                You are NextLevel AI, a helpful knowledge assistant.
+                You are NextLevel AI, a helpful knowledge assistant and study copilot.
                 You answer the user's questions based strictly on their personal knowledge base context provided below.
-                If the context does not contain the answer, say "I couldn't find that in your knowledge base."
+                If the context does not contain the answer, but the user is asking you to explain something, you may use your general knowledge, but prioritize the provided context.
                 You MUST cite your sources using bracketed numbers corresponding to the source document (e.g., [1], [2]).
                 Do not hallucinate information. Be concise, structured, and helpful.
 
@@ -51,9 +51,27 @@ public class ChatService {
 
         final String finalSystemPrompt = systemPrompt;
 
+        List<org.springframework.ai.chat.messages.Message> springMessages = new java.util.ArrayList<>();
+        springMessages.add(new org.springframework.ai.chat.messages.SystemMessage(finalSystemPrompt));
+        
+        if (history != null) {
+            for (java.util.Map<String, String> msg : history) {
+                String role = msg.get("role");
+                String content = msg.get("content");
+                if (content == null || content.isEmpty()) continue;
+                
+                if ("user".equalsIgnoreCase(role)) {
+                    springMessages.add(new org.springframework.ai.chat.messages.UserMessage(content));
+                } else if ("bot".equalsIgnoreCase(role)) {
+                    springMessages.add(new org.springframework.ai.chat.messages.AssistantMessage(content));
+                }
+            }
+        }
+        
+        springMessages.add(new org.springframework.ai.chat.messages.UserMessage(query));
+
         return chatClient.prompt()
-                .system(s -> s.text(finalSystemPrompt))
-                .user(u -> u.text(query))
+                .messages(springMessages)
                 .stream()
                 .content();
     }

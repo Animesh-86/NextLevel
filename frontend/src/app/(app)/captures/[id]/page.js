@@ -34,7 +34,8 @@ export default function CaptureDetailPage() {
                 const data = await res.json();
                 if (data.success) {
                     setCapture(data.data);
-                    setActiveContext(`Capture: ${data.data.title}`);
+                    const contentToPass = data.data.description || data.data.rawContent || "No content available.";
+                    setActiveContext(`Capture Title: ${data.data.title}\nCapture Content: ${contentToPass}`);
                 }
             } catch (err) {
                 console.error("Failed to load capture", err);
