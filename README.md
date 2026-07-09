@@ -87,7 +87,12 @@ NextLevel is built with a focus on reliability, scalability, and modern engineer
 *   **Algorithmic Review**: Implements the SM-2 spaced repetition algorithm to schedule optimal review intervals based on user recall quality.
 *   **Engagement Engine**: Gamification system awarding XP and dynamic level progression for completed study sessions and flashcards.
 
-### 5. Interactive Knowledge Graph & AI Chat
+### 5. Assessment Hub & AI Question Generation
+*   **Document Upload**: Upload PDF, Word (.docx), TXT, or JSON files directly into the platform.
+*   **AI Extraction**: Automatically extracts text and uses LLMs to generate high-quality multiple-choice questions (MCQs) mapped to the source document.
+*   **Simulation & Study Modes**: Group questions by their source document, run timed exam simulations, or practice with SRS study mode.
+
+### 6. Interactive Knowledge Graph & AI Chat
 *   **Visual Topography**: 2D force-directed knowledge graph mapping semantic connections between isolated captures.
 *   **SSE Streaming Chat**: Real-time contextual AI assistant using Server-Sent Events (SSE) for low-latency RAG conversations.
 *   **Deep Focus**: Integrated Pomodoro study timer with automated background session logging.
@@ -100,7 +105,7 @@ NextLevel is built with a focus on reliability, scalability, and modern engineer
 *   Java 21 / Maven
 *   Node.js 18+
 *   MongoDB Atlas Account (with Vector Search capabilities)
-*   Google AI Studio API Key
+*   Google AI Studio API Key & Groq API Key
 
 ### 2. Installation & Setup
 
@@ -112,10 +117,11 @@ cd NextLevel
 
 ### 3. Backend Setup
 
-Configure the environment variables in `backend-spring/src/main/resources/application.yml` or via system environment variables:
+Configure the environment variables in `backend-spring/src/main/resources/application.yml` or via `.env`:
 ```env
 MONGODB_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/nextlevel
 GROQ_API_KEY=your_groq_api_key
+GEMINI_API_KEY=your_gemini_api_key
 GOOGLE_CLIENT_ID=your_oauth_client_id
 GOOGLE_CLIENT_SECRET=your_oauth_client_secret
 JWT_SECRET=your_secure_jwt_secret

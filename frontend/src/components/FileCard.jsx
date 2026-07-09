@@ -14,13 +14,12 @@ const fileTypeIcons = {
 };
 
 const categoryLabels = {
-  'system-design': 'System Design',
-  'dsa': 'DSA',
-  'web-dev': 'Web Dev',
-  'database': 'Database',
-  'devops': 'DevOps',
-  'math': 'Math',
-  'college': 'College',
+  'work': 'Work',
+  'personal': 'Personal',
+  'education': 'Education',
+  'finance': 'Finance',
+  'health': 'Health',
+  'projects': 'Projects',
   'notes': 'Notes',
   'other': 'Other',
 };

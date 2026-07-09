@@ -40,13 +40,12 @@ export default function LibraryPage() {
   const [savingLink, setSavingLink] = useState(false);
 
   const fileCategoryOptions = [
-    { value: 'system-design', label: 'System Design' },
-    { value: 'dsa', label: 'DSA' },
-    { value: 'web-dev', label: 'Web Dev' },
-    { value: 'database', label: 'Database' },
-    { value: 'devops', label: 'DevOps' },
-    { value: 'math', label: 'Math' },
-    { value: 'college', label: 'College' },
+    { value: 'work', label: 'Work' },
+    { value: 'personal', label: 'Personal' },
+    { value: 'education', label: 'Education' },
+    { value: 'finance', label: 'Finance' },
+    { value: 'health', label: 'Health' },
+    { value: 'projects', label: 'Projects' },
     { value: 'notes', label: 'Notes' },
     { value: 'other', label: 'Other' },
   ];
@@ -235,12 +234,12 @@ export default function LibraryPage() {
       </div>
 
       {loading ? (
-        <div className="dash-main-grid">
+        <div className="dash-main-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
           <SkeletonCard height="260px" />
           <SkeletonCard height="260px" />
         </div>
       ) : (
-        <div className="dash-main-grid">
+        <div className="dash-main-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
           <section className="dash-section">
             <div className="card-title-row">
               <h2 className="card-title">Files</h2>

@@ -4,7 +4,7 @@ import { useToast } from '@/components/Toast';
 import { useSession, signOut } from '@/lib/useAuth';
 import { apiFetch } from '@/lib/api';
 import { SkeletonCard } from '@/components/SkeletonLoader';
-import { User, Mail, Calendar, Flame, BookOpen, HelpCircle, Clock, Award, Save, Lock, Eye, EyeOff, BarChart3, ChevronRight, LogOut, PieChart as PieChartIcon } from 'lucide-react';
+import { User, Mail, Calendar, Flame, BookOpen, HelpCircle, Clock, Award, Save, Lock, Eye, EyeOff, BarChart3, ChevronRight, LogOut, PieChart as PieChartIcon, X } from 'lucide-react';
 import Link from 'next/link';
 import SubjectHeatmap from '@/components/charts/SubjectHeatmap';
 import TimeDistributionPie from '@/components/charts/TimeDistributionPie';
@@ -21,6 +21,7 @@ export default function ProfilePage() {
 
   const [nameInput, setNameInput] = useState('');
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [showAddCat, setShowAddCat] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -315,8 +316,78 @@ export default function ProfilePage() {
           </section>
         </div>
 
-        {/* Security Sidebar */}
-        <div>
+        {/* Categories Sidebar */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <section className="dash-panel">
+            <div className="dash-panel-head">
+              <div className="dash-panel-title-group">
+                <BookOpen size={16} />
+                <h2>Custom Categories</h2>
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                {['Work', 'Personal', 'Education', 'Finance', 'Health', 'Projects', 'Notes', 'Other'].map(cat => (
+                  <span key={cat} className="capture-tag" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', opacity: 0.7 }}>
+                    {cat} (Default)
+                  </span>
+                ))}
+                {(profile.customCategories || []).map((cat, idx) => (
+                  <span key={idx} className="capture-tag" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', border: '1px solid var(--primary)' }}>
+                    {cat}
+                    <button
+                      className="icon-btn"
+                      style={{ padding: 0 }}
+                      onClick={async () => {
+                        const cats = profile.customCategories.filter((_, i) => i !== idx);
+                        setProfile({ ...profile, customCategories: cats });
+                        await apiFetch('/api/user/profile', {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ customCategories: cats })
+                        });
+                      }}
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              
+              {showAddCat ? (
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input
+                    className="input"
+                    placeholder="New category..."
+                    autoFocus
+                    onBlur={() => setShowAddCat(false)}
+                    onKeyDown={async (e) => {
+                      if (e.key === 'Escape') setShowAddCat(false);
+                      if (e.key === 'Enter' && e.target.value.trim()) {
+                        const newCat = e.target.value.trim();
+                        e.target.value = '';
+                        const cats = [...(profile.customCategories || []), newCat];
+                        setProfile({ ...profile, customCategories: cats });
+                        await apiFetch('/api/user/profile', {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ customCategories: cats })
+                        });
+                        toast.success('Category added');
+                        setShowAddCat(false);
+                      }
+                    }}
+                  />
+                </div>
+              ) : (
+                <button className="btn btn-secondary" onClick={() => setShowAddCat(true)} style={{ alignSelf: 'flex-start' }}>
+                  + Add Custom Category
+                </button>
+              )}
+            </div>
+          </section>
+
+          {/* Security Panel */}
           <section className="dash-panel">
             <div className="dash-panel-head">
               <div className="dash-panel-title-group">

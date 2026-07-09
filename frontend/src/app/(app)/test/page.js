@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/components/Toast';
 import { apiFetch } from '@/lib/api';
-import { BrainCircuit, Check, X, Clock, Play, Flag, AlertTriangle, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { BrainCircuit, Check, X, Clock, Play, Flag, AlertTriangle, ChevronLeft, ChevronRight, Loader2, Upload } from 'lucide-react';
 
 export default function FocusTest() {
   const router = useRouter();
@@ -201,21 +201,121 @@ export default function FocusTest() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [phase, currentQ, currentIdx, questions, answers, handleNext, handlePrev, toggleFlag, toggleOption]);
 
-  async function startTest() {
-    if (!selectedExam) { toast.error('Select an exam'); return; }
+  const handleUploadQuestions = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // UI state for loading
+    const toastId = toast.loading(`Processing ${file.name}...`);
+    e.target.value = '';
 
     try {
-      const endpoint = isStudy ? `/api/questions?examId=${selectedExam}&limit=${questionCount}` : `/api/questions/test?examId=${selectedExam}`;
-      const res = await apiFetch(endpoint);
-      const data = await res.json();
+      let questionsArray = [];
 
-      if (!data.success || data.data.length === 0) {
-        toast.error('No questions found for this exam');
+      if (file.type === 'application/json' || file.name.endsWith('.json')) {
+        // Handle JSON directly
+        const text = await file.text();
+        const json = JSON.parse(text);
+        questionsArray = Array.isArray(json) ? json : [json];
+      } else {
+        // It's a PDF, DOCX, or TXT -> Extract text
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const extractRes = await fetch('/api/extract', {
+          method: 'POST',
+          body: formData
+        });
+        const extractData = await extractRes.json();
+
+        if (!extractData.success) {
+          throw new Error(extractData.error || 'Failed to extract text from document');
+        }
+
+        toast.loading(`Analyzing text with AI to generate questions...`, { id: toastId });
+
+        // Generate questions via AI
+        const genRes = await fetch('/api/generate-questions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: extractData.text })
+        });
+        const genData = await genRes.json();
+
+        if (!genData.success) {
+          throw new Error(genData.error || 'Failed to generate questions');
+        }
+
+        questionsArray = genData.data;
+      }
+
+      if (!questionsArray || questionsArray.length === 0) {
+        throw new Error('No questions could be extracted or generated from this file.');
+      }
+
+      toast.loading(`Creating document group...`, { id: toastId });
+      
+      // Create Exam group for this document
+      const examRes = await apiFetch('/api/exams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+           title: file.name.replace(/\.[^/.]+$/, ""),
+           description: `Questions extracted from ${file.name}`,
+           timeLimit: 60,
+           isPublic: false
+        })
+      });
+      const examData = await examRes.json();
+      
+      if (!examData.success) {
+        throw new Error(examData.error || 'Failed to create document group');
+      }
+      const newExam = examData.data;
+
+      // Assign examId to questions
+      const questionsWithExam = questionsArray.map(q => ({ ...q, examId: newExam._id || newExam.id }));
+
+      toast.loading(`Saving ${questionsWithExam.length} questions...`, { id: toastId });
+
+      // Save to backend
+      const res = await apiFetch('/api/questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(questionsWithExam)
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        toast.success(`Successfully added ${questionsWithExam.length} questions from ${file.name}!`, { id: toastId });
+        setExams(prev => [...prev, newExam]);
+        setSelectedExam(newExam._id || newExam.id);
+      } else {
+        throw new Error(data.error || 'Failed to save questions');
+      }
+
+    } catch (err) {
+      toast.error(err.message || 'Upload failed', { id: toastId });
+    }
+  };
+
+  async function startTest() {
+    try {
+      const endpoint = selectedExam && selectedExam !== 'all' 
+        ? `/api/questions?limit=1000&examId=${selectedExam}` 
+        : `/api/questions?limit=1000`;
+      const res = await apiFetch(endpoint);
+      const resData = await res.json();
+      
+      const questionList = resData.data?.data || resData.data || [];
+
+      if (!resData.success || questionList.length === 0) {
+        toast.error('No questions found to test');
         return;
       }
 
       // Shuffle questions
-      const shuffled = data.data.sort(() => Math.random() - 0.5).slice(0, questionCount);
+      const shuffled = questionList.sort(() => Math.random() - 0.5).slice(0, questionCount);
       setQuestions(shuffled);
       setCurrentIdx(0);
       setAnswers({});
@@ -249,50 +349,105 @@ export default function FocusTest() {
   // ─── CONFIG PHASE ───
   if (phase === 'config') {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', animation: 'fadeIn 0.5s ease-out' }}>
-        <div className="card" style={{ maxWidth: '480px', width: '100%' }}>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>Configure Session</h1>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', fontSize: '0.9rem' }}>Set up your assessment parameters.</p>
+      <div className="dash-container" style={{ animation: 'fadeIn 0.5s ease-out' }}>
+        <header className="dash-header">
+          <div className="dash-header-title">
+            <h1 className="dash-title">Assessment Hub</h1>
+            <p className="dash-subtitle">Configure your test parameters and document sources.</p>
+          </div>
+        </header>
 
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Session Mode</label>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button onClick={() => setMode('simulation')} className={`btn ${mode === 'simulation' ? 'btn-primary' : 'btn-secondary'}`} style={{ flex: 1, padding: '0.875rem' }}>
-                Simulation
+        <div className="dash-bento">
+          {/* Main Config Column */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <section className="dash-panel">
+              <div className="dash-panel-head">
+                <div className="dash-panel-title-group">
+                  <BrainCircuit size={18} style={{ color: 'var(--brand)' }} />
+                  <h2>Document Source</h2>
+                </div>
+              </div>
+              <div style={{ marginTop: '1rem' }}>
+                <select 
+                  className="input" 
+                  value={selectedExam} 
+                  onChange={(e) => setSelectedExam(e.target.value)}
+                  style={{ width: '100%', fontSize: '1rem', padding: '0.875rem' }}
+                >
+                  <option value="all">Global Pool (All Questions)</option>
+                  {exams.map(ex => (
+                    <option key={ex._id || ex.id} value={ex._id || ex.id}>{ex.title}</option>
+                  ))}
+                </select>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4', marginTop: '0.75rem' }}>
+                  Select a specific document to study, or test from your entire question pool. 
+                  Documents are automatically created when you upload a PDF or JSON.
+                </p>
+              </div>
+            </section>
+
+            <section className="dash-panel">
+              <div className="dash-panel-head">
+                <div className="dash-panel-title-group">
+                  <Flag size={18} style={{ color: 'var(--brand)' }} />
+                  <h2>Session Mode</h2>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+                <button onClick={() => setMode('simulation')} className={`btn ${mode === 'simulation' ? 'btn-primary' : 'btn-secondary'}`} style={{ flex: 1, padding: '1rem', fontSize: '1rem' }}>
+                  Simulation
+                </button>
+                <button onClick={() => setMode('study')} className={`btn ${mode === 'study' ? 'btn-primary' : 'btn-secondary'}`} style={{ flex: 1, padding: '1rem', fontSize: '1rem' }}>
+                  Study (SRS)
+                </button>
+              </div>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4', marginTop: '1rem' }}>
+                {mode === 'simulation' ? 'Simulation mode runs a timed test mimicking a real exam environment.' : 'Study (SRS) mode uses Spaced Repetition System to help you memorize effectively, repeating harder questions more frequently.'}
+              </p>
+            </section>
+          </div>
+
+          {/* Action Column */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <section className="dash-panel">
+              <div className="dash-panel-head">
+                <div className="dash-panel-title-group">
+                  <Clock size={18} style={{ color: 'var(--brand)' }} />
+                  <h2>Parameters</h2>
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem', marginBottom: '1.5rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Time (min)</label>
+                  <input type="number" className="input" value={timeMinutes} onChange={(e) => setTimeMinutes(parseInt(e.target.value) || 60)} disabled={isStudy} style={{ opacity: isStudy ? 0.5 : 1, width: '100%', fontSize: '1rem' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Questions</label>
+                  <input type="number" className="input" value={questionCount} onChange={(e) => setQuestionCount(parseInt(e.target.value) || 20)} min={1} max={200} style={{ width: '100%', fontSize: '1rem' }} />
+                </div>
+              </div>
+
+              <button onClick={startTest} className="btn btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1rem' }} disabled={configLoading}>
+                <Play size={18} style={{ marginRight: '0.5rem' }} /> Begin {isStudy ? 'Study Session' : 'Assessment'}
               </button>
-              <button onClick={() => setMode('study')} className={`btn ${mode === 'study' ? 'btn-primary' : 'btn-secondary'}`} style={{ flex: 1, padding: '0.875rem' }}>
-                Study (SRS)
-              </button>
-            </div>
-          </div>
+            </section>
 
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Exam</label>
-            <select className="select" value={selectedExam} onChange={(e) => {
-              setSelectedExam(e.target.value);
-              const exam = exams.find(ex => ex._id === e.target.value);
-              if (exam) setTimeMinutes(exam.timeLimit || 60);
-            }}>
-              {configLoading ? <option>Loading...</option> : exams.map(ex => (
-                <option key={ex._id} value={ex._id}>{ex.title} ({ex.questionCount || 0} Qs)</option>
-              ))}
-            </select>
+            <section className="dash-panel" style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.1)' }}>
+              <div className="dash-panel-head">
+                <div className="dash-panel-title-group">
+                  <Upload size={18} style={{ color: 'var(--brand)' }} />
+                  <h2>Upload Material</h2>
+                </div>
+              </div>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5', marginTop: '0.5rem', marginBottom: '1.25rem' }}>
+                Upload a PDF, Word document, or JSON file. Our AI will extract multiple-choice questions and save them to a new Document group.
+              </p>
+              <label className="btn btn-secondary" style={{ display: 'flex', justifyContent: 'center', width: '100%', padding: '1rem', fontSize: '1rem', cursor: 'pointer', background: 'var(--bg-card)' }}>
+                <Upload size={16} style={{ marginRight: '0.5rem' }} /> Select File...
+                <input type="file" accept=".json,.pdf,.docx,.txt" onChange={handleUploadQuestions} style={{ display: 'none' }} />
+              </label>
+            </section>
           </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Time (min)</label>
-              <input type="number" className="input" value={timeMinutes} onChange={(e) => setTimeMinutes(parseInt(e.target.value) || 60)} disabled={isStudy} style={{ opacity: isStudy ? 0.5 : 1 }} />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Questions</label>
-              <input type="number" className="input" value={questionCount} onChange={(e) => setQuestionCount(parseInt(e.target.value) || 20)} min={1} max={200} />
-            </div>
-          </div>
-
-          <button onClick={startTest} className="btn btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1rem' }} disabled={!selectedExam || configLoading}>
-            <Play size={18} style={{ marginRight: '0.5rem' }} /> Begin {isStudy ? 'Study Session' : 'Assessment'}
-          </button>
         </div>
       </div>
     );

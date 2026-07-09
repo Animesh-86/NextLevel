@@ -64,6 +64,7 @@ public class UserProfileService {
         data.put("totalExams", totalResults);
         data.put("passedExams", passedResults);
         data.put("achievements", achievements);
+        data.put("customCategories", user.getCustomCategories());
 
         return data;
     }
@@ -82,6 +83,10 @@ public class UserProfileService {
                 user.setPassword(passwordEncoder.encode(request.getNewPassword()));
             }
 
+            if (request.getCustomCategories() != null) {
+                user.setCustomCategories(request.getCustomCategories());
+            }
+
             user.setUpdatedAt(Instant.now());
             User saved = userRepository.save(user);
 
@@ -96,6 +101,7 @@ public class UserProfileService {
             data.put("questionsAnswered", safeInt(saved.getQuestionsAnswered()));
             data.put("createdAt", saved.getCreatedAt());
             data.put("updatedAt", saved.getUpdatedAt());
+            data.put("customCategories", saved.getCustomCategories());
 
             return data;
         });

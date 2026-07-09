@@ -9,15 +9,14 @@ import FileCard from '@/components/FileCard';
 import FileViewer from '@/components/FileViewer';
 import { SkeletonCard } from '@/components/SkeletonLoader';
 
-const categoryFilters = [
+const categoryOptions = [
   { value: 'all', label: 'All' },
-  { value: 'system-design', label: 'System Design' },
-  { value: 'dsa', label: 'DSA' },
-  { value: 'web-dev', label: 'Web Dev' },
-  { value: 'database', label: 'Database' },
-  { value: 'devops', label: 'DevOps' },
-  { value: 'math', label: 'Math' },
-  { value: 'college', label: 'College' },
+  { value: 'work', label: 'Work' },
+  { value: 'personal', label: 'Personal' },
+  { value: 'education', label: 'Education' },
+  { value: 'finance', label: 'Finance' },
+  { value: 'health', label: 'Health' },
+  { value: 'projects', label: 'Projects' },
   { value: 'notes', label: 'Notes' },
   { value: 'other', label: 'Other' },
 ];

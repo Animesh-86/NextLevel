@@ -8,12 +8,13 @@ import {
 } from 'lucide-react';
 
 const categoryColors = {
-  dsa: '#fafafa', 'system-design': '#dddddd', 'web-dev': '#bbbbbb',
-  devops: '#999999', project: '#777777', career: '#666666', 'ml-ai': '#555555', other: '#444444',
+  work: '#fafafa', personal: '#dddddd', education: '#bbbbbb',
+  finance: '#999999', health: '#777777', projects: '#555555',
+  notes: '#333333', other: '#111111',
 };
 const categoryEmojis = {
-  dsa: '', 'system-design': '', 'web-dev': '', devops: '',
-  project: '', career: '', 'ml-ai': '', other: '',
+  work: '💼', personal: '🏠', education: '📚', finance: '💰',
+  health: '🏥', projects: '🚀', notes: '📝', other: '📎',
 };
 const statusColors = {
   bookmarked: '#444444', applied: '#555555', screening: '#666666',

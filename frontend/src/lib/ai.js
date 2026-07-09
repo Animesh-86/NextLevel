@@ -228,13 +228,11 @@ export async function analyzePDF(base64Data, mimeType, fileName) {
     const name = fileName.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
     let category = 'other';
     const lower = name.toLowerCase();
-    if (/system.?design|hld|lld|scalab/.test(lower)) category = 'system-design';
-    else if (/dsa|algo|data.?struct|leetcode|array|tree|graph/.test(lower)) category = 'dsa';
-    else if (/react|next|html|css|javascript|node|web/.test(lower)) category = 'web-dev';
-    else if (/sql|mongo|database|db/.test(lower)) category = 'database';
-    else if (/docker|k8s|aws|cloud|devops|ci.?cd/.test(lower)) category = 'devops';
-    else if (/math|calculus|linear|probability/.test(lower)) category = 'math';
-    else if (/college|semester|unit|syllabus/.test(lower)) category = 'college';
+    if (/budget|finance|money|expense|invoice/.test(lower)) category = 'finance';
+    if (/health|medical|fitness|workout|diet/.test(lower)) category = 'health';
+    if (/school|college|university|class|course|education/.test(lower)) category = 'education';
+    if (/project|plan|timeline|milestone/.test(lower)) category = 'projects';
+    if (/work|meeting|resume|job|career/.test(lower)) category = 'work';
 
     return {
       title: name.slice(0, 100),
@@ -249,7 +247,7 @@ export async function analyzePDF(base64Data, mimeType, fileName) {
     const prompt = `Analyze this document/file and return a JSON object with:
 - "title": A clear, descriptive title (max 100 chars)
 - "summary": A 2-4 sentence summary of the document's contents and key topics
-- "category": One of: system-design, dsa, web-dev, database, devops, math, college, notes, other
+- "category": One of: work, personal, education, finance, health, projects, notes, other
 - "tags": An array of 3-6 relevant tags (lowercase)
 
 Document filename: "${fileName}"
@@ -297,3 +295,55 @@ export async function generateEmbeddings(text) {
   }
 }
 
+/**
+ * Generate questions from raw text using AI
+ */
+export async function generateQuestionsFromText(text) {
+  const ai = getGenAI();
+  const groq = getGroq();
+
+  const prompt = `Extract exam/study questions from the following text and return a JSON array of question objects. 
+Each question object MUST have these EXACT fields:
+- "scenario": The question text (string)
+- "options": An array of exactly 4 strings (the multiple choice options)
+- "answer": An array of integers (e.g. [0] if the first option is correct). 0-indexed.
+- "type": Always "MCQ"
+- "explanation": A brief explanation of the correct answer (string)
+
+Generate as many relevant questions as you can find in the text (up to 20).
+
+Text to extract from:
+"""
+${text.slice(0, 15000)}
+"""
+
+Return ONLY a valid JSON array, no markdown formatting.`;
+
+  // 1. Try Groq (Llama 3) First for speed
+  if (groq) {
+    try {
+      const completion = await groq.chat.completions.create({
+        messages: [{ role: "user", content: prompt }],
+        model: "llama-3.1-8b-instant",
+        response_format: { type: "json_object" }
+      });
+      const response = completion.choices[0]?.message?.content;
+      const parsed = JSON.parse(response || '{}');
+      return Array.isArray(parsed) ? parsed : (parsed.questions || []);
+    } catch (err) {
+      console.error('Groq question generation failed, falling back to Gemini:', err.message);
+    }
+  }
+
+  // 2. Fallback to Gemini
+  if (!ai) {
+    throw new Error('No AI provider available. Set GEMINI_API_KEY or GROQ_API_KEY.');
+  }
+
+  const model = ai.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const result = await model.generateContent(prompt);
+  const response = result.response.text();
+  const cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+  const parsed = JSON.parse(cleaned);
+  return Array.isArray(parsed) ? parsed : (parsed.questions || []);
+}

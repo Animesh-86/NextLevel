@@ -20,6 +20,26 @@ export default function FileViewer({ file, isOpen, onClose }) {
       const res = await fetch(`/api/files/${file._id}`);
       const data = await res.json();
       if (data.success) {
+        if (data.data.fileType === 'pdf' && data.data.fileData.startsWith('data:')) {
+          try {
+            const base64Data = data.data.fileData.split(',')[1];
+            const byteCharacters = atob(base64Data);
+            const byteArrays = [];
+            for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+              const slice = byteCharacters.slice(offset, offset + 512);
+              const byteNumbers = new Array(slice.length);
+              for (let i = 0; i < slice.length; i++) {
+                byteNumbers[i] = slice.charCodeAt(i);
+              }
+              const byteArray = new Uint8Array(byteNumbers);
+              byteArrays.push(byteArray);
+            }
+            const blob = new Blob(byteArrays, { type: 'application/pdf' });
+            data.data.objectUrl = URL.createObjectURL(blob);
+          } catch (e) {
+            console.error('Failed to convert base64 to blob', e);
+          }
+        }
         setFileData(data.data);
       }
     } catch (err) {
@@ -75,7 +95,7 @@ export default function FileViewer({ file, isOpen, onClose }) {
               {fileData.fileType === 'pdf' ? (
                 <iframe
                   className="file-viewer-iframe"
-                  src={fileData.fileData}
+                  src={fileData.objectUrl || fileData.fileData}
                   title={fileData.fileName}
                 />
               ) : fileData.fileType === 'image' ? (
