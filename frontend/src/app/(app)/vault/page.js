@@ -44,10 +44,14 @@ export default function FileVault() {
 
   // Viewer
   const [viewerFile, setViewerFile] = useState(null);
+  const [viewerFiles, setViewerFiles] = useState([]);
   const [viewerOpen, setViewerOpen] = useState(false);
   
   // Custom Delete
   const [deleteTargetId, setDeleteTargetId] = useState(null);
+
+  // Multi-select for Side-by-Side Comparison
+  const [selectedFileIds, setSelectedFileIds] = useState([]);
 
   const fileInputRef = useRef(null);
 
@@ -195,6 +199,8 @@ export default function FileVault() {
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={() => setDragover(false)}
+        onClick={() => fileInputRef.current?.click()}
+        style={{ cursor: 'pointer' }}
       >
         {uploading ? (
           <div className="vault-dropzone-content">
@@ -295,6 +301,10 @@ export default function FileVault() {
               onPin={handlePin}
               onDownload={handleDownload}
               onPatchCategory={handlePatchCategory}
+              isSelected={selectedFileIds.includes(file.id || file._id)}
+              onSelect={(id, checked) => {
+                setSelectedFileIds(prev => checked ? [...prev, id] : prev.filter(x => x !== id));
+              }}
             />
           ))}
         </div>
@@ -303,8 +313,13 @@ export default function FileVault() {
       {/* File Viewer Modal */}
       <FileViewer
         file={viewerFile}
+        files={viewerFiles}
         isOpen={viewerOpen}
-        onClose={() => { setViewerOpen(false); setViewerFile(null); }}
+        onClose={() => {
+          setViewerOpen(false);
+          setViewerFile(null);
+          setViewerFiles([]);
+        }}
       />
 
       {/* Custom Delete Confirmation Modal */}
@@ -346,6 +361,51 @@ export default function FileVault() {
                 Delete
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Compare Action Bar */}
+      {selectedFileIds.length > 0 && (
+        <div style={{
+          position: 'fixed',
+          bottom: '2rem',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(20, 20, 20, 0.85)',
+          border: '1px solid var(--border-light)',
+          backdropFilter: 'blur(20px)',
+          padding: '0.75rem 1.5rem',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1.5rem',
+          zIndex: 100,
+          animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+        }}>
+          <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+            {selectedFileIds.length} file{selectedFileIds.length !== 1 ? 's' : ''} selected
+          </span>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button 
+              className="btn btn-secondary" 
+              onClick={() => setSelectedFileIds([])}
+              style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+            >
+              Clear
+            </button>
+            <button 
+              className="btn btn-primary"
+              onClick={() => {
+                const selectedFiles = files.filter(f => selectedFileIds.includes(f.id || f._id));
+                setViewerFiles(selectedFiles);
+                setViewerOpen(true);
+              }}
+              style={{ padding: '6px 16px', fontSize: '0.85rem' }}
+            >
+              Compare Side-by-Side
+            </button>
           </div>
         </div>
       )}

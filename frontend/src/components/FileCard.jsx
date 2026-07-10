@@ -42,17 +42,34 @@ function timeAgo(date) {
   return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-export default function FileCard({ file, onView, onDelete, onPin, onDownload, onPatchCategory }) {
+export default function FileCard({ file, onView, onDelete, onPin, onDownload, onPatchCategory, isSelected, onSelect }) {
   const [showMenu, setShowMenu] = useState(false);
-  const [isEditingCategory, setIsEditingCategory] = useState(false);
   const typeConfig = fileTypeIcons[file.fileType] || fileTypeIcons.other;
   const TypeIcon = typeConfig.icon;
 
   return (
     <div className="file-card" data-pinned={file.isPinned}>
-      <div className="file-card-header">
+      <div className="file-card-header" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <input
+          type="checkbox"
+          checked={isSelected || false}
+          onChange={(e) => {
+            if (onSelect) onSelect(file.id || file._id, e.target.checked);
+          }}
+          style={{
+            width: '15px',
+            height: '15px',
+            borderRadius: '4px',
+            border: '1px solid var(--border-light)',
+            background: 'var(--bg-surface-dark)',
+            cursor: 'pointer',
+            accentColor: 'var(--brand)',
+            marginRight: '2px'
+          }}
+          title="Select for comparison"
+        />
         <div className="file-card-icon" style={{ color: typeConfig.color }}>
-          <TypeIcon size={24} />
+          <TypeIcon size={22} />
         </div>
         <div className="file-card-type-badge">
           {file.fileType.toUpperCase()}
@@ -83,45 +100,41 @@ export default function FileCard({ file, onView, onDelete, onPin, onDownload, on
         <p className="file-card-summary">{file.summary}</p>
       )}
 
-      <div className="file-card-meta-row">
-        {isEditingCategory ? (
+      <div className="file-card-meta-row" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
           <select
-            className="select"
             style={{ 
-              padding: '2px 6px', 
-              fontSize: '0.8rem', 
-              height: 'auto', 
-              width: 'auto', 
-              background: 'var(--bg-surface-dark)', 
-              border: '1px solid var(--border-light)',
-              color: 'var(--text-primary)',
-              borderRadius: 'var(--radius-sm)'
+              appearance: 'none',
+              WebkitAppearance: 'none',
+              padding: '4px 22px 4px 8px', 
+              fontSize: '0.75rem',
+              fontWeight: 500,
+              background: 'rgba(255, 255, 255, 0.05)', 
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              color: 'var(--text-muted)',
+              borderRadius: 'var(--radius-sm)',
+              cursor: 'pointer',
+              outline: 'none',
+              transition: 'all 0.2s',
             }}
             value={file.category}
             onChange={async (e) => {
               const newCat = e.target.value;
-              setIsEditingCategory(false);
               if (newCat !== file.category && onPatchCategory) {
                 await onPatchCategory(file.id || file._id, newCat);
               }
             }}
-            onBlur={() => setIsEditingCategory(false)}
-            autoFocus
           >
             {Object.entries(categoryLabels).map(([val, label]) => (
-              <option key={val} value={val}>{label}</option>
+              <option key={val} value={val} style={{ background: '#121212', color: '#fff' }}>{label}</option>
             ))}
           </select>
-        ) : (
-          <span 
-            className="file-card-category" 
-            style={{ cursor: 'pointer', borderBottom: '1px dashed rgba(255,255,255,0.2)' }}
-            onClick={() => setIsEditingCategory(true)}
-            title="Click to edit category"
-          >
-            {categoryLabels[file.category] || 'Other'}
+          <span style={{ position: 'absolute', right: '8px', pointerEvents: 'none', display: 'flex', alignItems: 'center', color: 'var(--text-muted)', opacity: 0.7 }}>
+            <svg width="8" height="6" viewBox="0 0 8 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M1 1L4 4L7 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
           </span>
-        )}
+        </div>
         <span className="file-card-size">{formatSize(file.fileSize)}</span>
       </div>
 

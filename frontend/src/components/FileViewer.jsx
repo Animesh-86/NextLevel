@@ -1,18 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Download, Loader2, FileText } from 'lucide-react';
+import { X, Download, Loader2, FileText, Sparkles } from 'lucide-react';
 
-export default function FileViewer({ file, isOpen, onClose }) {
+export default function FileViewer({ file, files = [], isOpen, onClose }) {
   const [openFiles, setOpenFiles] = useState([]);
   const [filesData, setFilesData] = useState({});
   const [loadingFiles, setLoadingFiles] = useState({});
+  const [showSummaries, setShowSummaries] = useState({});
 
-  // Sync prop changes into the side-by-side array
+  // Sync prop changes into the side-by-side array (single click view mode)
   useEffect(() => {
     if (!isOpen) {
       setOpenFiles([]);
       setFilesData({});
+      setShowSummaries({});
       return;
     }
     
@@ -23,6 +25,13 @@ export default function FileViewer({ file, isOpen, onClose }) {
       }
     }
   }, [isOpen, file]);
+
+  // Sync bulk files (multi-select comparison mode)
+  useEffect(() => {
+    if (isOpen && files && files.length > 0) {
+      setOpenFiles(files);
+    }
+  }, [isOpen, files]);
 
   // Load metadata for any open files that aren't loaded yet
   useEffect(() => {
@@ -43,7 +52,6 @@ export default function FileViewer({ file, isOpen, onClose }) {
       const data = await res.json();
       if (data.success) {
         let fileObj = data.data;
-        // Direct stream URL from the backend download endpoint (with inline=true)
         fileObj.objectUrl = `/api/files/${fId}/download?inline=true`;
         setFilesData(prev => ({ ...prev, [fId]: fileObj }));
       }
@@ -66,16 +74,20 @@ export default function FileViewer({ file, isOpen, onClose }) {
   const handleCloseAll = () => {
     setOpenFiles([]);
     setFilesData({});
+    setShowSummaries({});
     onClose();
   };
 
   const handleDownload = (fId) => {
     const link = document.createElement('a');
     link.href = `/api/files/${fId}/download`;
-    // We fetch metadata for name
     const fData = filesData[fId];
     link.download = fData?.fileName || 'download';
     link.click();
+  };
+
+  const toggleSummary = (fId) => {
+    setShowSummaries(prev => ({ ...prev, [fId]: !prev[fId] }));
   };
 
   if (!isOpen || openFiles.length === 0) return null;
@@ -116,13 +128,24 @@ export default function FileViewer({ file, isOpen, onClose }) {
               File Comparison Workspace ({openFiles.length} open)
             </h3>
           </div>
-          <button 
-            className="btn btn-secondary" 
-            onClick={handleCloseAll}
-            style={{ fontSize: '0.85rem', padding: '6px 12px' }}
-          >
-            Close Workspace
-          </button>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            {openFiles.length > 1 && (
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => openFiles.forEach(f => handleDownload(f.id || f._id))}
+                style={{ fontSize: '0.85rem', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Download size={14} /> Download All
+              </button>
+            )}
+            <button 
+              className="btn btn-primary" 
+              onClick={handleCloseAll}
+              style={{ fontSize: '0.85rem', padding: '6px 12px' }}
+            >
+              Close Workspace
+            </button>
+          </div>
         </div>
 
         {/* Side-by-Side Flex Panels */}
@@ -170,6 +193,16 @@ export default function FileViewer({ file, isOpen, onClose }) {
                     </span>
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    {f.summary && (
+                      <button 
+                        className="icon-btn" 
+                        onClick={() => toggleSummary(fId)} 
+                        title="AI Summary"
+                        style={{ color: showSummaries[fId] ? 'var(--brand)' : 'inherit' }}
+                      >
+                        <Sparkles size={14} />
+                      </button>
+                    )}
                     <button className="icon-btn" onClick={() => handleDownload(fId)} title="Download">
                       <Download size={14} />
                     </button>
@@ -181,6 +214,30 @@ export default function FileViewer({ file, isOpen, onClose }) {
 
                 {/* Column Content */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', background: '#0e0e0e' }}>
+                  {/* AI Summary Drawer overlay */}
+                  {f.summary && showSummaries[fId] && (
+                    <div style={{ 
+                      padding: '0.75rem 1rem', 
+                      background: 'rgba(180, 255, 100, 0.05)', 
+                      borderBottom: '1px solid rgba(180, 255, 100, 0.1)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.85rem',
+                      lineHeight: '1.4',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '8px',
+                      zIndex: 5
+                    }}>
+                      <Sparkles size={14} style={{ color: 'var(--brand)', marginTop: '3px', flexShrink: 0 }} />
+                      <div>
+                        <strong style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--brand)', marginBottom: '4px' }}>
+                          AI Summary
+                        </strong>
+                        {f.summary}
+                      </div>
+                    </div>
+                  )}
+
                   {isLoading ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '10px' }}>
                       <Loader2 size={28} className="spin" style={{ color: 'var(--brand)' }} />
