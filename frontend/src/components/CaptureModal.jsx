@@ -332,35 +332,54 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
 
         {/* Unified Input Area */}
         <form onSubmit={handleSubmit} className="capture-form">
-          <div className="capture-text-input-area" style={{ position: 'relative', marginBottom: '1.5rem' }}>
-            <textarea
-              className="textarea capture-textarea"
-              placeholder="Paste a link, type a note, or dump an image here..."
-              value={rawContent}
-              onChange={(e) => setRawContent(e.target.value)}
-              rows={4}
-              onPaste={handlePaste}
-              style={{ paddingBottom: previewImage ? '150px' : '3.5rem' }}
-            />
-            
-            {rawContent.trim() && !aiSuggested && !previewImage && (
+          <div className="capture-text-input-area" style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ position: 'relative' }}>
+              <textarea
+                className="textarea capture-textarea"
+                placeholder="Paste a link, type a note, or dump an image here..."
+                value={rawContent}
+                onChange={(e) => setRawContent(e.target.value)}
+                rows={4}
+                onPaste={handlePaste}
+                style={{ paddingBottom: '3.5rem' }}
+              />
+              
+              {rawContent.trim() && !aiSuggested && !previewImage && (
+                <button
+                  type="button"
+                  className="capture-ai-btn"
+                  onClick={handleAnalyze}
+                  disabled={analyzing}
+                  style={{ position: 'absolute', top: '0.75rem', right: '0.75rem' }}
+                >
+                  {analyzing ? (
+                    <><Loader2 size={14} className="auth-spinner" /> Analyzing...</>
+                  ) : (
+                    <><Sparkles size={14} /> AI Categorize</>
+                  )}
+                </button>
+              )}
+
               <button
                 type="button"
-                className="capture-ai-btn"
-                onClick={handleAnalyze}
-                disabled={analyzing}
-                style={{ position: 'absolute', top: '0.75rem', right: '0.75rem' }}
+                className="icon-btn"
+                onClick={() => fileInputRef.current?.click()}
+                style={{ position: 'absolute', bottom: '0.75rem', right: '0.75rem', background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}
+                title="Attach Image"
               >
-                {analyzing ? (
-                  <><Loader2 size={14} className="auth-spinner" /> Analyzing...</>
-                ) : (
-                  <><Sparkles size={14} /> AI Categorize</>
-                )}
+                <Camera size={16} />
               </button>
-            )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={(e) => handleFileSelect(e.target.files[0])}
+              />
+            </div>
 
             {previewImage && (
-              <div className="capture-preview-container" style={{ position: 'absolute', bottom: '1rem', left: '1rem', height: '120px', width: 'auto', border: '1px solid var(--border-strong)', borderRadius: '6px', overflow: 'hidden' }}>
+              <div className="capture-preview-container" style={{ position: 'relative', height: '120px', width: 'fit-content', border: '1px solid var(--border-strong)', borderRadius: '6px', overflow: 'hidden' }}>
                 <img src={previewImage} alt="Preview" className="capture-preview-img" style={{ height: '100%', objectFit: 'cover' }} />
                 {analyzing && (
                   <div className="capture-preview-overlay" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '12px' }}>
@@ -376,29 +395,12 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
                     setPreviewImage(null);
                     setImageFile(null);
                   }}
-                  style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', color: 'white', padding: '4px', cursor: 'pointer' }}
+                  style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', color: 'white', padding: '4px', cursor: 'pointer', zIndex: 10 }}
                 >
                   <X size={14} />
                 </button>
               </div>
             )}
-
-            <button
-              type="button"
-              className="icon-btn"
-              onClick={() => fileInputRef.current?.click()}
-              style={{ position: 'absolute', bottom: '0.75rem', right: '0.75rem', background: 'var(--bg-surface)', border: '1px solid var(--border-strong)' }}
-              title="Attach Image"
-            >
-              <Camera size={16} />
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              style={{ display: 'none' }}
-              onChange={(e) => handleFileSelect(e.target.files[0])}
-            />
           </div>
 
           {/* AI suggestion banner */}
