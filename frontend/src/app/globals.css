@@ -132,6 +132,42 @@ button { cursor: pointer; font-family: inherit; border: none; background: none; 
   border-radius: var(--radius-lg);
 }
 
+.input {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--text-primary);
+  font-family: inherit;
+  outline: none;
+  transition: all 0.2s ease;
+  color-scheme: dark; /* Force native pickers to dark mode */
+}
+
+/* Fix visibility of native calendar/time icons in WebKit browsers */
+.input::-webkit-calendar-picker-indicator {
+  opacity: 0.6;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.input::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+.input option {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.input:focus {
+  border-color: var(--brand);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
 .glass-floating {
   background: var(--bg-surface);
   backdrop-filter: blur(20px);
@@ -2213,7 +2249,7 @@ select option {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 0.5rem;
-  min-height: 500px;
+  min-height: 300px;
 }
 
 .planner-column {
@@ -2223,7 +2259,7 @@ select option {
   border-radius: var(--radius-md);
   display: flex;
   flex-direction: column;
-  min-height: 400px;
+  min-height: 250px;
 }
 
 .planner-column.today {

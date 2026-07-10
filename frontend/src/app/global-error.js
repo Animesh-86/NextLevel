@@ -10,7 +10,7 @@ export default function GlobalError({ error, unstable_retry }) {
         minHeight: '100vh', textAlign: 'center', padding: '2rem',
       }}>
         <div>
-          <div style={{ fontSize: '4rem', marginBottom: '1rem', opacity: 0.2 }}>💥</div>
+          <div style={{ fontSize: '4rem', marginBottom: '1rem', opacity: 0.2 }}>!</div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>Critical Error</h2>
           <p style={{ color: '#a3a3a3', marginBottom: '1.5rem' }}>
             Something went seriously wrong. Please refresh the page.

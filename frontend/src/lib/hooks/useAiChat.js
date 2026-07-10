@@ -210,7 +210,7 @@ export function useAiChat(activeContext) {
                             if (idx === newBotMsgIndex) {
                                 let errMsg = "Sorry, I encountered an error. Please try again later.";
                                 if (err.message && err.message.includes("401")) {
-                                    errMsg = "⚠️ You are unauthorized. Your login session may have expired or a stale cookie was detected. Please log out, clear your cookies, and log back in.";
+                                    errMsg = "You are unauthorized. Your login session may have expired or a stale cookie was detected. Please log out, clear your cookies, and log back in.";
                                 }
                                 return { ...m, content: errMsg };
                             }

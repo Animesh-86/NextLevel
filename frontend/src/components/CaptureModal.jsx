@@ -514,7 +514,7 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
                 style={{ flex: 1, whiteSpace: 'nowrap' }}
                 title="Add to Google Calendar"
               >
-                📅 Google Calendar
+                Google Calendar
               </button>
             )}
             <button
@@ -528,7 +528,7 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
               ) : editingCapture ? (
                 'Update Capture'
               ) : (
-                '✨ Save Capture'
+                'Save Capture'
               )}
             </button>
           </div>

@@ -141,7 +141,6 @@ export default function ProfilePage() {
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', marginBottom: 'var(--space-md)' }}>
             <span className="badge badge-stark">Profile & Settings</span>
-            <span className="badge" style={{ background: 'rgba(255,255,255,0.05)' }}>{profile.role || 'USER'}</span>
           </div>
           <div style={{ position: 'absolute', top: 'var(--space-lg)', right: 'var(--space-lg)', display: 'flex', gap: '8px' }}>
             <button
@@ -210,29 +209,32 @@ export default function ProfilePage() {
         </div>
       </section>
 
-      {/* Quick Stats Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-md)' }}>
-        {[
-          { label: 'Day Streak', icon: Flame, value: profile.streak || 0 },
-          { label: 'Exams Taken', icon: BookOpen, value: profile.totalExams || 0 },
-          { label: 'Questions', icon: HelpCircle, value: profile.questionsAnswered || 0 },
-          { label: 'Study Time', icon: Clock, value: formatMinutes(profile.totalStudyMinutes || 0) },
-        ].map(stat => (
-          <div key={stat.label} style={{ 
-            background: 'var(--bg-surface)', 
-            padding: 'var(--space-sm) var(--space-md)', 
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--border-light)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-              <stat.icon size={14} />
-              <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</span>
-            </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, fontFamily: 'var(--font-geist, monospace)' }}>
-              {stat.value}
-            </div>
-          </div>
-        ))}
+      {/* Minimal Stats Row */}
+      <div style={{ 
+        display: 'flex', flexWrap: 'wrap', gap: '24px', 
+        padding: '12px 20px', background: 'rgba(255,255,255,0.02)', 
+        border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)',
+        alignItems: 'center'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Flame size={14} style={{ color: 'var(--text-muted)' }} />
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Day Streak: <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{profile.streak || 0}</strong></span>
+        </div>
+        <div style={{ width: '1px', height: '14px', background: 'var(--border-strong)' }}></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <BookOpen size={14} style={{ color: 'var(--text-muted)' }} />
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Exams Taken: <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{profile.totalExams || 0}</strong></span>
+        </div>
+        <div style={{ width: '1px', height: '14px', background: 'var(--border-strong)' }}></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <HelpCircle size={14} style={{ color: 'var(--text-muted)' }} />
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Questions: <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{profile.questionsAnswered || 0}</strong></span>
+        </div>
+        <div style={{ width: '1px', height: '14px', background: 'var(--border-strong)' }}></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Clock size={14} style={{ color: 'var(--text-muted)' }} />
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Study Time: <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{formatMinutes(profile.totalStudyMinutes || 0)}</strong></span>
+        </div>
       </div>
 
       {/* Main Bento Grid */}
@@ -282,7 +284,7 @@ export default function ProfilePage() {
           )}
 
           {/* New Charts Section */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--space-md)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--space-md)', flex: 1 }}>
             <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-md)' }}>
                 <BarChart3 size={18} />
@@ -376,7 +378,7 @@ export default function ProfilePage() {
           </section>
 
           {/* Achievements */}
-          <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
+          <section className="glass-panel" style={{ padding: 'var(--space-md)', flex: 1, display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-md)' }}>
               <Award size={18} />
               <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Achievements</h2>
@@ -393,7 +395,7 @@ export default function ProfilePage() {
                     alignItems: 'center',
                     gap: '12px'
                   }}>
-                    <div style={{ fontSize: '1.5rem', background: 'rgba(255,255,255,0.05)', padding: '8px', borderRadius: '50%' }}>{a.icon || '🏆'}</div>
+                    <div style={{ fontSize: '1.5rem', background: 'rgba(255,255,255,0.05)', padding: '8px', borderRadius: '50%', color: 'var(--brand)' }}>{a.icon ? <span>{a.icon}</span> : <Award size={24} />}</div>
                     <div>
                       <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{a.title}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{a.description}</div>
@@ -402,7 +404,7 @@ export default function ProfilePage() {
                 ))}
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 'var(--space-lg) 0', color: 'var(--text-muted)' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, padding: 'var(--space-lg) 0', color: 'var(--text-muted)' }}>
                 <Award size={24} style={{ marginBottom: '8px' }} />
                 <p style={{ fontSize: '0.9rem' }}>No achievements yet. Keep practicing!</p>
               </div>
