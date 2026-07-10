@@ -51,10 +51,19 @@ export default function Dashboard() {
   useEffect(() => {
     async function loadAll() {
       try {
+        const localDateKey = () => {
+          const d = new Date();
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+        const todayStr = localDateKey();
+        
         const [statsR, analyticsR, tasksR, capturesR] = await Promise.all([
           apiFetch('/api/stats').then(r => r.json()).catch(() => ({ success: false })),
           apiFetch('/api/analytics').then(r => r.json()).catch(() => ({ success: false })),
-          apiFetch(`/api/planner?start=${new Date().toISOString().split('T')[0]}&end=${new Date().toISOString().split('T')[0]}`).then(r => r.json()).catch(() => ({ success: false })),
+          apiFetch(`/api/planner?start=${todayStr}&end=${todayStr}`).then(r => r.json()).catch(() => ({ success: false })),
           apiFetch('/api/captures?limit=5').then(r => r.json()).catch(() => ({ success: false })),
         ]);
         if (statsR.success) setStats(statsR.data);
@@ -66,6 +75,23 @@ export default function Dashboard() {
     }
     loadAll();
   }, []);
+
+  async function handleStatusToggle(id, currentStatus) {
+    const nextStatus = currentStatus === 'done' ? 'todo' : 'done';
+    try {
+      const res = await apiFetch(`/api/planner/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTodayTasks(prev => prev.map(t => t.id === id ? { ...t, status: nextStatus } : t));
+      }
+    } catch (err) {
+      console.error('Failed to toggle task status:', err);
+    }
+  }
 
   const userName = session?.user?.name?.split(' ')[0] || 'there';
   const hour = new Date().getHours();
@@ -224,18 +250,69 @@ export default function Dashboard() {
                 </div>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'var(--space-sm)' }}>
-                  {todayTasks.slice(0, 3).map((task) => (
-                    <div key={task.id} style={{
-                      display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
-                      background: 'var(--bg-surface)', border: '1px solid var(--border-light)',
-                      borderRadius: 'var(--radius-md)', opacity: task.status === 'done' ? 0.6 : 1
-                    }}>
-                      <Circle size={14} style={{ color: task.status === 'done' ? 'var(--brand)' : 'var(--text-muted)' }} />
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{task.title}</span>
+                  {todayTasks.slice(0, 5).map((task) => {
+                    const isDone = task.status === 'done';
+                    return (
+                      <div key={task.id} style={{
+                        display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
+                        background: 'var(--bg-surface)', border: '1px solid var(--border-light)',
+                        borderRadius: 'var(--radius-md)', opacity: isDone ? 0.6 : 1,
+                        transition: 'opacity 0.2s'
+                      }}>
+                        <button 
+                          onClick={() => handleStatusToggle(task.id, task.status)}
+                          style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', padding: 0, background: 'none', border: 'none',
+                            color: isDone ? 'var(--brand)' : 'var(--text-muted)'
+                          }}
+                          title={isDone ? "Mark as Todo" : "Mark as Done"}
+                        >
+                          {isDone ? (
+                            <CheckCircle2 size={16} style={{ fill: 'var(--brand)', color: 'var(--bg-primary)' }} />
+                          ) : (
+                            <Circle size={16} />
+                          )}
+                        </button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ 
+                            fontSize: '0.9rem', 
+                            fontWeight: 600, 
+                            textDecoration: isDone ? 'line-through' : 'none',
+                            color: isDone ? 'var(--text-muted)' : 'var(--text-primary)'
+                          }}>
+                            {task.title}
+                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                            {task.startTime && (
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Clock size={12} />
+                                {task.startTime}{task.endTime ? ` – ${task.endTime}` : ''}
+                              </span>
+                            )}
+                            {!task.startTime && task.duration && (
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Clock size={12} />
+                                {task.duration} min
+                              </span>
+                            )}
+                             {task.category && !task.description?.startsWith('Google Calendar Event') && (
+                              <span style={{ 
+                                padding: '1px 6px', 
+                                borderRadius: '4px', 
+                                background: 'var(--bg-accent)', 
+                                fontSize: '0.65rem',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.05em'
+                              }}>
+                                {task.category}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ) : (

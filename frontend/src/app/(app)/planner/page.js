@@ -36,7 +36,11 @@ function getWeekEnd(start) {
 }
 
 function formatDateKey(date) {
-  return date.toISOString().split('T')[0];
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function isSameDay(a, b) {
@@ -72,8 +76,8 @@ export default function StudyPlanner() {
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     try {
-      const start = weekStart.toISOString();
-      const end = weekEnd.toISOString();
+      const start = formatDateKey(weekStart);
+      const end = formatDateKey(weekEnd);
       const res = await apiFetch(`/api/planner?start=${start}&end=${end}`);
       const data = await res.json();
       if (data.success) setTasks(data.data);
@@ -245,7 +249,7 @@ export default function StudyPlanner() {
                 <div className="planner-day-tasks">
                   {dayTasks.map(task => (
                     <PlannerTaskCard
-                      key={task._id}
+                      key={task.id || task._id}
                       task={task}
                       onStatusToggle={handleStatusToggle}
                       onDelete={handleDelete}

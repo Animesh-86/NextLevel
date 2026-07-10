@@ -2,9 +2,9 @@
 import { CheckCircle2, Circle, Clock, Trash2, GripVertical, FileText, Inbox, Play } from 'lucide-react';
 
 const priorityColors = {
-  high: 'var(--urgency-critical)',
-  medium: 'var(--urgency-medium)',
-  low: 'var(--urgency-low)',
+  high: 'var(--error)',
+  medium: 'var(--brand)',
+  low: 'var(--text-muted)',
 };
 
 const statusIcons = {
@@ -31,7 +31,7 @@ export default function PlannerTaskCard({ task, onStatusToggle, onDelete }) {
     >
       <button
         className="planner-task-status-btn"
-        onClick={() => onStatusToggle(task._id, nextStatus())}
+        onClick={() => onStatusToggle(task.id || task._id, nextStatus())}
         title={`Mark as ${nextStatus()}`}
       >
         <StatusIcon
@@ -68,7 +68,7 @@ export default function PlannerTaskCard({ task, onStatusToggle, onDelete }) {
           className="icon-btn planner-task-play"
           onClick={() => {
             if (window.startFocusTimer) {
-              window.startFocusTimer(task.duration || 25, task._id);
+              window.startFocusTimer(task.duration || 25, task.id || task._id);
             }
           }}
           title="Start Focus Timer"
@@ -77,7 +77,7 @@ export default function PlannerTaskCard({ task, onStatusToggle, onDelete }) {
         </button>
         <button
           className="icon-btn planner-task-delete"
-          onClick={() => onDelete(task._id)}
+          onClick={() => onDelete(task.id || task._id)}
           title="Delete"
         >
           <Trash2 size={12} />

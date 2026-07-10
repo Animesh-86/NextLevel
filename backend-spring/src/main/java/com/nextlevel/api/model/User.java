@@ -43,6 +43,11 @@ public class User {
     private List<String> customCategories = new ArrayList<>();
     private String dailyBriefingCache;
     private String dailyBriefingDate;
+    
+    private String googleAccessToken;
+    private String googleRefreshToken;
+    private String notionAccessToken;
+
     private Instant createdAt;
     private Instant updatedAt;
 }

@@ -2,12 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CalendarDays, CheckCircle2, Map, Network, ArrowRight, ListTodo } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Map, Network, ArrowRight, ListTodo, Circle, Clock } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { SkeletonCard } from '@/components/SkeletonLoader';
 
 function todayIso() {
-  return new Date().toISOString().split('T')[0];
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function itemId(item) {
@@ -113,19 +117,72 @@ export default function WorkspacePage() {
                 <Link className="dash-see-all" href="/planner">Planner <ArrowRight size={14} /></Link>
               </div>
               <div className="dash-task-list">
-                {tasks.slice(0, 8).map((task) => (
-                  <Link
-                    key={itemId(task)}
-                    href="/planner"
-                    className={`dash-task-item ${task.status === 'completed' ? 'done' : ''}`}
-                  >
-                    <CheckCircle2 size={15} />
-                    <span className={task.status === 'completed' ? 'line-through' : ''}>
-                      {task.title || 'Untitled task'}
-                    </span>
-                    {task.durationMinutes && <span className="dash-task-dur">{task.durationMinutes}m</span>}
-                  </Link>
-                ))}
+                {tasks.slice(0, 8).map((task) => {
+                  const isDone = task.status === 'done' || task.status === 'completed';
+                  return (
+                    <Link
+                      key={itemId(task)}
+                      href="/planner"
+                      className={`dash-task-item ${isDone ? 'done' : ''}`}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '12px',
+                        background: 'var(--bg-surface)',
+                        border: '1px solid var(--border-light)',
+                        borderRadius: 'var(--radius-md)',
+                        textDecoration: 'none',
+                        color: 'inherit',
+                        transition: 'all 0.2s',
+                        marginBottom: '8px'
+                      }}
+                    >
+                      {isDone ? (
+                        <CheckCircle2 size={16} style={{ color: 'var(--brand)', fill: 'var(--brand)', opacity: 0.8 }} />
+                      ) : task.status === 'in-progress' ? (
+                        <Clock size={16} style={{ color: 'var(--brand)' }} />
+                      ) : (
+                        <Circle size={16} style={{ color: 'var(--text-muted)' }} />
+                      )}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                        <span className={isDone ? 'line-through' : ''} style={{
+                          fontSize: '0.9rem',
+                          fontWeight: 600,
+                          color: isDone ? 'var(--text-muted)' : 'var(--text-primary)'
+                        }}>
+                          {task.title || 'Untitled task'}
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                          {task.startTime && (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Clock size={12} />
+                              {task.startTime}{task.endTime ? ` – ${task.endTime}` : ''}
+                            </span>
+                          )}
+                          {!task.startTime && task.duration && (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Clock size={12} />
+                              {task.duration} min
+                            </span>
+                          )}
+                          {task.category && !task.description?.startsWith('Google Calendar Event') && (
+                            <span style={{
+                              padding: '1px 6px',
+                              borderRadius: '4px',
+                              background: 'var(--bg-accent)',
+                              fontSize: '0.65rem',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em'
+                            }}>
+                              {task.category}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
                 {tasks.length === 0 && (
                   <div className="dash-empty-mini">
                     <CalendarDays size={24} />

@@ -6,7 +6,7 @@ import { useState } from 'react';
 import {
   LayoutDashboard, BookOpen, Play, Trophy,
   UserCircle, Settings, LogOut, Inbox,
-  FolderOpen, CalendarDays, Sparkles
+  FolderOpen, CalendarDays, Sparkles, Cloud
 } from 'lucide-react';
 import ReminderBell from '@/components/ReminderBell';
 import AiChatModal from '@/components/AiChatModal';
@@ -44,6 +44,7 @@ const navGroups = [
     label: 'Account',
     items: [
       { href: '/profile', label: 'Profile', icon: UserCircle },
+      { href: '/settings/integrations', label: 'Integrations', icon: Cloud },
     ],
   },
 ];

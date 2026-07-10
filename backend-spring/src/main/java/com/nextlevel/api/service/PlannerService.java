@@ -19,10 +19,12 @@ public class PlannerService {
     private static final Logger log = LoggerFactory.getLogger(PlannerService.class);
     private final PlannerTaskRepository plannerTaskRepository;
     private final GamificationService gamificationService;
+    private final GoogleCalendarService googleCalendarService;
 
-    public PlannerService(PlannerTaskRepository plannerTaskRepository, GamificationService gamificationService) {
+    public PlannerService(PlannerTaskRepository plannerTaskRepository, GamificationService gamificationService, GoogleCalendarService googleCalendarService) {
         this.plannerTaskRepository = plannerTaskRepository;
         this.gamificationService = gamificationService;
+        this.googleCalendarService = googleCalendarService;
     }
 
     public List<PlannerTask> listTasks(String userId, Instant start, Instant end) {
@@ -51,7 +53,14 @@ public class PlannerService {
         task.setCreatedAt(now);
         task.setUpdatedAt(now);
 
-        return plannerTaskRepository.save(task);
+        PlannerTask savedTask = plannerTaskRepository.save(task);
+
+        // Asynchronously push to Google Calendar
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            googleCalendarService.pushTaskToGoogleCalendar(savedTask);
+        });
+
+        return savedTask;
     }
 
     public Optional<PlannerTask> patchTask(String id, String userId, PlannerTaskPatchRequest request) {

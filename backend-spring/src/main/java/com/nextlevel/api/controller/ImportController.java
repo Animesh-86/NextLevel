@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -24,7 +26,9 @@ import org.springframework.web.multipart.MultipartFile;
 import org.jobrunr.scheduling.JobScheduler;
 
 import com.nextlevel.api.dto.ApiResponse;
+import com.nextlevel.api.model.Capture;
 import com.nextlevel.api.model.Question;
+import com.nextlevel.api.repository.CaptureRepository;
 import com.nextlevel.api.repository.QuestionRepository;
 import com.nextlevel.api.service.AIQuestionGeneratorService;
 import com.nextlevel.api.security.CurrentUser;
@@ -35,11 +39,13 @@ public class ImportController {
 
     private final JobScheduler jobScheduler;
     private final QuestionRepository questionRepository;
+    private final CaptureRepository captureRepository;
     private final AIQuestionGeneratorService aiQuestionGeneratorService;
 
-    public ImportController(JobScheduler jobScheduler, QuestionRepository questionRepository, AIQuestionGeneratorService aiQuestionGeneratorService) {
+    public ImportController(JobScheduler jobScheduler, QuestionRepository questionRepository, CaptureRepository captureRepository, AIQuestionGeneratorService aiQuestionGeneratorService) {
         this.jobScheduler = jobScheduler;
         this.questionRepository = questionRepository;
+        this.captureRepository = captureRepository;
         this.aiQuestionGeneratorService = aiQuestionGeneratorService;
     }
 
@@ -88,6 +94,10 @@ public class ImportController {
             List<Question> parsed = new ArrayList<>();
             if (fileName.endsWith(".csv")) {
                 parsed.addAll(parseCsv(bytes, examId));
+            } else if (fileName.endsWith(".zip")) {
+                // Parse Obsidian Markdown Vault to Captures instead of questions
+                processZipImport(bytes, userId);
+                return;
             } else if (fileName.endsWith(".pdf")) {
                 try (PDDocument document = Loader.loadPDF(bytes)) {
                     PDFTextStripper stripper = new PDFTextStripper();
@@ -105,13 +115,42 @@ public class ImportController {
     }
 
     private void saveGeneratedQuestions(List<Question> questions, String userId) {
-        if (questions == null || questions.isEmpty()) return;
+        if (questions == null || questions.isEmpty()) {
+            return;
+        }
         for (Question q : questions) {
             q.setUserId(userId);
-            q.setCreatedAt(java.time.Instant.now());
-            q.setUpdatedAt(java.time.Instant.now());
+            questionRepository.save(q);
         }
-        questionRepository.saveAll(questions);
+    }
+
+    private void processZipImport(byte[] zipBytes, String userId) {
+        try (java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(zipBytes);
+             ZipInputStream zis = new ZipInputStream(bais)) {
+            
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                if (!entry.isDirectory() && entry.getName().endsWith(".md")) {
+                    String title = entry.getName();
+                    // Strip path and .md
+                    int lastSlash = title.lastIndexOf('/');
+                    if (lastSlash != -1) title = title.substring(lastSlash + 1);
+                    if (title.endsWith(".md")) title = title.substring(0, title.length() - 3);
+
+                    String content = new String(zis.readAllBytes(), StandardCharsets.UTF_8);
+                    
+                    Capture capture = new Capture();
+                    capture.setUserId(userId);
+                    capture.setTitle(title);
+                    capture.setRawContent(content);
+                    capture.setType("note");
+                    capture.setStatus("active");
+                    captureRepository.save(capture);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     // Retaining parseSimpleText just in case it's needed elsewhere, though now unused.
