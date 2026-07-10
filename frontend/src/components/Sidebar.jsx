@@ -6,7 +6,7 @@ import { useState } from 'react';
 import {
   LayoutDashboard, BookOpen, Play, Trophy,
   UserCircle, Settings, LogOut, Inbox,
-  FolderOpen, CalendarDays, Sparkles, Cloud
+  FolderOpen, CalendarDays, Sparkles, Cloud, Menu
 } from 'lucide-react';
 import ReminderBell from '@/components/ReminderBell';
 import AiChatModal from '@/components/AiChatModal';
@@ -53,6 +53,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [chatOpen, setChatOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const user = session?.user;
   const isAdmin = user?.role === 'admin';
 
@@ -70,7 +71,18 @@ export default function Sidebar() {
 
   return (
     <>
-    <aside className="sidebar">
+    {isMobileMenuOpen && (
+      <div className="mobile-menu-overlay" onClick={() => setIsMobileMenuOpen(false)} />
+    )}
+    <button 
+      className="mobile-menu-btn" 
+      onClick={() => setIsMobileMenuOpen(true)}
+      aria-label="Open menu"
+    >
+      <Menu size={20} />
+    </button>
+
+    <aside className={`sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-header">
         <Link href="/" className="sidebar-logo" style={{ textDecoration: 'none', color: 'inherit' }}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -97,6 +109,7 @@ export default function Sidebar() {
                   key={item.href}
                   href={item.href}
                   className={`sidebar-link ${isActive ? 'sidebar-link-active' : ''}`}
+                  onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <Icon size={18} strokeWidth={1.75} />
                   <span>{item.label}</span>
