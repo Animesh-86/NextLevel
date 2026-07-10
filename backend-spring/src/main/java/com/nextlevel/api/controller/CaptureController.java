@@ -102,7 +102,7 @@ public class CaptureController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(saved));
     }
 
-    @JsonView(Views.Public.class)
+    @JsonView(Views.Internal.class)
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<Capture>> getCapture(
             @AuthenticationPrincipal CurrentUser currentUser,

@@ -350,7 +350,7 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
                   className="capture-ai-btn"
                   onClick={handleAnalyze}
                   disabled={analyzing}
-                  style={{ position: 'absolute', top: '0.75rem', right: '0.75rem' }}
+                  style={{ position: 'absolute', top: '0.75rem', bottom: 'auto', right: '0.75rem' }}
                 >
                   {analyzing ? (
                     <><Loader2 size={14} className="auth-spinner" /> Analyzing...</>
