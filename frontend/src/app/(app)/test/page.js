@@ -394,7 +394,7 @@ export default function FocusTest() {
               </div>
             </section>
 
-            <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
+            <section className="glass-panel" style={{ padding: 'var(--space-md)', flex: 1, display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-md)' }}>
                 <Flag size={18} />
                 <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Session Mode</h2>
@@ -436,7 +436,7 @@ export default function FocusTest() {
               </button>
             </section>
 
-            <section className="glass-panel" style={{ padding: 'var(--space-md)', background: 'rgba(255,255,255,0.02)', borderStyle: 'dashed' }}>
+            <section className="glass-panel" style={{ padding: 'var(--space-md)', background: 'rgba(255,255,255,0.02)', borderStyle: 'dashed', flex: 1, display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-sm)' }}>
                 <Upload size={18} />
                 <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Upload Material</h2>

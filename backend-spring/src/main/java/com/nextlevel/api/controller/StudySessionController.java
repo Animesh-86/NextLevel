@@ -1,9 +1,11 @@
 package com.nextlevel.api.controller;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -63,5 +65,15 @@ public class StudySessionController {
         }
 
         return ResponseEntity.ok(ApiResponse.success(saved));
+    }
+
+    @GetMapping("/sessions")
+    public ResponseEntity<ApiResponse<List<StudySession>>> getSessions(
+            @AuthenticationPrincipal CurrentUser currentUser) {
+        if (currentUser == null) {
+            return ResponseEntity.status(401).body(ApiResponse.error("Unauthorized"));
+        }
+        List<StudySession> sessions = studySessionRepository.findByUserIdOrderByCreatedAtDesc(currentUser.getUserId());
+        return ResponseEntity.ok(ApiResponse.success(sessions));
     }
 }

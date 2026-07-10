@@ -54,7 +54,7 @@ public class GamificationService {
             achievement.put("id", id);
             achievement.put("label", label);
             achievement.put("desc", desc);
-            achievement.put("icon", "🏆");
+            achievement.put("icon", "");
             achievement.put("earnedAt", Instant.now().toString());
             user.getAchievements().add(achievement);
         }

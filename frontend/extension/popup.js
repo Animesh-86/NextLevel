@@ -37,14 +37,14 @@ document.addEventListener('DOMContentLoaded', async () => {
           
           if (response && response.success) {
             status.style.display = 'block';
-            status.innerText = response.queued ? '✅ Queued for background saving!' : '✅ Saved successfully!';
+            status.innerText = response.queued ? 'Queued for background saving!' : 'Saved successfully!';
             setTimeout(() => window.close(), 1500);
           } else {
             btnText.style.display = 'inline';
             saveBtn.disabled = false;
             status.style.display = 'block';
             status.style.color = '#ef4444'; // Red 500
-            status.innerText = '❌ Failed to save. Are you logged in?';
+            status.innerText = 'Failed to save. Are you logged in?';
           }
         }
       );

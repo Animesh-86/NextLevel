@@ -13,8 +13,8 @@ const categoryColors = {
   notes: '#333333', other: '#111111',
 };
 const categoryEmojis = {
-  work: '💼', personal: '🏠', education: '📚', finance: '💰',
-  health: '🏥', projects: '🚀', notes: '📝', other: '📎',
+  work: '', personal: '', education: '', finance: '',
+  health: '', projects: '', notes: '', other: '',
 };
 const statusColors = {
   bookmarked: '#444444', applied: '#555555', screening: '#666666',
@@ -299,8 +299,8 @@ export default function JourneyPage() {
                       </div>
                       <div className="app-card-role">{app.role}</div>
                       <div className="app-card-meta">
-                        {app.location && <span>📍 {app.location}</span>}
-                        {app.salary && <span>💰 {app.salary}</span>}
+                        {app.location && <span>{app.location}</span>}
+                        {app.salary && <span>{app.salary}</span>}
                         {app.type !== 'full-time' && <span className="badge">{app.type}</span>}
                       </div>
                       {app.url && <a href={app.url} target="_blank" rel="noopener" className="app-card-link"><ExternalLink size={12} /> View Posting</a>}

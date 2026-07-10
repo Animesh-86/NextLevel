@@ -16,14 +16,16 @@ const METRICS = [
   { key: 'exams', label: 'Exams Taken', icon: BookOpen, getValue: (stats) => stats?.totalExamsTaken || 0 },
   { key: 'score', label: 'Avg Score', icon: Target, getValue: (stats) => `${stats?.avgScore || 0}%` },
   { key: 'tasks', label: 'Tasks Today', icon: CalendarDays, getValue: (_, tasks) => tasks.length },
-  { key: 'hours', label: 'Study Hours', icon: Clock, getValue: (_, __, c) => `${c?.totalStudyHours || 0}h` },
+  { key: 'focus', label: 'Focus Today', icon: Clock, getValue: (_, __, ___, focus) => `${focus?.minutes || 0}m (${focus?.sessions || 0} sess)` },
 ];
 
 const QUICK_ACTIONS = [
-  { href: '/test', label: 'Focus Test', icon: Play, desc: 'Timed exam session' },
-  { href: '/captures', label: 'Capture', icon: Inbox, desc: 'Save an idea fast' },
-  { href: '/vault', label: 'File Vault', icon: FolderOpen, desc: 'Upload & organize' },
-  { href: '/planner', label: 'Planner', icon: CalendarDays, desc: 'Plan your week' },
+  { href: '/focus', label: 'Focus Mode', icon: Clock, desc: 'Immersive focus workspace' },
+  { href: '/test', label: 'Practice Exams', icon: Play, desc: 'Timed study testing' },
+  { href: '/captures', label: 'Capture Hub', icon: Inbox, desc: 'Save an idea fast' },
+  { href: '/vault', label: 'File Vault', icon: FolderOpen, desc: 'Upload & organize docs' },
+  { href: '/planner', label: 'Study Planner', icon: CalendarDays, desc: 'Plan your week' },
+  { href: '/journey', label: 'Learning Journey', icon: Map, desc: 'Track visual path' },
 ];
 
 function formatDate() {
@@ -40,6 +42,7 @@ export default function Dashboard() {
   const [analytics, setAnalytics] = useState(null);
   const [todayTasks, setTodayTasks] = useState([]);
   const [recentCaptures, setRecentCaptures] = useState([]);
+  const [focusStats, setFocusStats] = useState({ minutes: 0, sessions: 0 });
   const [loading, setLoading] = useState(true);
   const { setActiveContext } = useCurrentContext();
 
@@ -60,16 +63,25 @@ export default function Dashboard() {
         };
         const todayStr = localDateKey();
         
-        const [statsR, analyticsR, tasksR, capturesR] = await Promise.all([
+        const [statsR, analyticsR, tasksR, capturesR, sessionsR] = await Promise.all([
           apiFetch('/api/stats').then(r => r.json()).catch(() => ({ success: false })),
           apiFetch('/api/analytics').then(r => r.json()).catch(() => ({ success: false })),
           apiFetch(`/api/planner?start=${todayStr}&end=${todayStr}`).then(r => r.json()).catch(() => ({ success: false })),
           apiFetch('/api/captures?limit=5').then(r => r.json()).catch(() => ({ success: false })),
+          apiFetch('/api/study/sessions').then(r => r.json()).catch(() => ({ success: false })),
         ]);
         if (statsR.success) setStats(statsR.data);
         if (analyticsR.success) setAnalytics(analyticsR.data);
         if (tasksR.success) setTodayTasks(tasksR.data || []);
         if (capturesR.success) setRecentCaptures((capturesR.data?.data || []).slice(0, 5));
+        if (sessionsR.success) {
+          const list = sessionsR.data || [];
+          const startOfDay = new Date();
+          startOfDay.setHours(0, 0, 0, 0);
+          const todaySessions = list.filter(s => new Date(s.createdAt) >= startOfDay);
+          const mins = todaySessions.reduce((acc, s) => acc + (s.durationMinutes || 0), 0);
+          setFocusStats({ minutes: mins, sessions: todaySessions.length });
+        }
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     }
@@ -149,7 +161,7 @@ export default function Dashboard() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
                 {METRICS.map((m) => {
                   const Icon = m.icon;
-                  const val = m.getValue(stats, todayTasks, c);
+                  const val = m.getValue(stats, todayTasks, c, focusStats);
                   return (
                     <div key={m.key} style={{ 
                       background: 'var(--bg-surface)', 
