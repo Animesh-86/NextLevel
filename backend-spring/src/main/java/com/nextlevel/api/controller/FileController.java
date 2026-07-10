@@ -69,7 +69,10 @@ public class FileController {
     }
 
     @GetMapping("/{id}/download")
-    public ResponseEntity<org.springframework.core.io.Resource> download(@AuthenticationPrincipal CurrentUser currentUser, @PathVariable String id) {
+    public ResponseEntity<org.springframework.core.io.Resource> download(
+            @AuthenticationPrincipal CurrentUser currentUser, 
+            @PathVariable String id,
+            @RequestParam(defaultValue = "false") boolean inline) {
         return fileService.getFile(id, currentUser.getUserId()).map(f -> {
             try {
                 if (f.getFilePath() == null) {
@@ -78,8 +81,9 @@ public class FileController {
                 java.nio.file.Path path = java.nio.file.Paths.get(f.getFilePath());
                 org.springframework.core.io.Resource resource = new org.springframework.core.io.UrlResource(path.toUri());
                 if (resource.exists() || resource.isReadable()) {
+                    String disposition = inline ? "inline" : "attachment";
                     return ResponseEntity.ok()
-                            .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + f.getFileName() + "\"")
+                            .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, disposition + "; filename=\"" + f.getFileName() + "\"")
                             .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, f.getMimeType())
                             .body(resource);
                 } else {

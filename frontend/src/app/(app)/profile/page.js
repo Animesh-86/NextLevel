@@ -304,39 +304,6 @@ export default function ProfilePage() {
             </section>
           </div>
 
-          {/* Achievements */}
-          <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-md)' }}>
-              <Award size={18} />
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Achievements</h2>
-            </div>
-            {profile.achievements?.length > 0 ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 'var(--space-sm)' }}>
-                {profile.achievements.map((a) => (
-                  <div key={a.id} style={{
-                    padding: 'var(--space-sm)',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid var(--border-light)',
-                    background: 'var(--bg-surface)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px'
-                  }}>
-                    <div style={{ fontSize: '1.5rem', background: 'rgba(255,255,255,0.05)', padding: '8px', borderRadius: '50%' }}>{a.icon || '🏆'}</div>
-                    <div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{a.title}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{a.description}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 'var(--space-lg) 0', color: 'var(--text-muted)' }}>
-                <Award size={24} style={{ marginBottom: '8px' }} />
-                <p style={{ fontSize: '0.9rem' }}>No achievements yet. Keep practicing!</p>
-              </div>
-            )}
-          </section>
         </div>
 
         {/* Categories Sidebar */}
@@ -408,8 +375,39 @@ export default function ProfilePage() {
             </div>
           </section>
 
-
-
+          {/* Achievements */}
+          <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-md)' }}>
+              <Award size={18} />
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Achievements</h2>
+            </div>
+            {profile.achievements?.length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 'var(--space-sm)' }}>
+                {profile.achievements.map((a) => (
+                  <div key={a.id} style={{
+                    padding: 'var(--space-sm)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-light)',
+                    background: 'var(--bg-surface)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px'
+                  }}>
+                    <div style={{ fontSize: '1.5rem', background: 'rgba(255,255,255,0.05)', padding: '8px', borderRadius: '50%' }}>{a.icon || '🏆'}</div>
+                    <div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{a.title}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{a.description}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 'var(--space-lg) 0', color: 'var(--text-muted)' }}>
+                <Award size={24} style={{ marginBottom: '8px' }} />
+                <p style={{ fontSize: '0.9rem' }}>No achievements yet. Keep practicing!</p>
+              </div>
+            )}
+          </section>
         </div>
       </div>
 

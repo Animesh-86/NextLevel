@@ -22,6 +22,8 @@ import com.nextlevel.api.model.PlannerTask;
 import com.nextlevel.api.repository.CaptureRepository;
 import com.nextlevel.api.repository.PlannerTaskRepository;
 import com.nextlevel.api.repository.UserRepository;
+import com.nextlevel.api.dto.GoogleCalendarResponseDto;
+import com.nextlevel.api.dto.GoogleCalendarEventDto;
 
 @Service
 public class GoogleCalendarService {
@@ -133,67 +135,67 @@ public class GoogleCalendarService {
                 String.class
             );
             
-            JsonNode root = objectMapper.readTree(response.getBody());
-            JsonNode items = root.path("items");
+            GoogleCalendarResponseDto responseDto = objectMapper.readValue(response.getBody(), GoogleCalendarResponseDto.class);
             
-            for (JsonNode item : items) {
-                String summary = item.path("summary").asText();
-                String htmlLink = item.path("htmlLink").asText();
-                String title = summary.isEmpty() ? "Calendar Event" : summary;
-                String rawContent = "Imported Calendar Event:\n" + htmlLink;
-                
-                // Parse date & time
-                String startDateTimeStr = item.path("start").path("dateTime").asText();
-                String startDateStr = item.path("start").path("date").asText();
+            if (responseDto != null && responseDto.items() != null) {
+                for (GoogleCalendarEventDto item : responseDto.items()) {
+                    String summary = item.summary() != null ? item.summary() : "";
+                    String htmlLink = item.htmlLink() != null ? item.htmlLink() : "";
+                    String title = summary.isEmpty() ? "Calendar Event" : summary;
+                    
+                    // Parse date & time
+                    String startDateTimeStr = item.start() != null && item.start().dateTime() != null ? item.start().dateTime() : "";
+                    String startDateStr = item.start() != null && item.start().date() != null ? item.start().date() : "";
 
-                java.time.Instant startInstant = null;
-                String startTimeStr = "09:00"; 
-                if (!startDateTimeStr.isEmpty()) {
-                    java.time.OffsetDateTime odt = java.time.OffsetDateTime.parse(startDateTimeStr);
-                    startInstant = odt.toInstant();
-                    startTimeStr = String.format("%02d:%02d", odt.getHour(), odt.getMinute());
-                } else if (!startDateStr.isEmpty()) {
-                    java.time.LocalDate ld = java.time.LocalDate.parse(startDateStr);
-                    startInstant = ld.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
-                    startTimeStr = "00:00";
-                }
+                    java.time.Instant startInstant = null;
+                    String startTimeStr = "09:00"; 
+                    if (!startDateTimeStr.isEmpty()) {
+                        java.time.OffsetDateTime odt = java.time.OffsetDateTime.parse(startDateTimeStr);
+                        startInstant = odt.toInstant();
+                        startTimeStr = String.format("%02d:%02d", odt.getHour(), odt.getMinute());
+                    } else if (!startDateStr.isEmpty()) {
+                        java.time.LocalDate ld = java.time.LocalDate.parse(startDateStr);
+                        startInstant = ld.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+                        startTimeStr = "00:00";
+                    }
 
-                String endDateTimeStr = item.path("end").path("dateTime").asText();
-                String endDateStr = item.path("end").path("date").asText();
+                    String endDateTimeStr = item.end() != null && item.end().dateTime() != null ? item.end().dateTime() : "";
+                    String endDateStr = item.end() != null && item.end().date() != null ? item.end().date() : "";
 
-                String endTimeStr = "10:00";
-                if (!endDateTimeStr.isEmpty()) {
-                    java.time.OffsetDateTime odt = java.time.OffsetDateTime.parse(endDateTimeStr);
-                    endTimeStr = String.format("%02d:%02d", odt.getHour(), odt.getMinute());
-                } else if (!endDateStr.isEmpty()) {
-                    endTimeStr = "23:59";
-                }
+                    String endTimeStr = "10:00";
+                    if (!endDateTimeStr.isEmpty()) {
+                        java.time.OffsetDateTime odt = java.time.OffsetDateTime.parse(endDateTimeStr);
+                        endTimeStr = String.format("%02d:%02d", odt.getHour(), odt.getMinute());
+                    } else if (!endDateStr.isEmpty()) {
+                        endTimeStr = "23:59";
+                    }
 
-                int duration = 30;
-                if (!startDateTimeStr.isEmpty() && !endDateTimeStr.isEmpty()) {
-                    java.time.OffsetDateTime startOdt = java.time.OffsetDateTime.parse(startDateTimeStr);
-                    java.time.OffsetDateTime endOdt = java.time.OffsetDateTime.parse(endDateTimeStr);
-                    duration = (int) java.time.Duration.between(startOdt, endOdt).toMinutes();
-                }
+                    int duration = 30;
+                    if (!startDateTimeStr.isEmpty() && !endDateTimeStr.isEmpty()) {
+                        java.time.OffsetDateTime startOdt = java.time.OffsetDateTime.parse(startDateTimeStr);
+                        java.time.OffsetDateTime endOdt = java.time.OffsetDateTime.parse(endDateTimeStr);
+                        duration = (int) java.time.Duration.between(startOdt, endOdt).toMinutes();
+                    }
 
-                // Check for duplicate PlannerTask
-                if (startInstant != null) {
-                    java.util.Optional<PlannerTask> existingTask = plannerTaskRepository.findByUserIdAndTitleAndScheduledDate(userId, title, startInstant);
-                    if (existingTask.isEmpty()) {
-                        PlannerTask task = new PlannerTask();
-                        task.setUserId(userId);
-                        task.setTitle(title);
-                        task.setDescription("Google Calendar Event: " + htmlLink);
-                        task.setScheduledDate(startInstant);
-                        task.setStartTime(startTimeStr);
-                        task.setEndTime(endTimeStr);
-                        task.setDuration(duration);
-                        task.setCategory(null);
-                        task.setPriority("medium");
-                        task.setStatus("todo");
-                        task.setCreatedAt(java.time.Instant.now());
-                        task.setUpdatedAt(java.time.Instant.now());
-                        plannerTaskRepository.save(task);
+                    // Check for duplicate PlannerTask
+                    if (startInstant != null) {
+                        java.util.Optional<PlannerTask> existingTask = plannerTaskRepository.findByUserIdAndTitleAndScheduledDate(userId, title, startInstant);
+                        if (existingTask.isEmpty()) {
+                            PlannerTask task = new PlannerTask();
+                            task.setUserId(userId);
+                            task.setTitle(title);
+                            task.setDescription("Google Calendar Event: " + htmlLink);
+                            task.setScheduledDate(startInstant);
+                            task.setStartTime(startTimeStr);
+                            task.setEndTime(endTimeStr);
+                            task.setDuration(duration);
+                            task.setCategory(null);
+                            task.setPriority("medium");
+                            task.setStatus("todo");
+                            task.setCreatedAt(java.time.Instant.now());
+                            task.setUpdatedAt(java.time.Instant.now());
+                            plannerTaskRepository.save(task);
+                        }
                     }
                 }
             }

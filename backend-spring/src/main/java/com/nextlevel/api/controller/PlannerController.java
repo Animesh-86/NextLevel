@@ -23,25 +23,56 @@ import com.nextlevel.api.dto.PlannerTaskPatchRequest;
 import com.nextlevel.api.model.PlannerTask;
 import com.nextlevel.api.security.CurrentUser;
 import com.nextlevel.api.service.PlannerService;
+import com.nextlevel.api.repository.CaptureRepository;
+import com.nextlevel.api.model.Capture;
 
 @RestController
 @RequestMapping("/api/planner")
 public class PlannerController {
 
     private final PlannerService plannerService;
+    private final CaptureRepository captureRepository;
 
-    public PlannerController(PlannerService plannerService) {
+    public PlannerController(PlannerService plannerService, CaptureRepository captureRepository) {
         this.plannerService = plannerService;
+        this.captureRepository = captureRepository;
     }
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<PlannerTask>>> list(@AuthenticationPrincipal CurrentUser currentUser,
             @RequestParam String start,
             @RequestParam String end) {
+        String userId = currentUser.getUserId();
         Instant s = Instant.parse(start + "T00:00:00Z");
         Instant e = Instant.parse(end + "T23:59:59Z");
         
-        List<PlannerTask> tasks = plannerService.listTasks(currentUser.getUserId(), s, e);
+        java.io.File logFile = new java.io.File("debug.log");
+        try (java.io.PrintWriter writer = new java.io.PrintWriter(new java.io.FileWriter(logFile, false))) {
+            writer.println("=== PLANNER DEBUG ===");
+            writer.println("UserId: " + userId);
+            writer.println("Query Start: " + s + " | End: " + e);
+            
+            try {
+                List<Capture> allCaptures = captureRepository.findByUserId(userId);
+                writer.println("Total user captures in DB: " + allCaptures.size());
+                for (Capture cap : allCaptures) {
+                    writer.println("Capture - ID: " + cap.getId() 
+                        + " | Title: " + cap.getTitle() 
+                        + " | ReminderAt: " + cap.getReminderAt() 
+                        + " | Status: " + cap.getStatus()
+                        + " | Pinned: " + cap.getIsPinned()
+                        + " | Archived: " + cap.getIsArchived());
+                }
+            } catch (Exception ex) {
+                writer.println("Error fetching user captures: " + ex.getMessage());
+                ex.printStackTrace(writer);
+            }
+            writer.println("=====================");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+        List<PlannerTask> tasks = plannerService.listTasks(userId, s, e);
         return ResponseEntity.ok(ApiResponse.success(tasks));
     }
 

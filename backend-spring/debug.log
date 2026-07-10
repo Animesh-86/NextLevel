@@ -1,0 +1,6 @@
+=== PLANNER DEBUG ===
+UserId: 6a19271bad00823184ed40d0
+Query Start: 2026-07-06T00:00:00Z | End: 2026-07-12T23:59:59Z
+Total user captures in DB: 1
+Capture - ID: 6a514698a360a2fab0e92785 | Title: React Class | ReminderAt: 2026-07-13T21:22:00Z | Status: active | Pinned: false | Archived: false
+=====================

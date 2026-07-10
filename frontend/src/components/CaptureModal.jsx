@@ -287,10 +287,35 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
     }
   };
 
+  // Google Calendar Export
+  const handleAddToCalendar = () => {
+    if (!title && !editingCapture?.title) {
+        alert("Please add a title first");
+        return;
+    }
+    if (!reminderAt) {
+        alert("Please set a reminder date first");
+        return;
+    }
+    
+    const d = new Date(reminderAt);
+    const dateStr = d.toISOString().replace(/-|:|\.\d\d\d/g, "");
+    
+    // Create an end date 30 mins later
+    const dEnd = new Date(d.getTime() + 30 * 60000);
+    const dateEndStr = dEnd.toISOString().replace(/-|:|\.\d\d\d/g, "");
+
+    const t = title || editingCapture?.title || "Capture Reminder";
+    const desc = description || rawContent || "";
+    
+    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(t)}&dates=${dateStr}/${dateEndStr}&details=${encodeURIComponent(desc)}`;
+    window.open(url, "_blank");
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div className="dialog-overlay" onClick={handleClose} onPaste={handlePaste}>
+    <div className="dialog-overlay" onPaste={handlePaste}>
       <div
         className="capture-modal"
         onClick={(e) => e.stopPropagation()}
@@ -471,19 +496,42 @@ export default function CaptureModal({ isOpen, onClose, onSave, editingCapture =
           </div>
 
           {/* Submit */}
-          <button
-            type="submit"
-            className="btn btn-primary capture-submit"
-            disabled={loading || (!rawContent.trim() && !imageFile && !editingCapture)}
-          >
-            {loading ? (
-              <><Loader2 size={16} className="auth-spinner" /> Saving...</>
-            ) : editingCapture ? (
-              'Update Capture'
-            ) : (
-              '✨ Save Capture'
+          <div style={{ display: 'flex', gap: '1rem', width: '100%' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleClose}
+              disabled={loading}
+              style={{ flex: 1 }}
+            >
+              Cancel
+            </button>
+            {reminderAt && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleAddToCalendar}
+                style={{ flex: 1, whiteSpace: 'nowrap' }}
+                title="Add to Google Calendar"
+              >
+                📅 Google Calendar
+              </button>
             )}
-          </button>
+            <button
+              type="submit"
+              className="btn btn-primary capture-submit"
+              disabled={loading || (!rawContent.trim() && !imageFile && !editingCapture)}
+              style={{ flex: 2 }}
+            >
+              {loading ? (
+                <><Loader2 size={16} className="auth-spinner" /> Saving...</>
+              ) : editingCapture ? (
+                'Update Capture'
+              ) : (
+                '✨ Save Capture'
+              )}
+            </button>
+          </div>
         </form>
       </div>
     </div>

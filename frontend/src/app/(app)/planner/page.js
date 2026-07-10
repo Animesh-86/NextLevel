@@ -171,7 +171,7 @@ export default function StudyPlanner() {
       {/* Header */}
       <header className="capture-hub-header">
         <div>
-          <h1 className="capture-hub-title">Study Planner</h1>
+          <h1 className="capture-hub-title">Planner</h1>
           <p className="capture-hub-subtitle">Plan your week, track your progress</p>
         </div>
       </header>

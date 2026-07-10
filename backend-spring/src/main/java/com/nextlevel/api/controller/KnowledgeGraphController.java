@@ -12,6 +12,10 @@ import com.nextlevel.api.dto.ApiResponse;
 import com.nextlevel.api.security.CurrentUser;
 import com.nextlevel.api.service.KnowledgeGraphService;
 
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.RequestParam;
+import reactor.core.publisher.Flux;
+
 @RestController
 @RequestMapping("/api/graph")
 public class KnowledgeGraphController {
@@ -26,5 +30,12 @@ public class KnowledgeGraphController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> getGraph(@AuthenticationPrincipal CurrentUser currentUser) {
         Map<String, Object> data = knowledgeGraphService.getGraphData(currentUser.getUserId());
         return ResponseEntity.ok(ApiResponse.success(data));
+    }
+
+    @GetMapping(value = "/explore", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> exploreNode(
+            @AuthenticationPrincipal CurrentUser currentUser,
+            @RequestParam String nodeId) {
+        return knowledgeGraphService.exploreNode(currentUser.getUserId(), nodeId);
     }
 }

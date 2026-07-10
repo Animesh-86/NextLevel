@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { FileText, Link2, Search, Upload, Plus, ExternalLink, FolderOpen, X, Loader2 } from 'lucide-react';
+import { FileText, Link2, Search, Upload, Plus, ExternalLink, FolderOpen, X, Loader2, Eye } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { SkeletonCard } from '@/components/SkeletonLoader';
 import { useCurrentContext } from '@/lib/CurrentContext';
+import FileViewer from '@/components/FileViewer';
 
 function itemId(item) {
   return item._id || item.id;
@@ -26,6 +27,10 @@ export default function LibraryPage() {
   // Modals
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
+  
+  // File Viewer states
+  const [viewerFile, setViewerFile] = useState(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   // File Upload states
   const [fileToUpload, setFileToUpload] = useState(null);
@@ -196,7 +201,10 @@ export default function LibraryPage() {
               Files and saved links in one searchable place.
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 500, marginRight: '0.5rem' }}>
+              {files.length} file{files.length !== 1 ? 's' : ''} • {links.length} link{links.length !== 1 ? 's' : ''}
+            </span>
             <button className="btn" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-strong)', color: 'var(--text-primary)' }} onClick={() => setUploadModalOpen(true)}>
               <Upload size={16} style={{ marginRight: '8px' }} /> Upload File
             </button>
@@ -210,101 +218,81 @@ export default function LibraryPage() {
       {/* Main Bento Grid */}
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 480px), 1fr))', 
         gap: 'var(--space-md)' 
       }}>
-        {/* Left Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+        {/* Files Bento */}
+        <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-md)' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FileText size={18} /> Files
+            </h2>
+            <Link href="/vault" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textDecoration: 'none' }}>Manage files</Link>
+          </div>
           
-          {/* Metrics Grid */}
-          <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--space-sm)' }}>
-              {[
-                { label: 'Files', icon: FileText, value: files.length },
-                { label: 'Links', icon: Link2, value: links.length },
-                { label: 'Total', icon: FolderOpen, value: files.length + links.length },
-              ].map((stat) => (
-                <div key={stat.label} style={{ 
-                  background: 'var(--bg-surface)', 
-                  padding: 'var(--space-sm) var(--space-md)', 
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border-light)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                    <stat.icon size={14} />
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</span>
-                  </div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 700, fontFamily: 'var(--font-geist, monospace)' }}>
-                    {stat.value}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Files Bento */}
-          <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-md)' }}>
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <FileText size={18} /> Files
-              </h2>
-              <Link href="/vault" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textDecoration: 'none' }}>Manage files</Link>
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {filteredFiles.slice(0, 8).map((file) => (
-                <Link key={itemId(file)} href="/vault" style={{
-                  display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
-                  background: 'var(--bg-surface)', border: '1px solid var(--border-light)',
-                  borderRadius: 'var(--radius-md)', textDecoration: 'none', color: 'inherit'
-                }}>
-                  <span className="dash-capture-title">{file.title || file.fileName || 'Untitled file'}</span>
-                  <span className="dash-capture-cat">{file.fileType || file.category || 'file'}</span>
-                </Link>
-              ))}
-              {filteredFiles.length === 0 && (
-                <div className="dash-empty-mini">
-                  <FileText size={24} />
-                  <p>No files match your search.</p>
-                </div>
-              )}
-            </div>
-          </section>
-
-        </div>
-
-        {/* Right Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-          {/* Links Bento */}
-          <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-md)' }}>
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Link2 size={18} /> Links
-              </h2>
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {filteredLinks.slice(0, 8).map((link) => (
-                <a key={itemId(link)} href={link.url} target="_blank" rel="noopener noreferrer" style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px',
-                  background: 'var(--bg-surface)', border: '1px solid var(--border-light)',
-                  borderRadius: 'var(--radius-md)', textDecoration: 'none', color: 'inherit'
-                }}>
-                  <span style={{ fontSize: '0.95rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {link.title || link.url || 'Untitled link'}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {filteredFiles.slice(0, 8).map((file) => (
+              <div key={itemId(file)} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px',
+                background: 'var(--bg-surface)', border: '1px solid var(--border-light)',
+                borderRadius: 'var(--radius-md)', color: 'inherit'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
+                  <span className="dash-capture-title" style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {file.title || file.fileName || 'Untitled file'}
                   </span>
-                  <ExternalLink size={14} style={{ color: 'var(--text-muted)' }} />
-                </a>
-              ))}
-              {filteredLinks.length === 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 'var(--space-lg) 0', color: 'var(--text-muted)' }}>
-                  <Link2 size={24} style={{ marginBottom: '8px' }} />
-                  <p style={{ fontSize: '0.9rem' }}>No links match your search.</p>
+                  <span className="dash-capture-cat">{file.fileType || file.category || 'file'}</span>
                 </div>
-              )}
-            </div>
-          </section>
-        </div>
+                <button 
+                  className="btn btn-secondary" 
+                  style={{ padding: '4px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
+                  onClick={() => {
+                    setViewerFile(file);
+                    setViewerOpen(true);
+                  }}
+                >
+                  <Eye size={12} /> Open
+                </button>
+              </div>
+            ))}
+            {filteredFiles.length === 0 && (
+              <div className="dash-empty-mini">
+                <FileText size={24} />
+                <p>No files match your search.</p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Links Bento */}
+        <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-md)' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Link2 size={18} /> Links
+            </h2>
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {filteredLinks.slice(0, 8).map((link) => (
+              <a key={itemId(link)} href={link.url} target="_blank" rel="noopener noreferrer" style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px',
+                background: 'var(--bg-surface)', border: '1px solid var(--border-light)',
+                borderRadius: 'var(--radius-md)', textDecoration: 'none', color: 'inherit'
+              }}>
+                <span style={{ fontSize: '0.95rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {link.title || link.url || 'Untitled link'}
+                </span>
+                <ExternalLink size={14} style={{ color: 'var(--text-muted)' }} />
+              </a>
+            ))}
+            {filteredLinks.length === 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 'var(--space-lg) 0', color: 'var(--text-muted)' }}>
+                <Link2 size={24} style={{ marginBottom: '8px' }} />
+                <p style={{ fontSize: '0.9rem' }}>No links match your search.</p>
+              </div>
+            )}
+          </div>
+        </section>
       </div>
       {/* Upload File Modal */}
       {uploadModalOpen && (
@@ -514,6 +502,13 @@ export default function LibraryPage() {
           </div>
         </div>
       )}
+      
+      {/* File Viewer Workspace Overlay */}
+      <FileViewer
+        file={viewerFile}
+        isOpen={viewerOpen}
+        onClose={() => { setViewerOpen(false); setViewerFile(null); }}
+      />
     </div>
   );
 }
