@@ -31,6 +31,8 @@ public interface CaptureRepository extends MongoRepository<Capture, String> {
 
     List<Capture> findByUserId(String userId);
 
+    List<Capture> findByUserIdAndReminderAtBetweenAndStatus(String userId, Instant start, Instant end, String status);
+
     Optional<Capture> findByUserIdAndTitleAndRawContent(String userId, String title, String rawContent);
 }
 

@@ -157,7 +157,7 @@ export default function CaptureCard({ capture, onEdit, onDelete, onPin, onArchiv
         {capture.reminderAt && (
           <span className={`capture-reminder ${isOverdue ? 'overdue' : ''}`}>
             {isOverdue ? <AlertTriangle size={13} /> : <Clock size={13} />}
-            {reminderText(capture.reminderAt)}
+            {new Date(capture.reminderAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} ({reminderText(capture.reminderAt)})
           </span>
         )}
           {capture.status === 'active' && (

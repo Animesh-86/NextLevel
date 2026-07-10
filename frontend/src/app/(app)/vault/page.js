@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiFetch } from '@/lib/api';
+import { useToast } from '@/components/Toast';
 import {
   Upload, Search, FolderOpen, Grid, List, Loader2,
   SlidersHorizontal, FileText, Image, File, Table
@@ -30,6 +31,7 @@ const typeFilters = [
 ];
 
 export default function FileVault() {
+  const toast = useToast();
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -43,6 +45,9 @@ export default function FileVault() {
   // Viewer
   const [viewerFile, setViewerFile] = useState(null);
   const [viewerOpen, setViewerOpen] = useState(false);
+  
+  // Custom Delete
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
 
   const fileInputRef = useRef(null);
 
@@ -112,13 +117,7 @@ export default function FileVault() {
   }
 
   async function handleDelete(id) {
-    if (!confirm('Delete this file?')) return;
-    try {
-      await apiFetch(`/api/files/${id}`, { method: 'DELETE' });
-      fetchFiles();
-    } catch (err) {
-      console.error('Delete failed:', err);
-    }
+    setDeleteTargetId(id);
   }
 
   async function handlePin(id, pinned) {
@@ -134,23 +133,32 @@ export default function FileVault() {
     }
   }
 
+  async function handlePatchCategory(id, category) {
+    try {
+      await apiFetch(`/api/files/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category }),
+      });
+      fetchFiles();
+      toast.success('Category updated');
+    } catch (err) {
+      console.error('Failed to update category:', err);
+      toast.error('Failed to update category');
+    }
+  }
+
   function handleView(file) {
     setViewerFile(file);
     setViewerOpen(true);
   }
 
   function handleDownload(file) {
-    // Need to fetch full data first
-    fetch(`/api/files/${file._id}`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.success && data.data.fileData) {
-          const link = document.createElement('a');
-          link.href = data.data.fileData;
-          link.download = data.data.fileName;
-          link.click();
-        }
-      });
+    const fId = file.id || file._id;
+    const link = document.createElement('a');
+    link.href = `/api/files/${fId}/download`;
+    link.download = file.fileName;
+    link.click();
   }
 
   const totalSize = files.reduce((s, f) => s + (f.fileSize || 0), 0);
@@ -280,12 +288,13 @@ export default function FileVault() {
         <div className="capture-grid">
           {files.map(file => (
             <FileCard
-              key={file._id}
+              key={file.id || file._id}
               file={file}
               onView={handleView}
               onDelete={handleDelete}
               onPin={handlePin}
               onDownload={handleDownload}
+              onPatchCategory={handlePatchCategory}
             />
           ))}
         </div>
@@ -297,6 +306,49 @@ export default function FileVault() {
         isOpen={viewerOpen}
         onClose={() => { setViewerOpen(false); setViewerFile(null); }}
       />
+
+      {/* Custom Delete Confirmation Modal */}
+      {deleteTargetId && (
+        <div className="dialog-overlay" onClick={() => setDeleteTargetId(null)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="glass-panel" onClick={(e) => e.stopPropagation()} style={{
+            width: '90%',
+            maxWidth: '400px',
+            padding: 'var(--space-lg)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--space-md)',
+            animation: 'fadeIn 0.2s ease-out'
+          }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Delete File</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.5 }}>
+              Are you sure you want to delete this file? This action is permanent and cannot be undone.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: 'var(--space-xs)' }}>
+              <button className="btn btn-secondary" onClick={() => setDeleteTargetId(null)}>
+                Cancel
+              </button>
+              <button 
+                className="btn btn-primary" 
+                style={{ background: 'var(--urgency-critical)', border: 'none', color: '#fff' }}
+                onClick={async () => {
+                  const id = deleteTargetId;
+                  setDeleteTargetId(null);
+                  try {
+                    await apiFetch(`/api/files/${id}`, { method: 'DELETE' });
+                    fetchFiles();
+                    toast.success('File deleted successfully');
+                  } catch (err) {
+                    console.error('Delete failed:', err);
+                    toast.error('Failed to delete file');
+                  }
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

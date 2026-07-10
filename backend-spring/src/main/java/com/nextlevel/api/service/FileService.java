@@ -80,11 +80,48 @@ public class FileService {
         sf.setFilePath(targetPath.toString());
         sf.setTitle(title == null || title.isBlank() ? file.getOriginalFilename() : title);
         sf.setSummary("");
-        sf.setCategory(category == null ? "other" : category);
+        
+        String resolvedCategory = (category == null || category.isBlank() || "all".equals(category) || "auto".equals(category))
+                ? autoDetectCategory(file.getOriginalFilename()) 
+                : category;
+        sf.setCategory(resolvedCategory);
         sf.setCreatedAt(Instant.now());
         sf.setUpdatedAt(Instant.now());
 
         return studyFileRepository.save(sf);
+    }
+
+    private String autoDetectCategory(String fileName) {
+        if (fileName == null) return "other";
+        String lower = fileName.toLowerCase();
+        if (lower.contains("resume") || lower.contains("cv") || lower.contains("work") || lower.contains("career") || lower.contains("portfolio") || lower.contains("job")) {
+            return "work";
+        }
+        if (lower.contains("personal") || lower.contains("passport") || lower.contains("visa") || lower.contains("license") || lower.contains("id_card")) {
+            return "personal";
+        }
+        if (lower.contains("study") || lower.contains("class") || lower.contains("course") || lower.contains("lecture") 
+                || lower.contains("homework") || lower.contains("assignment") || lower.contains("syllabus") 
+                || lower.contains("book") || lower.contains("exam") || lower.contains("test") || lower.contains("quiz")
+                || lower.contains("school") || lower.contains("university") || lower.contains("college")) {
+            return "education";
+        }
+        if (lower.contains("receipt") || lower.contains("bill") || lower.contains("invoice") || lower.contains("tax") 
+                || lower.contains("bank") || lower.contains("statement") || lower.contains("salary") || lower.contains("payment")
+                || lower.contains("finance") || lower.contains("transaction")) {
+            return "finance";
+        }
+        if (lower.contains("medical") || lower.contains("doctor") || lower.contains("report") || lower.contains("prescription") 
+                || lower.contains("health") || lower.contains("fitness") || lower.contains("hospital")) {
+            return "health";
+        }
+        if (lower.contains("project") || lower.contains("design") || lower.contains("mockup") || lower.contains("code")) {
+            return "projects";
+        }
+        if (lower.contains("note") || lower.contains("summary") || lower.contains("memo") || lower.contains("doc")) {
+            return "notes";
+        }
+        return "other";
     }
 
     public Optional<StudyFile> getFile(String id, String userId) {

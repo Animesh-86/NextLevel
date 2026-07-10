@@ -16,18 +16,29 @@ import com.nextlevel.api.repository.CaptureRepository;
 import com.nextlevel.api.repository.RoadmapRepository;
 import com.nextlevel.api.repository.StudyFileRepository;
 
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.model.ChatModel;
+import reactor.core.publisher.Flux;
+
 @Service
 public class KnowledgeGraphService {
 
     private final CaptureRepository captureRepository;
     private final StudyFileRepository studyFileRepository;
     private final RoadmapRepository roadmapRepository;
+    private final ChatClient chatClient;
 
     public KnowledgeGraphService(CaptureRepository captureRepository, StudyFileRepository studyFileRepository,
-            RoadmapRepository roadmapRepository) {
+            RoadmapRepository roadmapRepository, ChatModel chatModel) {
         this.captureRepository = captureRepository;
         this.studyFileRepository = studyFileRepository;
         this.roadmapRepository = roadmapRepository;
+        this.chatClient = ChatClient.builder(chatModel).build();
+    }
+
+    private int find(int i, int[] parent) {
+        if (parent[i] == i) return i;
+        return parent[i] = find(parent[i], parent);
     }
 
     public Map<String, Object> getGraphData(String userId) {
@@ -44,39 +55,9 @@ public class KnowledgeGraphService {
                 .limit(50)
                 .toList();
 
-        List<Map<String, Object>> nodes = new ArrayList<>();
         List<Map<String, Object>> links = new ArrayList<>();
-
-        // Add Nodes
-        for (Capture c : captures) {
-            nodes.add(Map.of(
-                    "id", "capture_" + c.getId(),
-                    "name", c.getTitle() != null ? c.getTitle() : "Capture",
-                    "type", "capture",
-                    "val", 3,
-                    "category", c.getCategory()
-            ));
-        }
-
-        for (StudyFile f : files) {
-            nodes.add(Map.of(
-                    "id", "file_" + f.getId(),
-                    "name", f.getFileName() != null ? f.getFileName() : "File",
-                    "type", "file",
-                    "val", 5,
-                    "category", f.getCategory()
-            ));
-        }
-
-        for (Roadmap r : roadmaps) {
-            nodes.add(Map.of(
-                    "id", "roadmap_" + r.getId(),
-                    "name", r.getTitle() != null ? r.getTitle() : "Roadmap",
-                    "type", "roadmap",
-                    "val", 8,
-                    "category", r.getCategory()
-            ));
-        }
+        int[] parent = new int[captures.size()];
+        for (int i = 0; i < captures.size(); i++) parent[i] = i;
 
         // Add Edges: Semantic similarity between captures
         for (int i = 0; i < captures.size(); i++) {
@@ -94,6 +75,9 @@ public class KnowledgeGraphService {
                                 "strength", sim,
                                 "type", "semantic"
                         ));
+                        int rootI = find(i, parent);
+                        int rootJ = find(j, parent);
+                        if (rootI != rootJ) parent[rootI] = rootJ;
                     }
                 } else {
                     // Fallback to shared tags
@@ -110,6 +94,45 @@ public class KnowledgeGraphService {
                     }
                 }
             }
+        }
+
+        List<Map<String, Object>> nodes = new ArrayList<>();
+
+        for (int i = 0; i < captures.size(); i++) {
+            Capture c = captures.get(i);
+            nodes.add(Map.of(
+                    "id", "capture_" + c.getId(),
+                    "name", c.getTitle() != null ? c.getTitle() : "Capture",
+                    "type", "capture",
+                    "val", 3,
+                    "category", c.getCategory() != null ? c.getCategory() : "other",
+                    "createdAt", c.getCreatedAt() != null ? c.getCreatedAt().toString() : java.time.Instant.now().toString(),
+                    "clusterId", find(i, parent)
+            ));
+        }
+
+        for (StudyFile f : files) {
+            nodes.add(Map.of(
+                    "id", "file_" + f.getId(),
+                    "name", f.getFileName() != null ? f.getFileName() : "File",
+                    "type", "file",
+                    "val", 5,
+                    "category", f.getCategory() != null ? f.getCategory() : "other",
+                    "createdAt", f.getCreatedAt() != null ? f.getCreatedAt().toString() : java.time.Instant.now().toString(),
+                    "clusterId", -1
+            ));
+        }
+
+        for (Roadmap r : roadmaps) {
+            nodes.add(Map.of(
+                    "id", "roadmap_" + r.getId(),
+                    "name", r.getTitle() != null ? r.getTitle() : "Roadmap",
+                    "type", "roadmap",
+                    "val", 8,
+                    "category", r.getCategory() != null ? r.getCategory() : "other",
+                    "createdAt", r.getCreatedAt() != null ? r.getCreatedAt().toString() : java.time.Instant.now().toString(),
+                    "clusterId", -1
+            ));
         }
 
         // Edges between files and captures (shared category)
@@ -219,6 +242,62 @@ public class KnowledgeGraphService {
             .sorted((a, b) -> Double.compare((double) b.get("score"), (double) a.get("score")))
             .limit(5)
             .toList();
+    }
+
+    public Flux<String> exploreNode(String userId, String nodeId) {
+        String[] parts = nodeId.split("_", 2);
+        if (parts.length != 2) return Flux.just("data: Invalid node ID format.\n\n");
+        
+        String type = parts[0];
+        String realId = parts[1];
+        
+        String nodeTitle = "";
+        String nodeContent = "";
+        
+        if ("capture".equals(type)) {
+            Capture c = captureRepository.findById(realId).orElse(null);
+            if (c != null && c.getUserId().equals(userId)) {
+                nodeTitle = c.getTitle();
+                nodeContent = c.getRawContent();
+            }
+        } else if ("file".equals(type)) {
+            StudyFile f = studyFileRepository.findById(realId).orElse(null);
+            if (f != null && f.getUserId().equals(userId)) {
+                nodeTitle = f.getFileName();
+                nodeContent = ""; // StudyFile doesn't have a description field
+            }
+        } else if ("roadmap".equals(type)) {
+            Roadmap r = roadmapRepository.findById(realId).orElse(null);
+            if (r != null && r.getUserId().equals(userId)) {
+                nodeTitle = r.getTitle();
+                nodeContent = r.getDescription();
+            }
+        }
+        
+        if (nodeTitle.isEmpty()) return Flux.just("data: Could not find the requested node.\n\n");
+
+        List<Map<String, Object>> related = getRelatedItems(userId, realId, type);
+        String neighborsContext = related.stream()
+            .map(m -> "- " + m.get("title") + " (" + m.get("type") + ")")
+            .collect(Collectors.joining("\n"));
+
+        if (neighborsContext.isEmpty()) {
+            neighborsContext = "No immediate neighbors found.";
+        }
+
+        String prompt = "You are an AI assistant analyzing a Knowledge Graph. " +
+            "The user clicked on a node titled '" + nodeTitle + "'.\n" +
+            "Its content/description is: " + (nodeContent != null ? nodeContent : "No content") + "\n\n" +
+            "This node is closely connected to the following neighbors in the graph:\n" +
+            neighborsContext + "\n\n" +
+            "Provide a brief, insightful explanation (max 3 sentences) of how this node likely connects to its neighbors conceptually.";
+
+        return chatClient.prompt()
+                .user(prompt)
+                .stream()
+                .content()
+                .map(chunk -> "data: " + chunk + "\n\n")
+                .concatWith(Flux.just("data: [DONE]\n\n"));
     }
 
     private double cosineSimilarity(List<Double> v1, List<Double> v2) {

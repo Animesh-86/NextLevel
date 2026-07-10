@@ -11,25 +11,52 @@ import org.springframework.stereotype.Service;
 import com.nextlevel.api.dto.PlannerTaskCreateRequest;
 import com.nextlevel.api.dto.PlannerTaskPatchRequest;
 import com.nextlevel.api.model.PlannerTask;
+import com.nextlevel.api.model.Capture;
 import com.nextlevel.api.repository.PlannerTaskRepository;
+import com.nextlevel.api.repository.CaptureRepository;
 
 @Service
 public class PlannerService {
 
     private static final Logger log = LoggerFactory.getLogger(PlannerService.class);
     private final PlannerTaskRepository plannerTaskRepository;
+    private final CaptureRepository captureRepository;
     private final GamificationService gamificationService;
     private final GoogleCalendarService googleCalendarService;
 
-    public PlannerService(PlannerTaskRepository plannerTaskRepository, GamificationService gamificationService, GoogleCalendarService googleCalendarService) {
+    public PlannerService(PlannerTaskRepository plannerTaskRepository, CaptureRepository captureRepository, GamificationService gamificationService, GoogleCalendarService googleCalendarService) {
         this.plannerTaskRepository = plannerTaskRepository;
+        this.captureRepository = captureRepository;
         this.gamificationService = gamificationService;
         this.googleCalendarService = googleCalendarService;
     }
 
     public List<PlannerTask> listTasks(String userId, Instant start, Instant end) {
         log.info("Listing planner tasks for user: {}, between {} and {}", userId, start, end);
-        return plannerTaskRepository.findByUserIdAndScheduledDateBetweenOrderByScheduledDateAscStartTimeAsc(userId, start, end);
+        List<PlannerTask> tasks = new java.util.ArrayList<>(plannerTaskRepository.findByUserIdAndScheduledDateBetweenOrderByScheduledDateAscStartTimeAsc(userId, start, end));
+        
+        List<Capture> captures = captureRepository.findByUserIdAndReminderAtBetweenAndStatus(userId, start, end, "active");
+        for (Capture c : captures) {
+            PlannerTask pt = new PlannerTask();
+            pt.setId("capture_" + c.getId());
+            pt.setUserId(c.getUserId());
+            pt.setTitle(c.getTitle());
+            pt.setDescription(c.getDescription());
+            pt.setScheduledDate(c.getReminderAt());
+            pt.setCategory(c.getCategory());
+            pt.setPriority(c.getUrgency());
+            pt.setStatus(c.getIsArchived() != null && c.getIsArchived() ? "completed" : "todo");
+            pt.setLinkedCaptureId(c.getId());
+            tasks.add(pt);
+        }
+        
+        tasks.sort((t1, t2) -> {
+            if (t1.getScheduledDate() == null) return 1;
+            if (t2.getScheduledDate() == null) return -1;
+            return t1.getScheduledDate().compareTo(t2.getScheduledDate());
+        });
+        
+        return tasks;
     }
 
     public PlannerTask createTask(String userId, PlannerTaskCreateRequest request) {
@@ -65,6 +92,21 @@ public class PlannerService {
 
     public Optional<PlannerTask> patchTask(String id, String userId, PlannerTaskPatchRequest request) {
         log.info("Patching planner task {} for user {}", id, userId);
+        
+        if (id.startsWith("capture_")) {
+            String realId = id.substring(8);
+            return captureRepository.findByIdAndUserId(realId, userId).map(c -> {
+                if (request.status() != null) {
+                    c.setIsArchived("completed".equals(request.status()));
+                    captureRepository.save(c);
+                }
+                PlannerTask pt = new PlannerTask();
+                pt.setId(id);
+                pt.setStatus(c.getIsArchived() != null && c.getIsArchived() ? "completed" : "todo");
+                return pt;
+            });
+        }
+        
         return plannerTaskRepository.findByIdAndUserId(id, userId).map(task -> {
             if (request.title() != null) task.setTitle(request.title());
             if (request.description() != null) task.setDescription(request.description());
@@ -92,6 +134,14 @@ public class PlannerService {
 
     public void deleteTask(String id, String userId) {
         log.info("Deleting planner task {} for user {}", id, userId);
+        if (id.startsWith("capture_")) {
+            String realId = id.substring(8);
+            captureRepository.findByIdAndUserId(realId, userId).ifPresent(c -> {
+                c.setReminderAt(null);
+                captureRepository.save(c);
+            });
+            return;
+        }
         plannerTaskRepository.findByIdAndUserId(id, userId).ifPresent(plannerTaskRepository::delete);
     }
 }

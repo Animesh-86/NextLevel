@@ -42,8 +42,9 @@ function timeAgo(date) {
   return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-export default function FileCard({ file, onView, onDelete, onPin, onDownload }) {
+export default function FileCard({ file, onView, onDelete, onPin, onDownload, onPatchCategory }) {
   const [showMenu, setShowMenu] = useState(false);
+  const [isEditingCategory, setIsEditingCategory] = useState(false);
   const typeConfig = fileTypeIcons[file.fileType] || fileTypeIcons.other;
   const TypeIcon = typeConfig.icon;
 
@@ -66,11 +67,11 @@ export default function FileCard({ file, onView, onDelete, onPin, onDownload }) 
           <button
             className="icon-btn"
             title={file.isPinned ? 'Unpin' : 'Pin'}
-            onClick={() => onPin(file._id, !file.isPinned)}
+            onClick={() => onPin(file.id || file._id, !file.isPinned)}
           >
             {file.isPinned ? <PinOff size={14} /> : <Pin size={14} />}
           </button>
-          <button className="icon-btn" title="Delete" onClick={() => onDelete(file._id)}>
+          <button className="icon-btn" title="Delete" onClick={() => onDelete(file.id || file._id)}>
             <Trash2 size={14} />
           </button>
         </div>
@@ -83,9 +84,44 @@ export default function FileCard({ file, onView, onDelete, onPin, onDownload }) 
       )}
 
       <div className="file-card-meta-row">
-        <span className="file-card-category">
-          {categoryLabels[file.category] || 'Other'}
-        </span>
+        {isEditingCategory ? (
+          <select
+            className="select"
+            style={{ 
+              padding: '2px 6px', 
+              fontSize: '0.8rem', 
+              height: 'auto', 
+              width: 'auto', 
+              background: 'var(--bg-surface-dark)', 
+              border: '1px solid var(--border-light)',
+              color: 'var(--text-primary)',
+              borderRadius: 'var(--radius-sm)'
+            }}
+            value={file.category}
+            onChange={async (e) => {
+              const newCat = e.target.value;
+              setIsEditingCategory(false);
+              if (newCat !== file.category && onPatchCategory) {
+                await onPatchCategory(file.id || file._id, newCat);
+              }
+            }}
+            onBlur={() => setIsEditingCategory(false)}
+            autoFocus
+          >
+            {Object.entries(categoryLabels).map(([val, label]) => (
+              <option key={val} value={val}>{label}</option>
+            ))}
+          </select>
+        ) : (
+          <span 
+            className="file-card-category" 
+            style={{ cursor: 'pointer', borderBottom: '1px dashed rgba(255,255,255,0.2)' }}
+            onClick={() => setIsEditingCategory(true)}
+            title="Click to edit category"
+          >
+            {categoryLabels[file.category] || 'Other'}
+          </span>
+        )}
         <span className="file-card-size">{formatSize(file.fileSize)}</span>
       </div>
 
