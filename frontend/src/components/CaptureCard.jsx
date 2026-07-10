@@ -123,11 +123,17 @@ export default function CaptureCard({ capture, onEdit, onDelete, onPin, onArchiv
         </div>
       )}
 
-      {/* Screenshot indicator */}
+      {/* Screenshot indicator / preview */}
       {capture.type === 'screenshot' && (
-        <div className="capture-screenshot-badge">
-          <ImageIcon size={14} /> Screenshot attached
-        </div>
+        capture.imageData ? (
+          <div className="capture-screenshot-preview" style={{ marginTop: '0.75rem', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--border-light)' }}>
+            <img src={capture.imageData} alt="Screenshot preview" style={{ width: '100%', display: 'block', objectFit: 'cover', maxHeight: '150px' }} />
+          </div>
+        ) : (
+          <div className="capture-screenshot-badge">
+            <ImageIcon size={14} /> Screenshot attached
+          </div>
+        )
       )}
 
       {/* URL preview */}
