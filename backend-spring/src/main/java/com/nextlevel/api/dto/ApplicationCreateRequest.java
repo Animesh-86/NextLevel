@@ -10,6 +10,7 @@ public record ApplicationCreateRequest(
     String type,
     String status,
     Instant appliedDate,
+    String year,
     String salary,
     String location,
     String url,

@@ -34,6 +34,7 @@ public class Application {
     private String type = "full-time";
     private String status = "bookmarked";
     private Instant appliedDate;
+    private String year = "";
     private String salary = "";
     private String location = "";
     private String url = "";

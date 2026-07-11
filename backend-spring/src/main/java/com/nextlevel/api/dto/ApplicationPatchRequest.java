@@ -7,6 +7,7 @@ public record ApplicationPatchRequest(
     String role,
     String type,
     String status,
+    String year,
     String salary,
     String location,
     String url,

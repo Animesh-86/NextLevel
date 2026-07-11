@@ -6,13 +6,15 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { Loader2, X, Sparkles, ExternalLink } from "lucide-react";
 
+import * as THREE from 'three';
+
 const ForceGraph3D = dynamic(() => import("react-force-graph-3d"), { ssr: false });
 
 const NODE_COLORS = {
-  capture: "#fafafa",
-  file: "#888888",
-  roadmap: "#555555",
-  default: "#444444",
+  capture: "#38bdf8", // Sky blue
+  file: "#a78bfa",    // Purple
+  roadmap: "#f472b6", // Pink
+  default: "#fde047", // Yellow
 };
 
 const CLUSTER_COLORS = [
@@ -56,10 +58,44 @@ export default function KnowledgeGraphPage() {
         const resizeObserver = new ResizeObserver(() => updateDimensions());
         resizeObserver.observe(containerRef.current);
         
-        // Initial set (delay slightly to ensure layout is complete)
         setTimeout(updateDimensions, 50);
 
         return () => resizeObserver.disconnect();
+    }, []);
+
+    useEffect(() => {
+        if (fgRef.current && graphData.nodes.length > 0) {
+            // Prevent nodes from flying infinitely far apart
+            fgRef.current.d3Force('charge').strength(-120).distanceMax(300);
+            
+            setTimeout(() => {
+                if (fgRef.current) {
+                    fgRef.current.zoomToFit(800, 150);
+                }
+            }, 1000); // give it a second to settle
+        }
+    }, [graphData.nodes.length]);
+
+    useEffect(() => {
+        let animationFrameId;
+        const animate = () => {
+            if (fgRef.current) {
+                const scene = fgRef.current.scene();
+                if (scene) {
+                    const time = Date.now() * 0.002;
+                    scene.traverse((obj) => {
+                        if (obj.__halo) {
+                            const scale = 1 + Math.sin(time + obj.__pulsePhase) * 0.2;
+                            obj.__halo.scale.set(scale, scale, scale);
+                            obj.__halo.material.opacity = 0.3 + Math.sin(time + obj.__pulsePhase) * 0.2;
+                        }
+                    });
+                }
+            }
+            animationFrameId = requestAnimationFrame(animate);
+        };
+        animate();
+        return () => cancelAnimationFrame(animationFrameId);
     }, []);
 
     useEffect(() => {
@@ -236,7 +272,7 @@ export default function KnowledgeGraphPage() {
                             {exploreNode.name}
                         </h4>
                         
-                        <button onClick={() => handleNavigate(exploreNode)} className="btn-secondary" style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '0.5rem', alignItems: 'center' }}>
+                        <button onClick={() => handleNavigate(exploreNode)} className="btn btn-secondary" style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '0.5rem', alignItems: 'center', color: '#ffffff', borderColor: 'rgba(255,255,255,0.2)' }}>
                             <ExternalLink size={14} /> Open {exploreNode.type}
                         </button>
                     </div>
@@ -246,7 +282,7 @@ export default function KnowledgeGraphPage() {
                             onClick={analyzeConnections} 
                             disabled={analyzing}
                             className="btn btn-primary" 
-                            style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '0.5rem', alignItems: 'center', background: 'linear-gradient(45deg, var(--brand-purple), var(--brand-blue))', border: 'none' }}
+                            style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '0.5rem', alignItems: 'center', background: 'linear-gradient(45deg, var(--brand-purple), var(--brand-blue))', border: 'none', color: '#ffffff' }}
                         >
                             {analyzing ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
                             {analyzing ? 'Analyzing connections...' : 'AI Connection Analysis'}
@@ -299,9 +335,31 @@ export default function KnowledgeGraphPage() {
                 height={dimensions.height}
                 graphData={{ nodes: filteredNodes, links: filteredLinks }}
                 nodeLabel="name"
-                nodeColor={getNodeColor}
-                nodeResolution={16}
-                nodeRelSize={6}
+                nodeThreeObject={node => {
+                    const color = getNodeColor(node);
+                    const group = new THREE.Group();
+                    
+                    const geometry = new THREE.SphereGeometry(14, 32, 32);
+                    const material = new THREE.MeshBasicMaterial({ color: color });
+                    const mesh = new THREE.Mesh(geometry, material);
+                    group.add(mesh);
+
+                    const haloGeometry = new THREE.SphereGeometry(22, 32, 32);
+                    const haloMaterial = new THREE.MeshBasicMaterial({ 
+                        color: color, 
+                        transparent: true, 
+                        opacity: 0.4, 
+                        blending: THREE.AdditiveBlending,
+                        depthWrite: false
+                    });
+                    const halo = new THREE.Mesh(haloGeometry, haloMaterial);
+                    group.add(halo);
+
+                    group.__pulsePhase = Math.random() * Math.PI * 2;
+                    group.__halo = halo;
+
+                    return group;
+                }}
                 linkColor={link => link.type === 'semantic' ? 'rgba(124, 58, 237, 0.4)' : 'rgba(255, 255, 255, 0.1)'}
                 linkWidth={link => link.strength * 2}
                 linkResolution={6}

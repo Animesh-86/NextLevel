@@ -76,8 +76,8 @@ export default async function LandingPage() {
         </h1>
 
         <p className="landing-subtext">
-          Upload documents, generate smart quizzes, capture fleeting thoughts, <br className="landing-br" />
-          and track your growth — all inside a sleek, unified dashboard.
+          Upload PDFs you swore you'd read, get humbled by AI quizzes, and hoard chaotic thoughts — <br className="landing-br" />
+          all inside a shockingly sleek dashboard.
         </p>
 
         <div className="landing-hero-actions">

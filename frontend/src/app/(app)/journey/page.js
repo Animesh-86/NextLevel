@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import confetti from 'canvas-confetti';
 import { apiFetch } from '@/lib/api';
 import {
   Map, Briefcase, BarChart3, Plus, ChevronDown, ChevronRight,
@@ -34,22 +35,23 @@ export default function JourneyPage() {
   const [apps, setApps] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [templates, setTemplates] = useState([]);
-  const [showTemplates, setShowTemplates] = useState(false);
+  const [showRoadmapForm, setShowRoadmapForm] = useState(false);
+  const [roadmapForm, setRoadmapForm] = useState({ 
+    title: '', description: '', category: 'work', targetDate: '', 
+    milestones: [{ title: '', tasks: [{ title: '', done: false }] }] 
+  });
   const [showAppForm, setShowAppForm] = useState(false);
   const [expandedRoadmap, setExpandedRoadmap] = useState(null);
   const [appForm, setAppForm] = useState({ company: '', role: '', type: 'full-time', url: '', location: '', salary: '', notes: '' });
+  const [rejectFlow, setRejectFlow] = useState({ active: false, appId: null, note: '', completed: false });
+  const [showArchive, setShowArchive] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       if (tab === 'roadmaps') {
-        const [r, t] = await Promise.all([
-          apiFetch('/api/roadmaps').then(r => r.json()),
-          apiFetch('/api/roadmaps?templates=true').then(r => r.json()),
-        ]);
+        const r = await apiFetch('/api/roadmaps').then(res => res.json());
         if (r.success) setRoadmaps(r.data);
-        if (t.success) setTemplates(t.data);
       } else if (tab === 'applications') {
         const r = await apiFetch('/api/applications').then(r => r.json());
         if (r.success) setApps(r.data);
@@ -63,12 +65,31 @@ export default function JourneyPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  async function createFromTemplate(idx) {
+  async function createRoadmap() {
+    if (!roadmapForm.title || !roadmapForm.targetDate) return;
+    
+    // Convert targetDate to Instant-compatible ISO string if possible
+    const dateObj = new Date(roadmapForm.targetDate);
+    const targetDateISO = isNaN(dateObj) ? new Date().toISOString() : dateObj.toISOString();
+
+    const payload = {
+      title: roadmapForm.title,
+      description: roadmapForm.description,
+      category: roadmapForm.category,
+      targetDate: targetDateISO,
+      milestones: roadmapForm.milestones
+    };
+
     await apiFetch('/api/roadmaps', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ templateIndex: idx }),
+      body: JSON.stringify(payload),
     });
-    setShowTemplates(false);
+    
+    setShowRoadmapForm(false);
+    setRoadmapForm({ 
+      title: '', description: '', category: 'work', targetDate: '', 
+      milestones: [{ title: '', tasks: [{ title: '', done: false }] }] 
+    });
     fetchData();
   }
 
@@ -96,18 +117,104 @@ export default function JourneyPage() {
     fetchData();
   }
 
-  async function updateAppStatus(id, status) {
+  async function updateAppStatus(id, status, note = null) {
+    const payload = { status };
+    if (note) {
+      payload.addEvent = { event: 'Status changed to ' + status, notes: note };
+    }
     await apiFetch(`/api/applications/${id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(payload),
     });
     fetchData();
+  }
+
+  function handleStatusChange(id, status) {
+    if (status === 'rejected') {
+      setRejectFlow({ active: true, appId: id, note: '', completed: false });
+    } else if (status === 'accepted') {
+      confetti({
+        particleCount: 150,
+        spread: 80,
+        origin: { y: 0.6 }
+      });
+      updateAppStatus(id, status);
+    } else {
+      updateAppStatus(id, status);
+    }
   }
 
   async function deleteApp(id) {
     await apiFetch(`/api/applications/${id}`, { method: 'DELETE' });
     fetchData();
   }
+
+  const activeApps = apps.filter(a => a.status !== 'rejected' && a.status !== 'ghosted');
+  const archiveApps = apps.filter(a => a.status === 'rejected' || a.status === 'ghosted');
+
+  const renderAppCard = (app) => (
+    <div key={app.id || app._id} className="app-card">
+      <div className="app-card-header">
+        <div><Building2 size={16} /><strong>{app.company}</strong></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span className="app-status-badge" style={{ color: statusColors[app.status], borderColor: statusColors[app.status] }}>
+            {statusLabels[app.status]}
+          </span>
+          <button className="icon-btn" style={{ padding: '0.25rem', color: 'var(--text-muted)' }} onClick={() => deleteApp(app.id || app._id)} title="Delete Application">
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+      <div className="app-card-role">{app.role}</div>
+      <div className="app-card-meta">
+        {app.location && <span>{app.location}</span>}
+        {app.salary && <span>{app.salary}</span>}
+        {app.type !== 'full-time' && <span className="badge">{app.type}</span>}
+      </div>
+      {app.url && <a href={app.url} target="_blank" rel="noopener" className="app-card-link"><ExternalLink size={12} /> View Posting</a>}
+      {/* Timeline */}
+      {app.timeline?.length > 0 && (
+        <div className="app-timeline">
+          {app.timeline.slice(-3).map((ev, i) => (
+            <div key={i} className="app-timeline-item">
+              <div className="app-timeline-dot" />
+              <span>{ev.event}</span>
+              <span className="app-timeline-date">{new Date(ev.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {/* Status pipeline */}
+      <div className="app-pipeline">
+        {statusOrder.slice(0, 7).map(s => (
+          <button key={s} className={`app-pipeline-step ${app.status === s ? 'active' : ''} ${statusOrder.indexOf(app.status) > statusOrder.indexOf(s) ? 'passed' : ''}`}
+            onClick={() => handleStatusChange(app.id || app._id, s)} title={statusLabels[s]} style={{ '--step-color': statusColors[s] }} />
+        ))}
+      </div>
+      
+      {/* Terminal states */}
+      {app.status !== 'rejected' && app.status !== 'ghosted' && app.status !== 'accepted' && (
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', borderTop: '1px solid var(--border-light)', paddingTop: '0.75rem' }}>
+          <button className="btn btn-secondary" style={{ flex: 1, fontSize: '0.75rem', padding: '0.25rem 0' }} onClick={() => handleStatusChange(app.id || app._id, 'rejected')}>
+            Mark Rejected
+          </button>
+          <button className="btn btn-secondary" style={{ flex: 1, fontSize: '0.75rem', padding: '0.25rem 0' }} onClick={() => handleStatusChange(app.id || app._id, 'ghosted')}>
+            Ghosted
+          </button>
+          <button className="btn btn-secondary" style={{ flex: 1, fontSize: '0.75rem', padding: '0.25rem 0', color: '#10b981', borderColor: '#10b981' }} onClick={() => handleStatusChange(app.id || app._id, 'accepted')}>
+            Accepted
+          </button>
+        </div>
+      )}
+      {(app.status === 'rejected' || app.status === 'ghosted') && (
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', borderTop: '1px solid var(--border-light)', paddingTop: '0.75rem' }}>
+            <button className="btn btn-secondary" style={{ flex: 1, fontSize: '0.75rem', padding: '0.25rem 0' }} onClick={() => handleStatusChange(app.id || app._id, 'applied')}>
+            Revert Status
+          </button>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
@@ -141,41 +248,24 @@ export default function JourneyPage() {
           {tab === 'roadmaps' && (
             <div>
               <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                <button className="btn btn-primary" onClick={() => setShowTemplates(!showTemplates)}>
-                  <Plus size={16} /> Use Template
+                <button className="btn btn-primary" onClick={() => setShowRoadmapForm(true)}>
+                  <Plus size={16} /> Create Roadmap
                 </button>
               </div>
 
-              {showTemplates && (
-                <div className="journey-templates">
-                  {templates.map((t, i) => (
-                    <div key={i} className="journey-template-card" style={{ borderLeftColor: t.color }}>
-                      <h4>{categoryEmojis[t.category]} {t.title}</h4>
-                      <p>{t.description}</p>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        {t.milestones.length} milestones · {t.milestones.reduce((s, m) => s + m.tasks.length, 0)} tasks
-                      </div>
-                      <button className="btn btn-secondary" style={{ marginTop: '0.5rem' }} onClick={() => createFromTemplate(i)}>
-                        <Plus size={14} /> Start This
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {roadmaps.length === 0 && !showTemplates ? (
+              {roadmaps.length === 0 ? (
                 <div className="capture-empty-state">
                   <Map size={56} strokeWidth={1} />
                   <h3>No roadmaps yet</h3>
-                  <p>Start a learning roadmap from our templates or create your own</p>
+                  <p>Start a learning roadmap by creating your own journey</p>
                 </div>
               ) : (
                 <div className="journey-roadmaps">
                   {roadmaps.map(r => {
-                    const isExpanded = expandedRoadmap === r._id;
+                    const isExpanded = expandedRoadmap === (r.id || r._id);
                     return (
-                      <div key={r._id} className="roadmap-card" style={{ borderLeftColor: categoryColors[r.category] || '#fff' }}>
-                        <div className="roadmap-header" onClick={() => setExpandedRoadmap(isExpanded ? null : r._id)}>
+                      <div key={r.id || r._id} className="roadmap-card" style={{ borderLeftColor: categoryColors[r.category] || '#fff' }}>
+                        <div className="roadmap-header" onClick={() => setExpandedRoadmap(isExpanded ? null : (r.id || r._id))}>
                           <div className="roadmap-info">
                             <h3>{categoryEmojis[r.category]} {r.title}</h3>
                             <div className="roadmap-meta">
@@ -227,8 +317,8 @@ export default function JourneyPage() {
                                 <h4 className="roadmap-milestone-title">{m.title}</h4>
                                 <div className="roadmap-tasks">
                                   {m.tasks.map(t => (
-                                    <button key={t._id} className={`roadmap-task ${t.done ? 'done' : ''}`}
-                                      onClick={() => toggleTask(r._id, m._id, t._id)}>
+                                    <button key={t.id || t._id} className={`roadmap-task ${t.done ? 'done' : ''}`}
+                                      onClick={() => toggleTask(r.id || r._id, m.id || m._id, t.id || t._id)}>
                                       {t.done ? <CheckCircle2 size={14} /> : <Circle size={14} />}
                                       <span>{t.title}</span>
                                     </button>
@@ -236,7 +326,7 @@ export default function JourneyPage() {
                                 </div>
                               </div>
                             ))}
-                            <button className="btn btn-secondary" style={{ marginTop: '0.5rem' }} onClick={() => deleteRoadmap(r._id)}>
+                            <button className="btn btn-secondary" style={{ marginTop: '0.5rem' }} onClick={() => deleteRoadmap(r.id || r._id)}>
                               <Trash2 size={14} /> Delete Roadmap
                             </button>
                           </div>
@@ -252,9 +342,16 @@ export default function JourneyPage() {
           {/* ═══ APPLICATIONS TAB ═══ */}
           {tab === 'applications' && (
             <div>
-              <button className="btn btn-primary" style={{ marginBottom: '1.5rem' }} onClick={() => setShowAppForm(!showAppForm)}>
-                <Plus size={16} /> Add Application
-              </button>
+              <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', alignItems: 'center' }}>
+                <button className="btn btn-primary" onClick={() => setShowAppForm(!showAppForm)}>
+                  <Plus size={16} /> Add Application
+                </button>
+                {archiveApps.length > 0 && (
+                  <button className="btn btn-secondary" onClick={() => setShowArchive(!showArchive)}>
+                    {showArchive ? 'Hide Archived' : 'Show Archived'}
+                  </button>
+                )}
+              </div>
 
               {showAppForm && (
                 <div className="journey-app-form card" style={{ marginBottom: '1.5rem' }}>
@@ -288,47 +385,19 @@ export default function JourneyPage() {
                   <p>Track your job applications and interview pipeline</p>
                 </div>
               ) : (
-                <div className="journey-apps-grid">
-                  {apps.map(app => (
-                    <div key={app._id} className="app-card">
-                      <div className="app-card-header">
-                        <div><Building2 size={16} /><strong>{app.company}</strong></div>
-                        <span className="app-status-badge" style={{ color: statusColors[app.status], borderColor: statusColors[app.status] }}>
-                          {statusLabels[app.status]}
-                        </span>
+                <>
+                  <div className="journey-apps-grid">
+                    {activeApps.map(app => renderAppCard(app))}
+                  </div>
+                  {showArchive && archiveApps.length > 0 && (
+                    <div style={{ marginTop: '3rem' }}>
+                      <h3 style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>Archived (Rejected / Ghosted)</h3>
+                      <div className="journey-apps-grid">
+                        {archiveApps.map(app => renderAppCard(app))}
                       </div>
-                      <div className="app-card-role">{app.role}</div>
-                      <div className="app-card-meta">
-                        {app.location && <span>{app.location}</span>}
-                        {app.salary && <span>{app.salary}</span>}
-                        {app.type !== 'full-time' && <span className="badge">{app.type}</span>}
-                      </div>
-                      {app.url && <a href={app.url} target="_blank" rel="noopener" className="app-card-link"><ExternalLink size={12} /> View Posting</a>}
-                      {/* Timeline */}
-                      {app.timeline?.length > 0 && (
-                        <div className="app-timeline">
-                          {app.timeline.slice(-3).map((ev, i) => (
-                            <div key={i} className="app-timeline-item">
-                              <div className="app-timeline-dot" />
-                              <span>{ev.event}</span>
-                              <span className="app-timeline-date">{new Date(ev.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {/* Status pipeline */}
-                      <div className="app-pipeline">
-                        {statusOrder.slice(0, 7).map(s => (
-                          <button key={s} className={`app-pipeline-step ${app.status === s ? 'active' : ''} ${statusOrder.indexOf(app.status) > statusOrder.indexOf(s) ? 'passed' : ''}`}
-                            onClick={() => updateAppStatus(app._id, s)} title={statusLabels[s]} style={{ '--step-color': statusColors[s] }} />
-                        ))}
-                      </div>
-                      <button className="icon-btn" style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', opacity: 0 }} onClick={() => deleteApp(app._id)}>
-                        <Trash2 size={14} />
-                      </button>
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -338,6 +407,139 @@ export default function JourneyPage() {
             <AnalyticsPanel data={analytics} />
           )}
         </>
+      )}
+
+      {/* ROADMAP MODAL */}
+      {showRoadmapForm && (
+        <div className="modal-overlay" onClick={() => setShowRoadmapForm(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="modal-header">
+              <h2>Create Roadmap</h2>
+              <button className="icon-btn" onClick={() => setShowRoadmapForm(false)}><X size={20} /></button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+              <div>
+                <label>Title</label>
+                <input type="text" className="input" value={roadmapForm.title} onChange={e => setRoadmapForm({...roadmapForm, title: e.target.value})} placeholder="e.g. Learn System Design" />
+              </div>
+              
+              <div>
+                <label>Description (Optional)</label>
+                <textarea className="input" value={roadmapForm.description} onChange={e => setRoadmapForm({...roadmapForm, description: e.target.value})} placeholder="What is the goal of this journey?" />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label>Category</label>
+                  <select className="input" value={roadmapForm.category} onChange={e => setRoadmapForm({...roadmapForm, category: e.target.value})}>
+                    {Object.keys(categoryColors).map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label>Target Date</label>
+                  <input type="date" className="input" value={roadmapForm.targetDate} onChange={e => setRoadmapForm({...roadmapForm, targetDate: e.target.value})} />
+                </div>
+              </div>
+
+              <div style={{ marginTop: '1rem' }}>
+                <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between' }}>
+                  Milestones
+                  <button className="btn btn-secondary" onClick={() => {
+                    const newMilestones = [...roadmapForm.milestones, { title: '', tasks: [{ title: '', done: false }] }];
+                    setRoadmapForm({...roadmapForm, milestones: newMilestones});
+                  }}><Plus size={14} /> Add Milestone</button>
+                </h3>
+                
+                {roadmapForm.milestones.map((milestone, mIdx) => (
+                  <div key={mIdx} style={{ background: 'var(--bg-secondary)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem', border: '1px solid var(--border-light)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <label style={{ margin: 0 }}>Milestone {mIdx + 1} Title</label>
+                      {roadmapForm.milestones.length > 1 && (
+                        <button className="icon-btn" onClick={() => {
+                          const newM = [...roadmapForm.milestones];
+                          newM.splice(mIdx, 1);
+                          setRoadmapForm({...roadmapForm, milestones: newM});
+                        }}><Trash2 size={14} style={{color: 'var(--text-error)'}} /></button>
+                      )}
+                    </div>
+                    <input type="text" className="input" value={milestone.title} onChange={e => {
+                      const newM = [...roadmapForm.milestones];
+                      newM[mIdx].title = e.target.value;
+                      setRoadmapForm({...roadmapForm, milestones: newM});
+                    }} placeholder="e.g. Week 1: Fundamentals" style={{ marginBottom: '1rem' }} />
+
+                    <label>Topics / Tasks</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {milestone.tasks.map((task, tIdx) => (
+                        <div key={tIdx} style={{ display: 'flex', gap: '0.5rem' }}>
+                          <input type="text" className="input" value={task.title} onChange={e => {
+                            const newM = [...roadmapForm.milestones];
+                            newM[mIdx].tasks[tIdx].title = e.target.value;
+                            setRoadmapForm({...roadmapForm, milestones: newM});
+                          }} placeholder="Task title" />
+                          {milestone.tasks.length > 1 && (
+                            <button className="btn btn-secondary" onClick={() => {
+                              const newM = [...roadmapForm.milestones];
+                              newM[mIdx].tasks.splice(tIdx, 1);
+                              setRoadmapForm({...roadmapForm, milestones: newM});
+                            }}><Trash2 size={14} /></button>
+                          )}
+                        </div>
+                      ))}
+                      <button className="btn btn-secondary" onClick={() => {
+                        const newM = [...roadmapForm.milestones];
+                        newM[mIdx].tasks.push({ title: '', done: false });
+                        setRoadmapForm({...roadmapForm, milestones: newM});
+                      }} style={{ width: 'fit-content' }}>+ Add Topic</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
+              <button className="btn btn-secondary" onClick={() => setShowRoadmapForm(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={createRoadmap}>Create Journey</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* REJECTION MODAL */}
+      {rejectFlow.active && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '400px' }}>
+            {!rejectFlow.completed ? (
+              <>
+                <div className="modal-header">
+                  <h2>Application Rejected</h2>
+                  <button className="icon-btn" onClick={() => setRejectFlow({ active: false, appId: null, note: '', completed: false })}><X size={20} /></button>
+                </div>
+                <div style={{ marginTop: '1rem' }}>
+                  <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>Sorry to hear that. Any notes on why it was rejected? (Optional)</p>
+                  <textarea className="input" placeholder="e.g. They wanted more Python experience" value={rejectFlow.note} onChange={e => setRejectFlow(f => ({ ...f, note: e.target.value }))} rows={3} style={{ resize: 'vertical' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
+                  <button className="btn btn-secondary" onClick={() => setRejectFlow({ active: false, appId: null, note: '', completed: false })}>Cancel</button>
+                  <button className="btn btn-secondary" onClick={() => {
+                    updateAppStatus(rejectFlow.appId, 'rejected');
+                    setRejectFlow(f => ({ ...f, completed: true }));
+                  }}>Save without Note</button>
+                  <button className="btn btn-primary" onClick={() => {
+                    updateAppStatus(rejectFlow.appId, 'rejected', rejectFlow.note);
+                    setRejectFlow(f => ({ ...f, completed: true }));
+                  }}>Save Note</button>
+                </div>
+              </>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '1rem' }}>
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Keep Pushing!</h2>
+                <p style={{ color: 'var(--text-secondary)' }}>Every 'No' brings you one step closer to a 'Yes'. Your next opportunity is out there.</p>
+                <button className="btn btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => setRejectFlow({ active: false, appId: null, note: '', completed: false })}>Got it</button>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

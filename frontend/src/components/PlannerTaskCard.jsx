@@ -10,18 +10,17 @@ const priorityColors = {
 const statusIcons = {
   todo: Circle,
   'in-progress': Clock,
-  done: CheckCircle2,
+  completed: CheckCircle2,
   skipped: Circle,
 };
 
 export default function PlannerTaskCard({ task, onStatusToggle, onDelete }) {
   const StatusIcon = statusIcons[task.status] || Circle;
-  const isDone = task.status === 'done';
+  const isDone = task.status === 'completed';
   const isSkipped = task.status === 'skipped';
 
   const nextStatus = () => {
-    const cycle = { todo: 'in-progress', 'in-progress': 'done', done: 'todo', skipped: 'todo' };
-    return cycle[task.status] || 'todo';
+    return task.status === 'completed' ? 'todo' : 'completed';
   };
 
   return (

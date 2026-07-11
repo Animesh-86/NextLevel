@@ -41,6 +41,7 @@ public class ApplicationService {
         app.setType(request.type() != null ? request.type() : "full-time");
         app.setStatus(request.status() != null ? request.status() : "bookmarked");
         app.setAppliedDate(request.appliedDate());
+        app.setYear(request.year() != null ? request.year() : "");
         app.setSalary(request.salary() != null ? request.salary() : "");
         app.setLocation(request.location() != null ? request.location() : "");
         app.setUrl(request.url() != null ? request.url() : "");
@@ -86,6 +87,7 @@ public class ApplicationService {
             if (request.role() != null) app.setRole(request.role());
             if (request.type() != null) app.setType(request.type());
             if (request.status() != null) app.setStatus(request.status());
+            if (request.year() != null) app.setYear(request.year());
             if (request.salary() != null) app.setSalary(request.salary());
             if (request.location() != null) app.setLocation(request.location());
             if (request.url() != null) app.setUrl(request.url());

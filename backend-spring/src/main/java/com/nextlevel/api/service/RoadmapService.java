@@ -22,9 +22,11 @@ public class RoadmapService {
 
     private static final Logger log = LoggerFactory.getLogger(RoadmapService.class);
     private final RoadmapRepository roadmapRepository;
+    private final GamificationService gamificationService;
 
-    public RoadmapService(RoadmapRepository roadmapRepository) {
+    public RoadmapService(RoadmapRepository roadmapRepository, GamificationService gamificationService) {
         this.roadmapRepository = roadmapRepository;
+        this.gamificationService = gamificationService;
     }
 
     public List<Roadmap> listRoadmaps(String userId, String status) {
@@ -86,10 +88,19 @@ public class RoadmapService {
                     boolean done = !Boolean.TRUE.equals(t.getDone());
                     t.setDone(done);
                     t.setCompletedAt(done ? Instant.now() : null);
+                    
+                    if (done) {
+                        gamificationService.awardXp(userId, 10, "Completed a roadmap task");
+                    }
                 });
                 boolean allDone = m.getTasks().stream().allMatch(t -> Boolean.TRUE.equals(t.getDone()));
                 boolean anyDone = m.getTasks().stream().anyMatch(t -> Boolean.TRUE.equals(t.getDone()));
-                m.setStatus(allDone ? "completed" : anyDone ? "in-progress" : "not-started");
+                
+                String newStatus = allDone ? "completed" : anyDone ? "in-progress" : "not-started";
+                if ("completed".equals(newStatus) && !"completed".equals(m.getStatus())) {
+                    gamificationService.awardXp(userId, 50, "Completed a roadmap milestone");
+                }
+                m.setStatus(newStatus);
             });
         }
 
