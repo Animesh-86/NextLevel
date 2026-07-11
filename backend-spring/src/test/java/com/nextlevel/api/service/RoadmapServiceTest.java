@@ -22,6 +22,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.nextlevel.api.dto.RoadmapCreateRequest;
 import com.nextlevel.api.model.Roadmap;
 import com.nextlevel.api.repository.RoadmapRepository;
+import com.nextlevel.api.service.GamificationService;
 
 @ExtendWith(MockitoExtension.class)
 class RoadmapServiceTest {
@@ -29,11 +30,14 @@ class RoadmapServiceTest {
     @Mock
     private RoadmapRepository roadmapRepository;
 
+    @Mock
+    private GamificationService gamificationService;
+
     private RoadmapService roadmapService;
 
     @BeforeEach
     void setUp() {
-        roadmapService = new RoadmapService(roadmapRepository);
+        roadmapService = new RoadmapService(roadmapRepository, gamificationService);
     }
 
     @Test
