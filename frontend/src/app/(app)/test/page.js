@@ -3,7 +3,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/components/Toast';
 import { apiFetch } from '@/lib/api';
-import { BrainCircuit, Check, X, Clock, Play, Flag, AlertTriangle, ChevronLeft, ChevronRight, Loader2, Upload } from 'lucide-react';
+import { BrainCircuit, Check, X, Clock, Play, Flag, AlertTriangle, ChevronLeft, ChevronRight, Loader2, Upload, Trash2 } from 'lucide-react';
+import ConfirmModal from '@/components/ConfirmModal';
 
 export default function FocusTest() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function FocusTest() {
   const [questionCount, setQuestionCount] = useState(20);
   const [timeMinutes, setTimeMinutes] = useState(60);
   const [configLoading, setConfigLoading] = useState(true);
+  const [deleteExamId, setDeleteExamId] = useState(null);
 
   // Test state
   const [questions, setQuestions] = useState([]);
@@ -54,9 +56,35 @@ export default function FocusTest() {
     load();
   }, []);
 
+  const handleDeleteExam = useCallback(async (examId) => {
+    if (!examId || examId === 'all') return;
+    setDeleteExamId(examId);
+  }, []);
+
+  const confirmDeleteExam = useCallback(async () => {
+    const examId = deleteExamId;
+    setDeleteExamId(null);
+    if (!examId) return;
+    
+    try {
+      const res = await apiFetch(`/api/exams/${examId}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('Document deleted successfully');
+        setExams(prev => prev.filter(e => (e.id || e._id) !== examId));
+        if (selectedExam === examId) {
+          setSelectedExam('all');
+        }
+      } else {
+        toast.error('Failed to delete document');
+      }
+    } catch (err) {
+      toast.error('Failed to delete document');
+    }
+  }, [deleteExamId, selectedExam, toast]);
+
   const toggleOption = useCallback((optIdx) => {
     if (!currentQ) return;
-    const qId = currentQ._id;
+    const qId = currentQ.id || currentQ._id;
 
     // Don't allow changes after checking in study mode
     if (isStudy && checked.has(qId)) return;
@@ -81,19 +109,31 @@ export default function FocusTest() {
   }, [currentQ, isStudy, checked, answers, selectedExam]);
 
   const handleCheck = useCallback(async () => {
-    if (!currentQ || checked.has(currentQ._id)) return;
+    const qId = currentQ?.id || currentQ?._id;
+    if (!currentQ || checked.has(qId)) return;
     
+    // If it's a temporary ID, validate locally (no backend sync)
+    if (qId && qId.startsWith('temp_')) {
+       const isCorrect = (answers[qId] || []).length === (currentQ.answer || []).length && (answers[qId] || []).every(a => currentQ.answer.includes(a));
+       setCheckedResults(prev => ({ ...prev, [qId]: { isCorrect, correctAnswer: currentQ.answer, explanation: currentQ.explanation } }));
+       setChecked(prev => new Set([...prev, qId]));
+       setShowExplanation(true);
+       return;
+    }
+
     try {
       const res = await apiFetch('/api/reviews/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionId: currentQ._id, userAnswer: answers[currentQ._id] || [] })
+        body: JSON.stringify({ questionId: qId, userAnswer: answers[qId] || [] })
       });
       const data = await res.json();
       if (data.success) {
-        setCheckedResults(prev => ({ ...prev, [currentQ._id]: data.data }));
-        setChecked(prev => new Set([...prev, currentQ._id]));
+        setCheckedResults(prev => ({ ...prev, [qId]: data.data }));
+        setChecked(prev => new Set([...prev, qId]));
         setShowExplanation(true);
+      } else {
+        toast.error(data.error || 'Failed to check answer');
       }
     } catch (err) {
       toast.error('Failed to check answer');
@@ -127,7 +167,18 @@ export default function FocusTest() {
     }
   }, [currentIdx]);
 
+  const exitFullscreen = () => {
+    if (document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+  };
+
+  useEffect(() => {
+    return () => exitFullscreen();
+  }, []);
+
   const goToReview = useCallback(() => {
+    exitFullscreen();
     setPhase('review');
   }, []);
 
@@ -154,7 +205,9 @@ export default function FocusTest() {
 
       const data = await res.json();
       if (data.success) {
-        router.push(`/results/${data.data._id}`);
+        exitFullscreen();
+        const resultId = data.data?.id || data.data?._id || data?.id || data?._id;
+        router.push(`/results/${resultId}`);
       } else {
         toast.error('Failed to save result');
         setSubmitting(false);
@@ -208,6 +261,12 @@ export default function FocusTest() {
     // UI state for loading
     const toastId = toast.loading(`Processing ${file.name}...`);
     e.target.value = '';
+    
+    const docTitle = file.name.replace(/\.[^/.]+$/, "");
+    if (exams.some(e => e.title === docTitle)) {
+      toast.error(`A document named "${docTitle}" already exists.`, { id: toastId });
+      return;
+    }
 
     try {
       let questionsArray = [];
@@ -314,8 +373,14 @@ export default function FocusTest() {
         return;
       }
 
-      // Shuffle questions
-      const shuffled = questionList.sort(() => Math.random() - 0.5).slice(0, questionCount);
+      // Ensure all questions have a unique ID, then shuffle
+      const shuffled = questionList.map((q, i) => {
+        if (!q.id && !q._id) {
+          q._id = `temp_${Date.now()}_${i}`;
+        }
+        return q;
+      }).sort(() => Math.random() - 0.5).slice(0, questionCount);
+      
       setQuestions(shuffled);
       setCurrentIdx(0);
       setAnswers({});
@@ -329,6 +394,15 @@ export default function FocusTest() {
       setTimeLeft(timeMinutes * 60);
       setTestStartTime(performance.now());
       setPhase('testing');
+      
+      setTimeout(() => {
+        const testElem = document.getElementById('test-container');
+        if (testElem && testElem.requestFullscreen) {
+          testElem.requestFullscreen().catch(() => {});
+        } else if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      }, 100);
     } catch (err) {
       toast.error('Failed to load questions');
     }
@@ -341,7 +415,7 @@ export default function FocusTest() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const answeredCount = questions.filter(q => (answers[q._id] || []).length > 0).length;
+  const answeredCount = questions.filter(q => (answers[q.id || q._id] || []).length > 0).length;
   const unansweredCount = questions.length - answeredCount;
   const timerWarning = !isStudy && timeLeft < 300 && timeLeft > 0;
   const timerCritical = !isStudy && timeLeft < 60 && timeLeft > 0;
@@ -350,6 +424,14 @@ export default function FocusTest() {
   if (phase === 'config') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+        <ConfirmModal
+          open={!!deleteExamId}
+          onCancel={() => setDeleteExamId(null)}
+          onConfirm={confirmDeleteExam}
+          title="Delete this document?"
+          message="This will permanently delete this document and all its questions. This action cannot be undone."
+          confirmText="Delete Document"
+        />
         {/* Glass Header Banner */}
         <header className="glass-panel" style={{ padding: 'var(--space-lg)', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'relative', zIndex: 1 }}>
@@ -361,40 +443,15 @@ export default function FocusTest() {
             </p>
           </div>
         </header>
-
         {/* Main Bento Grid */}
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
           gap: 'var(--space-md)' 
         }}>
-          {/* Main Config Column */}
+          {/* Left Column: Configuration & Parameters */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
             <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-md)' }}>
-                <BrainCircuit size={18} />
-                <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Document Source</h2>
-              </div>
-              <div>
-                <select 
-                  className="select" 
-                  value={selectedExam} 
-                  onChange={(e) => setSelectedExam(e.target.value)}
-                  style={{ width: '100%', fontSize: '0.95rem' }}
-                >
-                  <option value="all">Global Pool (All Questions)</option>
-                  {exams.map(ex => (
-                    <option key={ex._id || ex.id} value={ex._id || ex.id}>{ex.title}</option>
-                  ))}
-                </select>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4', marginTop: '1rem' }}>
-                  Select a specific document to study, or test from your entire question pool. 
-                  Documents are automatically created when you upload a PDF or JSON.
-                </p>
-              </div>
-            </section>
-
-            <section className="glass-panel" style={{ padding: 'var(--space-md)', flex: 1, display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-md)' }}>
                 <Flag size={18} />
                 <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Session Mode</h2>
@@ -411,10 +468,7 @@ export default function FocusTest() {
                 {mode === 'simulation' ? 'Simulation mode runs a timed test mimicking a real exam environment.' : 'Study (SRS) mode uses Spaced Repetition System to help you memorize effectively, repeating harder questions more frequently.'}
               </p>
             </section>
-          </div>
 
-          {/* Action Column */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
             <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-md)' }}>
                 <Clock size={18} />
@@ -435,19 +489,60 @@ export default function FocusTest() {
                 <Play size={18} style={{ marginRight: '0.5rem' }} /> Begin {isStudy ? 'Study Session' : 'Assessment'}
               </button>
             </section>
+          </div>
 
-            <section className="glass-panel" style={{ padding: 'var(--space-md)', background: 'rgba(255,255,255,0.02)', borderStyle: 'dashed', flex: 1, display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-sm)' }}>
-                <Upload size={18} />
-                <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Upload Material</h2>
+          {/* Right Column: Documents */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+            <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-md)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <BrainCircuit size={18} />
+                  <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Document Source</h2>
+                </div>
+                <label className="btn btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', cursor: 'pointer', margin: 0 }}>
+                  <Upload size={14} style={{ marginRight: '0.4rem' }} /> Upload
+                  <input type="file" accept=".json,.pdf,.docx,.txt" onChange={handleUploadQuestions} style={{ display: 'none' }} />
+                </label>
               </div>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5', marginBottom: '1.25rem' }}>
-                Upload a PDF, Word document, or JSON file. Our AI will extract multiple-choice questions and save them to a new Document group.
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <select 
+                  className="select" 
+                  value={selectedExam} 
+                  onChange={(e) => setSelectedExam(e.target.value)}
+                  style={{ width: '100%', fontSize: '0.95rem' }}
+                >
+                  <option value="all">Global Pool (All Questions)</option>
+                  {exams.map(ex => (
+                    <option key={ex._id || ex.id} value={ex._id || ex.id}>{ex.title}</option>
+                  ))}
+                </select>
+              </div>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4', marginTop: '1rem' }}>
+                Select a document to test against, or test from your entire pool.
               </p>
-              <label className="btn" style={{ display: 'flex', justifyContent: 'center', width: '100%', padding: '1rem', cursor: 'pointer', background: 'var(--bg-surface)', border: '1px solid var(--border-light)', color: 'var(--text-primary)' }}>
-                <Upload size={16} style={{ marginRight: '0.5rem' }} /> Select File...
-                <input type="file" accept=".json,.pdf,.docx,.txt" onChange={handleUploadQuestions} style={{ display: 'none' }} />
-              </label>
+            </section>
+
+            <section className="glass-panel" style={{ padding: 'var(--space-md)', flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-sm)' }}>
+                <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Document History</h2>
+              </div>
+              <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {exams.length === 0 ? (
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '2rem' }}>No documents uploaded yet.</p>
+                ) : (
+                  exams.map(ex => (
+                    <div key={ex._id || ex.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                        <span style={{ fontSize: '0.9rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ex.title}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(ex.createdAt || Date.now()).toLocaleDateString()}</span>
+                      </div>
+                      <button onClick={() => handleDeleteExam(ex._id || ex.id)} className="icon-btn" title="Delete document" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </section>
           </div>
         </div>
@@ -484,7 +579,13 @@ export default function FocusTest() {
           )}
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button className="btn btn-secondary" onClick={() => setPhase('testing')} style={{ flex: 1 }}>Go Back</button>
+            <button className="btn btn-secondary" onClick={() => {
+              setPhase('testing');
+              setTimeout(() => {
+                const testElem = document.getElementById('test-container');
+                if (testElem && testElem.requestFullscreen) testElem.requestFullscreen().catch(() => {});
+              }, 100);
+            }} style={{ flex: 1 }}>Go Back</button>
             <button className="btn btn-primary" onClick={handleSubmit} style={{ flex: 1 }} disabled={submitting}>
               {submitting ? <Loader2 size={18} className="auth-spinner" /> : 'Submit Exam'}
             </button>
@@ -496,13 +597,14 @@ export default function FocusTest() {
 
   // ─── TESTING PHASE ───
   if (!currentQ) return null;
-  const questionAnswer = answers[currentQ._id] || [];
-  const isChecked = checked.has(currentQ._id);
-  const checkResult = checkedResults[currentQ._id];
+  const qId = currentQ.id || currentQ._id;
+  const questionAnswer = answers[qId] || [];
+  const isChecked = checked.has(qId);
+  const checkResult = checkedResults[qId];
   const isFlagged = flagged.has(currentIdx);
 
   return (
-    <div style={{ display: 'flex', height: '100%', gap: '1.5rem', animation: 'fadeIn 0.3s ease-out' }} className="test-layout">
+    <div id="test-container" style={{ display: 'flex', height: '100%', gap: '1.5rem', animation: 'fadeIn 0.3s ease-out', backgroundColor: 'var(--bg-primary)', padding: '1.5rem', overflow: 'auto' }} className="test-layout">
       {/* Left Panel */}
       <div style={{ width: '260px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }} className="test-sidebar">
         {/* Timer */}
@@ -534,7 +636,7 @@ export default function FocusTest() {
           <h3 style={{ fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Navigator</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.4rem' }}>
             {questions.map((q, i) => {
-              const isAnswered = (answers[q._id] || []).length > 0;
+              const isAnswered = (answers[q.id || q._id] || []).length > 0;
               const isCurrent = i === currentIdx;
               const isFlag = flagged.has(i);
 

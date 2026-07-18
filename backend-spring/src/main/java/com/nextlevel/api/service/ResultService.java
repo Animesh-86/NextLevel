@@ -83,7 +83,7 @@ public class ResultService {
             }
         }
         
-        double scorePercent = totalCount == 0 ? 0.0 : ((double) correctCount / totalCount) * 100.0;
+        double scorePercent = totalCount == 0 ? 0.0 : Math.round(((double) correctCount / totalCount) * 10000.0) / 100.0;
         boolean passed = scorePercent >= exam.getPassPercentage();
         
         Result result = new Result();
@@ -115,6 +115,10 @@ public class ResultService {
     public Optional<Exam> getExam(String examId) {
         if (examId == null) return Optional.empty();
         return examRepository.findById(examId);
+    }
+
+    public void deleteResult(String id) {
+        resultRepository.deleteById(id);
     }
 
     private void updateUserStats(String userId, int totalCount, Integer timeTaken) {

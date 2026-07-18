@@ -24,7 +24,7 @@ const QUICK_ACTIONS = [
   { href: '/test', label: 'Practice Exams', icon: Play, desc: 'Timed study testing' },
   { href: '/captures', label: 'Capture Hub', icon: Inbox, desc: 'Save an idea fast' },
   { href: '/vault', label: 'File Vault', icon: FolderOpen, desc: 'Upload & organize docs' },
-  { href: '/planner', label: 'Study Planner', icon: CalendarDays, desc: 'Plan your week' },
+  { href: '/planner', label: 'Planner', icon: CalendarDays, desc: 'Plan your week' },
   { href: '/journey', label: 'Learning Journey', icon: Map, desc: 'Track visual path' },
 ];
 

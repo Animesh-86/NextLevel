@@ -46,19 +46,21 @@ export default function KnowledgeGraphPage() {
     useEffect(() => {
         if (typeof window === "undefined" || !containerRef.current) return;
 
-        const updateDimensions = () => {
-            if (containerRef.current) {
+        const resizeObserver = new ResizeObserver((entries) => {
+            if (entries && entries.length > 0) {
                 setDimensions({
-                    width: containerRef.current.clientWidth,
-                    height: containerRef.current.clientHeight
+                    width: entries[0].contentRect.width,
+                    height: entries[0].contentRect.height
                 });
             }
-        };
-
-        const resizeObserver = new ResizeObserver(() => updateDimensions());
+        });
         resizeObserver.observe(containerRef.current);
         
-        setTimeout(updateDimensions, 50);
+        // Initial dimension set
+        setDimensions({
+            width: containerRef.current.clientWidth,
+            height: containerRef.current.clientHeight
+        });
 
         return () => resizeObserver.disconnect();
     }, []);
@@ -67,12 +69,6 @@ export default function KnowledgeGraphPage() {
         if (fgRef.current && graphData.nodes.length > 0) {
             // Prevent nodes from flying infinitely far apart
             fgRef.current.d3Force('charge').strength(-120).distanceMax(300);
-            
-            setTimeout(() => {
-                if (fgRef.current) {
-                    fgRef.current.zoomToFit(800, 150);
-                }
-            }, 1000); // give it a second to settle
         }
     }, [graphData.nodes.length]);
 
@@ -365,6 +361,12 @@ export default function KnowledgeGraphPage() {
                 linkResolution={6}
                 onNodeClick={handleNodeClick}
                 cooldownTicks={100}
+                onEngineStop={() => {
+                    if (fgRef.current && !fgRef.current.initialZoomDone) {
+                        fgRef.current.zoomToFit(400, 50);
+                        fgRef.current.initialZoomDone = true;
+                    }
+                }}
                 backgroundColor="#0a0a0a"
                 showNavInfo={false}
             />

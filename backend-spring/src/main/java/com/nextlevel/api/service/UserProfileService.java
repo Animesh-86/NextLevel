@@ -40,14 +40,19 @@ public class UserProfileService {
         long passedResults = resultRepository.countByUserIdAndPassed(userId, true);
         long perfectScores = resultRepository.countByUserIdAndScorePercent(userId, 100.0);
 
+        // Compute questionsAnswered live from actual results
+        int liveQuestionsAnswered = resultRepository.findByUserId(userId).stream()
+                .mapToInt(r -> r.getTotalCount() != null ? r.getTotalCount() : 0)
+                .sum();
+
         List<Map<String, Object>> achievements = new ArrayList<>();
         if (totalResults >= 1) achievements.add(achievement("first_exam", "First Exam", "Completed your first exam"));
         if (safeInt(user.getStreak()) >= 7) achievements.add(achievement("streak_7", "7-Day Streak", "Practiced 7 days in a row"));
         if (perfectScores >= 1) achievements.add(achievement("perfect", "Perfect Score", "Scored 100% on an exam"));
-        if (safeInt(user.getQuestionsAnswered()) >= 100) achievements.add(achievement("100_questions", "Century", "Answered 100 questions"));
+        if (liveQuestionsAnswered >= 100) achievements.add(achievement("100_questions", "Century", "Answered 100 questions"));
         if (passedResults >= 10) achievements.add(achievement("10_passed", "Champion", "Passed 10 exams"));
         if (safeInt(user.getStreak()) >= 30) achievements.add(achievement("streak_30", "Monthly Warrior", "30-day streak"));
-        if (safeInt(user.getQuestionsAnswered()) >= 500) achievements.add(achievement("500_questions", "Scholar", "Answered 500 questions"));
+        if (liveQuestionsAnswered >= 500) achievements.add(achievement("500_questions", "Scholar", "Answered 500 questions"));
         if (safeInt(user.getTotalStudyMinutes()) >= 600) achievements.add(achievement("10_hours", "Dedicated", "10+ hours of study"));
 
         Map<String, Object> data = new HashMap<>();
@@ -58,7 +63,7 @@ public class UserProfileService {
         data.put("streak", safeInt(user.getStreak()));
         data.put("lastActiveDate", user.getLastActiveDate());
         data.put("totalStudyMinutes", safeInt(user.getTotalStudyMinutes()));
-        data.put("questionsAnswered", safeInt(user.getQuestionsAnswered()));
+        data.put("questionsAnswered", liveQuestionsAnswered);
         data.put("createdAt", user.getCreatedAt());
         data.put("updatedAt", user.getUpdatedAt());
         data.put("totalExams", totalResults);

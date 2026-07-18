@@ -35,7 +35,7 @@ export default function ResultsPage() {
   const total = results.length;
   const passed = results.filter(r => r.passed).length;
   const avgScore = total > 0 ? Math.round(results.reduce((s, r) => s + r.scorePercent, 0) / total) : 0;
-  const bestScore = total > 0 ? Math.max(...results.map(r => r.scorePercent)) : 0;
+  const bestScore = total > 0 ? Math.round(Math.max(...results.map(r => r.scorePercent))) : 0;
 
   return (
     <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
@@ -84,8 +84,8 @@ export default function ResultsPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {results.map((result) => (
               <Link
-                key={result._id}
-                href={`/results/${result._id}`}
+                key={result.id || result._id}
+                href={`/results/${result.id || result._id}`}
                 className="card result-card"
                 style={{
                   display: 'flex',
@@ -110,7 +110,7 @@ export default function ResultsPage() {
                   </div>
                   <div>
                     <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>
-                      {result.examId?.title || 'Exam'}
+                      {result.exam?.title || 'Exam'}
                     </div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', gap: '1rem' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -123,7 +123,7 @@ export default function ResultsPage() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <span style={{ fontSize: '1.5rem', fontWeight: 800 }}>{result.scorePercent}%</span>
+                  <span style={{ fontSize: '1.5rem', fontWeight: 800 }}>{Math.round(result.scorePercent)}%</span>
                   <span className={`badge ${result.passed ? 'badge-stark' : ''}`}>
                     {result.passed ? 'PASS' : 'FAIL'}
                   </span>

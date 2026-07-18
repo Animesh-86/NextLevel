@@ -299,51 +299,71 @@ export async function generateEmbeddings(text) {
  * Generate questions from raw text using AI
  */
 export async function generateQuestionsFromText(text) {
-  const ai = getGenAI();
-  const groq = getGroq();
+  const parts = text.split(/---ANSWERS---/i);
+  if (parts.length < 2) {
+    throw new Error('Specific format required: The document must include an "---ANSWERS---" section at the very end.');
+  }
+  
+  const mainText = parts[0];
+  const answersText = parts[1];
+  
+  // Parse answers
+  const answerDict = {};
+  const ansRegex = /^(\d+)\s+([A-Z](?:,[A-Z])*)/gm;
+  let m;
+  while ((m = ansRegex.exec(answersText)) !== null) {
+    answerDict[m[1]] = m[2].split(',').map(s => s.trim());
+  }
 
-  const prompt = `Extract exam/study questions from the following text and return a JSON array of question objects. 
-Each question object MUST have these EXACT fields:
-- "scenario": The question text (string)
-- "options": An array of exactly 4 strings (the multiple choice options)
-- "answer": An array of integers (e.g. [0] if the first option is correct). 0-indexed.
-- "type": Always "MCQ"
-- "explanation": A brief explanation of the correct answer (string)
-
-Generate as many relevant questions as you can find in the text (up to 20).
-
-Text to extract from:
-"""
-${text.slice(0, 15000)}
-"""
-
-Return ONLY a valid JSON array, no markdown formatting.`;
-
-  // 1. Try Groq (Llama 3) First for speed
-  if (groq) {
-    try {
-      const completion = await groq.chat.completions.create({
-        messages: [{ role: "user", content: prompt }],
-        model: "llama-3.1-8b-instant",
-        response_format: { type: "json_object" }
-      });
-      const response = completion.choices[0]?.message?.content;
-      const parsed = JSON.parse(response || '{}');
-      return Array.isArray(parsed) ? parsed : (parsed.questions || []);
-    } catch (err) {
-      console.error('Groq question generation failed, falling back to Gemini:', err.message);
+  // Parse questions
+  const qRegex = /(?:^|\n)(\d+)\.\s+([\s\S]*?)(?=(?:\n\d+\.\s+)|$)/g;
+  const questions = [];
+  
+  while ((m = qRegex.exec(mainText)) !== null) {
+    const qNum = m[1];
+    let qContent = m[2].trim();
+    
+    // Split into question text and options
+    const optRegex = /\n([A-Z])\)\s+([\s\S]*?)(?=\n[A-Z]\)\s+|$)/g;
+    let options = [];
+    let qText = qContent;
+    
+    const firstOptMatch = /\n[A-Z]\)\s+/.exec('\n' + qContent);
+    if (firstOptMatch) {
+        qText = ('\n' + qContent).substring(0, firstOptMatch.index).trim();
+        
+        let optM;
+        const optsText = ('\n' + qContent).substring(firstOptMatch.index);
+        while ((optM = optRegex.exec(optsText)) !== null) {
+            options.push({ letter: optM[1], text: optM[2].trim() });
+        }
     }
+    
+    if (options.length === 0) continue; 
+    
+    const ansLetters = answerDict[qNum];
+    if (!ansLetters) continue; 
+    
+    const answerIndices = [];
+    ansLetters.forEach(letter => {
+        const idx = options.findIndex(o => o.letter === letter);
+        if (idx !== -1) answerIndices.push(idx);
+    });
+    
+    if (answerIndices.length === 0) continue;
+
+    questions.push({
+      scenario: qText,
+      options: options.map(o => o.text),
+      answer: answerIndices,
+      type: "MCQ",
+      explanation: "Parsed from document."
+    });
+  }
+  
+  if (questions.length === 0) {
+    throw new Error('Specific format required: No valid formatted questions found (e.g. "1. Question text", "A) Option").');
   }
 
-  // 2. Fallback to Gemini
-  if (!ai) {
-    throw new Error('No AI provider available. Set GEMINI_API_KEY or GROQ_API_KEY.');
-  }
-
-  const model = ai.getGenerativeModel({ model: 'gemini-2.0-flash' });
-  const result = await model.generateContent(prompt);
-  const response = result.response.text();
-  const cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-  const parsed = JSON.parse(cleaned);
-  return Array.isArray(parsed) ? parsed : (parsed.questions || []);
+  return questions;
 }

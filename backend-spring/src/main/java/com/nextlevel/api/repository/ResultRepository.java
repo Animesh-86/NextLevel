@@ -18,4 +18,5 @@ public interface ResultRepository extends MongoRepository<Result, String> {
     long countByUserId(String userId);
     long countByUserIdAndPassed(String userId, Boolean passed);
     long countByUserIdAndScorePercent(String userId, Double scorePercent);
+    java.util.List<Result> findByUserId(String userId);
 }

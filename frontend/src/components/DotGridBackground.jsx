@@ -51,13 +51,9 @@ export default function DotGridBackground({
   const canvasRef = useRef(null);
   const cfgRef = useRef({ dotColor, dotSize, dotSpacing, orbitSpeed, impactRadius, scaleOnHover, enableRevolve });
   
-  cfgRef.current.dotColor = dotColor;
-  cfgRef.current.dotSize = dotSize;
-  cfgRef.current.dotSpacing = dotSpacing;
-  cfgRef.current.orbitSpeed = orbitSpeed;
-  cfgRef.current.impactRadius = impactRadius;
-  cfgRef.current.scaleOnHover = scaleOnHover;
-  cfgRef.current.enableRevolve = enableRevolve;
+  useEffect(() => {
+    cfgRef.current = { dotColor, dotSize, dotSpacing, orbitSpeed, impactRadius, scaleOnHover, enableRevolve };
+  }, [dotColor, dotSize, dotSpacing, orbitSpeed, impactRadius, scaleOnHover, enableRevolve]);
   
   const dotsRef = useRef([]);
   const spacingSnapRef = useRef(dotSpacing);

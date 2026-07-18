@@ -228,7 +228,7 @@ export default function ProfilePage() {
         <div style={{ width: '1px', height: '14px', background: 'var(--border-strong)' }}></div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <HelpCircle size={14} style={{ color: 'var(--text-muted)' }} />
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Questions: <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{profile.questionsAnswered || 0}</strong></span>
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Questions Answered: <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{profile.questionsAnswered || 0}</strong></span>
         </div>
         <div style={{ width: '1px', height: '14px', background: 'var(--border-strong)' }}></div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -383,32 +383,70 @@ export default function ProfilePage() {
               <Award size={18} />
               <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Achievements</h2>
             </div>
-            {profile.achievements?.length > 0 ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 'var(--space-sm)' }}>
-                {profile.achievements.map((a) => (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 'var(--space-sm)' }}>
+              {[
+                { id: 'first_exam', title: 'First Exam', description: 'Completed your first exam' },
+                { id: 'streak_7', title: '7-Day Streak', description: 'Practiced 7 days in a row' },
+                { id: 'perfect', title: 'Perfect Score', description: 'Scored 100% on an exam' },
+                { id: '100_questions', title: 'Century', description: 'Answered 100 questions' },
+                { id: '10_passed', title: 'Champion', description: 'Passed 10 exams' },
+                { id: 'streak_30', title: 'Monthly Warrior', description: '30-day streak' },
+                { id: '500_questions', title: 'Scholar', description: 'Answered 500 questions' },
+                { id: '10_hours', title: 'Dedicated', description: '10+ hours of study' }
+              ].map((a) => {
+                const isUnlocked = profile.achievements?.some(ua => ua.id === a.id);
+                return (
                   <div key={a.id} style={{
                     padding: 'var(--space-sm)',
                     borderRadius: 'var(--radius-md)',
-                    border: '1px solid var(--border-light)',
-                    background: 'var(--bg-surface)',
+                    border: `1px solid ${isUnlocked ? 'var(--brand)' : 'var(--border-light)'}`,
+                    background: isUnlocked ? 'rgba(var(--brand-rgb), 0.05)' : 'var(--bg-surface)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '12px'
+                    gap: '12px',
+                    opacity: isUnlocked ? 1 : 0.4
                   }}>
-                    <div style={{ fontSize: '1.5rem', background: 'rgba(255,255,255,0.05)', padding: '8px', borderRadius: '50%', color: 'var(--brand)' }}>{a.icon ? <span>{a.icon}</span> : <Award size={24} />}</div>
+                    <div style={{ 
+                      fontSize: '1.5rem', 
+                      background: isUnlocked ? 'var(--brand)' : 'rgba(255,255,255,0.05)', 
+                      padding: '8px', 
+                      borderRadius: '50%', 
+                      color: isUnlocked ? 'var(--bg-primary)' : 'var(--text-muted)' 
+                    }}>
+                      <Award size={24} />
+                    </div>
                     <div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{a.title}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{a.description}</div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 600, color: isUnlocked ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                        {a.title}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        {a.description}
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, padding: 'var(--space-lg) 0', color: 'var(--text-muted)' }}>
-                <Award size={24} style={{ marginBottom: '8px' }} />
-                <p style={{ fontSize: '0.9rem' }}>No achievements yet. Keep practicing!</p>
-              </div>
-            )}
+                );
+              })}
+              {/* Also show any dynamically generated achievements (e.g. level ups) that aren't in the static list */}
+              {profile.achievements?.filter(ua => !['first_exam', 'streak_7', 'perfect', '100_questions', '10_passed', 'streak_30', '500_questions', '10_hours'].includes(ua.id)).map(a => (
+                <div key={a.id} style={{
+                    padding: 'var(--space-sm)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--brand)',
+                    background: 'rgba(var(--brand-rgb), 0.05)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                  }}>
+                    <div style={{ fontSize: '1.5rem', background: 'var(--brand)', padding: '8px', borderRadius: '50%', color: 'var(--bg-primary)' }}>
+                      {a.icon ? <span>{a.icon}</span> : <Award size={24} />}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{a.title || a.label}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{a.description || a.desc}</div>
+                    </div>
+                  </div>
+              ))}
+            </div>
           </section>
         </div>
       </div>
