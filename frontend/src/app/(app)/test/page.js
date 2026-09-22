@@ -322,7 +322,11 @@ export default function FocusTest() {
       if (file.type === 'application/json' || file.name.endsWith('.json')) {
         const text = await file.text();
         const json = JSON.parse(text);
-        questionsArray = Array.isArray(json) ? json : [json];
+        const rawArray = Array.isArray(json) ? json : [json];
+        questionsArray = rawArray.map(q => ({
+          ...q,
+          answer: Array.isArray(q.answer) ? q.answer.map(a => Math.max(0, a - 1)) : [0]
+        }));
       } else {
         const formData = new FormData();
         formData.append('file', file);
@@ -365,12 +369,19 @@ export default function FocusTest() {
     // Fast path: if the user pasted raw JSON, parse it directly!
     try {
       const parsedJson = JSON.parse(pasteText);
-      const questionsArray = Array.isArray(parsedJson) ? parsedJson : [parsedJson];
+      const rawArray = Array.isArray(parsedJson) ? parsedJson : [parsedJson];
       
       // Basic validation to ensure it looks like questions
-      if (questionsArray[0] && questionsArray[0].scenario) {
+      if (rawArray[0] && rawArray[0].scenario) {
         setPasteProcessing(true);
         const toastId = toast.loading('Saving pasted JSON questions...');
+        
+        // Convert user-friendly 1-based answers to 0-based backend format
+        const questionsArray = rawArray.map(q => ({
+          ...q,
+          answer: Array.isArray(q.answer) ? q.answer.map(a => Math.max(0, a - 1)) : [0]
+        }));
+
         const title = `Pasted JSON ${new Date().toLocaleDateString()}`;
         await saveQuestionsToBackend(questionsArray, title, toastId);
         setShowPasteModal(false);
@@ -629,7 +640,7 @@ D) Mars
                       <pre style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'monospace', background: 'var(--bg-primary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', marginTop: '0.5rem' }}>{`[{
   "scenario": "What is 2+2?",
   "options": ["3", "4", "5", "6"],
-  "answer": [1],
+  "answer": [2], // 1-based (2 means the second option is correct)
   "type": "MCQ"
 }]`}</pre>
                     </div>
