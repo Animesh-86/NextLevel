@@ -8,7 +8,7 @@ const withSerwist = withSerwistInit({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ['mongoose', 'bcryptjs', 'pdf-parse'],
+  serverExternalPackages: ['mongoose', 'bcryptjs', 'pdf-parse', 'mammoth'],
   turbopack: {},
 
   async headers() {
