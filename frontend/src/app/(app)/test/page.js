@@ -213,11 +213,12 @@ export default function FocusTest() {
         const resultId = data.data?.id || data.data?._id || data?.id || data?._id;
         router.push(`/results/${resultId}`);
       } else {
-        toast.error('Failed to save result');
+        toast.error(data.message || data.error || 'Failed to save result');
         setSubmitting(false);
       }
     } catch (err) {
-      toast.error('Failed to submit');
+      console.error('Submit error:', err);
+      toast.error(err.message || 'Failed to submit');
       setSubmitting(false);
     }
   }, [submitting, testStartTime, selectedExam, answers, router, toast]);
