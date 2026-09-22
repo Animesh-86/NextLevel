@@ -55,11 +55,18 @@ public class ResultService {
     public Result createResult(String userId, ExamGradingRequest request) {
         log.info("Creating graded result for user: {}, exam: {}", userId, request.getExamId());
         
-        Exam exam = examRepository.findById(request.getExamId()).orElseThrow(() -> new IllegalArgumentException("Exam not found"));
-        if (!userId.equals(exam.getUserId())) {
-            throw new IllegalArgumentException("Unauthorized: You do not own this exam");
+        Exam exam = null;
+        List<Question> questions;
+        
+        if ("all".equals(request.getExamId())) {
+            questions = questionRepository.findByUserId(userId);
+        } else {
+            exam = examRepository.findById(request.getExamId()).orElseThrow(() -> new IllegalArgumentException("Exam not found"));
+            if (!userId.equals(exam.getUserId())) {
+                throw new IllegalArgumentException("Unauthorized: You do not own this exam");
+            }
+            questions = questionRepository.findByExamIdAndUserId(request.getExamId(), userId);
         }
-        List<Question> questions = questionRepository.findByExamIdAndUserId(request.getExamId(), userId);
         
         int correctCount = 0;
         int wrongCount = 0;
@@ -73,9 +80,8 @@ public class ResultService {
             if (given == null || given.isEmpty()) {
                 skippedCount++;
             } else {
-                List<Integer> expected = q.getAnswer() == null ? List.of() : q.getAnswer();
-                boolean isCorrect = given.size() == expected.size() && given.containsAll(expected);
-                if (isCorrect) {
+                List<Integer> expected = q.getAnswer();
+                if (given.size() == expected.size() && expected.containsAll(given)) {
                     correctCount++;
                 } else {
                     wrongCount++;
@@ -83,8 +89,9 @@ public class ResultService {
             }
         }
         
-        double scorePercent = totalCount == 0 ? 0.0 : Math.round(((double) correctCount / totalCount) * 10000.0) / 100.0;
-        boolean passed = scorePercent >= exam.getPassPercentage();
+        double scorePercent = totalCount > 0 ? ((double) correctCount / totalCount) * 100.0 : 0.0;
+        int passThreshold = exam != null && exam.getPassPercentage() != null ? exam.getPassPercentage() : 70;
+        boolean passed = scorePercent >= passThreshold;
         
         Result result = new Result();
         result.setUserId(userId);
