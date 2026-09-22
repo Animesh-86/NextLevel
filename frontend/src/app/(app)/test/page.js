@@ -373,7 +373,7 @@ export default function FocusTest() {
         setPasteProcessing(true);
         const toastId = toast.loading('Saving pasted JSON questions...');
         
-        const title = `Pasted JSON ${new Date().toLocaleDateString()}`;
+        const title = `Pasted JSON ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
         await saveQuestionsToBackend(rawArray, title, toastId);
         setShowPasteModal(false);
         setPasteText('');
