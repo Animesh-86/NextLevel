@@ -13,6 +13,7 @@ public interface QuestionRepository extends MongoRepository<Question, String> {
     Page<Question> findByExamId(String examId, Pageable pageable);
     List<Question> findByExamId(String examId);
     Page<Question> findByUserId(String userId, Pageable pageable);
+    List<Question> findByUserId(String userId);
     Page<Question> findByExamIdAndUserId(String examId, String userId, Pageable pageable);
     long countByExamId(String examId);
     void deleteByExamId(String examId);
