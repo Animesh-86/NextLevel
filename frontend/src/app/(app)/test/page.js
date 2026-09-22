@@ -322,11 +322,7 @@ export default function FocusTest() {
       if (file.type === 'application/json' || file.name.endsWith('.json')) {
         const text = await file.text();
         const json = JSON.parse(text);
-        const rawArray = Array.isArray(json) ? json : [json];
-        questionsArray = rawArray.map(q => ({
-          ...q,
-          answer: Array.isArray(q.answer) ? q.answer.map(a => Math.max(0, a - 1)) : [0]
-        }));
+        questionsArray = Array.isArray(json) ? json : [json];
       } else {
         const formData = new FormData();
         formData.append('file', file);
@@ -376,14 +372,8 @@ export default function FocusTest() {
         setPasteProcessing(true);
         const toastId = toast.loading('Saving pasted JSON questions...');
         
-        // Convert user-friendly 1-based answers to 0-based backend format
-        const questionsArray = rawArray.map(q => ({
-          ...q,
-          answer: Array.isArray(q.answer) ? q.answer.map(a => Math.max(0, a - 1)) : [0]
-        }));
-
         const title = `Pasted JSON ${new Date().toLocaleDateString()}`;
-        await saveQuestionsToBackend(questionsArray, title, toastId);
+        await saveQuestionsToBackend(rawArray, title, toastId);
         setShowPasteModal(false);
         setPasteText('');
         setPasteProcessing(false);
@@ -640,7 +630,7 @@ D) Mars
                       <pre style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'monospace', background: 'var(--bg-primary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', marginTop: '0.5rem' }}>{`[{
   "scenario": "What is 2+2?",
   "options": ["3", "4", "5", "6"],
-  "answer": [2], // 1-based (2 means the second option is correct)
+  "answer": [1],
   "type": "MCQ"
 }]`}</pre>
                     </div>
