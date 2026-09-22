@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/components/Toast';
 import { apiFetch } from '@/lib/api';
-import { BrainCircuit, Check, X, Clock, Play, Flag, AlertTriangle, ChevronLeft, ChevronRight, Loader2, Upload, Trash2 } from 'lucide-react';
+import { BrainCircuit, Check, X, Clock, Play, Flag, AlertTriangle, ChevronLeft, ChevronRight, Loader2, Upload, Trash2, ClipboardPaste, Info, ChevronDown, FileText, Download } from 'lucide-react';
 import ConfirmModal from '@/components/ConfirmModal';
 
 export default function FocusTest() {
@@ -20,6 +20,10 @@ export default function FocusTest() {
   const [timeMinutes, setTimeMinutes] = useState(60);
   const [configLoading, setConfigLoading] = useState(true);
   const [deleteExamId, setDeleteExamId] = useState(null);
+  const [showPasteModal, setShowPasteModal] = useState(false);
+  const [pasteText, setPasteText] = useState('');
+  const [pasteProcessing, setPasteProcessing] = useState(false);
+  const [showFormatGuide, setShowFormatGuide] = useState(false);
 
   // Test state
   const [questions, setQuestions] = useState([]);
@@ -254,11 +258,55 @@ export default function FocusTest() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [phase, currentQ, currentIdx, questions, answers, handleNext, handlePrev, toggleFlag, toggleOption]);
 
+  // Shared function to save parsed questions to backend
+  const saveQuestionsToBackend = async (questionsArray, title, toastId) => {
+    if (!questionsArray || questionsArray.length === 0) {
+      throw new Error('No questions could be extracted or generated.');
+    }
+
+    toast.loading(`Creating document group...`, { id: toastId });
+    
+    const examRes = await apiFetch('/api/exams', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+         title,
+         description: `Questions from ${title}`,
+         timeLimit: 60,
+         isPublic: false
+      })
+    });
+    const examData = await examRes.json();
+    
+    if (!examData.success) {
+      throw new Error(examData.error || 'Failed to create document group');
+    }
+    const newExam = examData.data;
+
+    const questionsWithExam = questionsArray.map(q => ({ ...q, examId: newExam._id || newExam.id }));
+
+    toast.loading(`Saving ${questionsWithExam.length} questions...`, { id: toastId });
+
+    const res = await apiFetch('/api/questions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(questionsWithExam)
+    });
+    const data = await res.json();
+    
+    if (data.success) {
+      toast.success(`Successfully added ${questionsWithExam.length} questions!`, { id: toastId });
+      setExams(prev => [...prev, newExam]);
+      setSelectedExam(newExam._id || newExam.id);
+    } else {
+      throw new Error(data.error || 'Failed to save questions');
+    }
+  };
+
   const handleUploadQuestions = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     
-    // UI state for loading
     const toastId = toast.loading(`Processing ${file.name}...`);
     e.target.value = '';
     
@@ -272,12 +320,10 @@ export default function FocusTest() {
       let questionsArray = [];
 
       if (file.type === 'application/json' || file.name.endsWith('.json')) {
-        // Handle JSON directly
         const text = await file.text();
         const json = JSON.parse(text);
         questionsArray = Array.isArray(json) ? json : [json];
       } else {
-        // It's a PDF, DOCX, or TXT -> Extract text
         const formData = new FormData();
         formData.append('file', file);
 
@@ -291,9 +337,8 @@ export default function FocusTest() {
           throw new Error(extractData.error || 'Failed to extract text from document');
         }
 
-        toast.loading(`Analyzing text with AI to generate questions...`, { id: toastId });
+        toast.loading(`Analyzing questions with AI...`, { id: toastId });
 
-        // Generate questions via AI
         const genRes = await fetch('/api/generate-questions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -308,53 +353,37 @@ export default function FocusTest() {
         questionsArray = genData.data;
       }
 
-      if (!questionsArray || questionsArray.length === 0) {
-        throw new Error('No questions could be extracted or generated from this file.');
-      }
-
-      toast.loading(`Creating document group...`, { id: toastId });
-      
-      // Create Exam group for this document
-      const examRes = await apiFetch('/api/exams', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-           title: file.name.replace(/\.[^/.]+$/, ""),
-           description: `Questions extracted from ${file.name}`,
-           timeLimit: 60,
-           isPublic: false
-        })
-      });
-      const examData = await examRes.json();
-      
-      if (!examData.success) {
-        throw new Error(examData.error || 'Failed to create document group');
-      }
-      const newExam = examData.data;
-
-      // Assign examId to questions
-      const questionsWithExam = questionsArray.map(q => ({ ...q, examId: newExam._id || newExam.id }));
-
-      toast.loading(`Saving ${questionsWithExam.length} questions...`, { id: toastId });
-
-      // Save to backend
-      const res = await apiFetch('/api/questions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(questionsWithExam)
-      });
-      const data = await res.json();
-      
-      if (data.success) {
-        toast.success(`Successfully added ${questionsWithExam.length} questions from ${file.name}!`, { id: toastId });
-        setExams(prev => [...prev, newExam]);
-        setSelectedExam(newExam._id || newExam.id);
-      } else {
-        throw new Error(data.error || 'Failed to save questions');
-      }
-
+      await saveQuestionsToBackend(questionsArray, docTitle, toastId);
     } catch (err) {
       toast.error(err.message || 'Upload failed', { id: toastId });
+    }
+  };
+
+  const handlePasteSubmit = async () => {
+    if (!pasteText.trim()) return;
+    setPasteProcessing(true);
+    const toastId = toast.loading('Analyzing pasted questions with AI...');
+
+    try {
+      const genRes = await fetch('/api/generate-questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: pasteText })
+      });
+      const genData = await genRes.json();
+
+      if (!genData.success) {
+        throw new Error(genData.error || 'Failed to parse questions');
+      }
+
+      const title = `Pasted ${new Date().toLocaleDateString()}`;
+      await saveQuestionsToBackend(genData.data, title, toastId);
+      setShowPasteModal(false);
+      setPasteText('');
+    } catch (err) {
+      toast.error(err.message || 'Failed to process pasted questions', { id: toastId });
+    } finally {
+      setPasteProcessing(false);
     }
   };
 
@@ -499,10 +528,15 @@ export default function FocusTest() {
                   <BrainCircuit size={18} />
                   <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Document Source</h2>
                 </div>
-                <label className="btn btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', cursor: 'pointer', margin: 0 }}>
-                  <Upload size={14} style={{ marginRight: '0.4rem' }} /> Upload
-                  <input type="file" accept=".json,.pdf,.docx,.txt" onChange={handleUploadQuestions} style={{ display: 'none' }} />
-                </label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button onClick={() => setShowPasteModal(true)} className="btn btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
+                    <ClipboardPaste size={14} style={{ marginRight: '0.4rem' }} /> Paste
+                  </button>
+                  <label className="btn btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', cursor: 'pointer', margin: 0 }}>
+                    <Upload size={14} style={{ marginRight: '0.4rem' }} /> Upload
+                    <input type="file" accept=".json,.pdf,.docx,.txt,.csv" onChange={handleUploadQuestions} style={{ display: 'none' }} />
+                  </label>
+                </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <select 
@@ -518,8 +552,72 @@ export default function FocusTest() {
                 </select>
               </div>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4', marginTop: '1rem' }}>
-                Select a document to test against, or test from your entire pool.
+                Upload a file or paste questions. AI will automatically extract questions from any format.
               </p>
+            </section>
+
+            {/* Format Guide */}
+            <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
+              <button
+                onClick={() => setShowFormatGuide(!showFormatGuide)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', padding: 0 }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Info size={16} style={{ color: 'var(--text-muted)' }} />
+                  <span style={{ fontSize: '0.95rem', fontWeight: 600 }}>Accepted Formats</span>
+                </div>
+                <ChevronDown size={16} style={{ transition: 'transform 0.2s', transform: showFormatGuide ? 'rotate(180deg)' : 'rotate(0)' }} />
+              </button>
+              {showFormatGuide && (
+                <div style={{ marginTop: '1rem', animation: 'fadeIn 0.2s ease-out' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ padding: '0.75rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--brand-primary)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.5rem' }}>
+                        <FileText size={14} />
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>AI-Powered (Recommended)</span>
+                      </div>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
+                        Just paste or upload questions in <strong>any format</strong> — numbered, bulleted, with or without answer keys. AI will detect and parse them automatically.
+                      </p>
+                    </div>
+                    <div style={{ padding: '0.75rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--text-muted)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.5rem' }}>
+                        <Download size={14} />
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>Manual Format (Fallback)</span>
+                      </div>
+                      <pre style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'monospace', background: 'var(--bg-primary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', marginTop: '0.5rem' }}>{`1. What is the capital of France?
+A) London
+B) Paris
+C) Berlin
+D) Madrid
+
+2. Which planet is closest to the Sun?
+A) Earth
+B) Venus
+C) Mercury
+D) Mars
+
+---ANSWERS---
+1 B
+2 C`}</pre>
+                    </div>
+                    <div style={{ padding: '0.75rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--text-muted)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.5rem' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>JSON Format</span>
+                      </div>
+                      <pre style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'monospace', background: 'var(--bg-primary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', marginTop: '0.5rem' }}>{`[{
+  "scenario": "What is 2+2?",
+  "options": ["3", "4", "5", "6"],
+  "answer": [1],
+  "type": "MCQ"
+}]`}</pre>
+                    </div>
+                  </div>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.75rem' }}>
+                    Supported file types: PDF, DOCX, TXT, JSON
+                  </p>
+                </div>
+              )}
             </section>
 
             <section className="glass-panel" style={{ padding: 'var(--space-md)', flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -545,6 +643,45 @@ export default function FocusTest() {
               </div>
             </section>
           </div>
+
+          {/* Paste Questions Modal */}
+          {showPasteModal && (
+            <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={(e) => { if (e.target === e.currentTarget) setShowPasteModal(false); }}>
+              <div className="glass-panel" style={{ width: '90%', maxWidth: '640px', padding: 'var(--space-lg)', animation: 'fadeIn 0.2s ease-out', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-md)' }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Paste Questions</h2>
+                  <button onClick={() => setShowPasteModal(false)} className="icon-btn" style={{ color: 'var(--text-muted)' }}>
+                    <X size={20} />
+                  </button>
+                </div>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 'var(--space-sm)', lineHeight: 1.5 }}>
+                  Paste your questions below in any format — numbered, bulleted, with inline answers or a separate answer key. AI will parse them automatically.
+                </p>
+                <textarea
+                  value={pasteText}
+                  onChange={(e) => setPasteText(e.target.value)}
+                  placeholder={`Example:\n\n1. What is the capital of France?\n   a) London\n   b) Paris (correct)\n   c) Berlin\n   d) Madrid\n\n2. Which is the largest planet?\n   a) Earth\n   b) Jupiter (correct)\n   c) Mars\n   d) Venus`}
+                  style={{ width: '100%', minHeight: '280px', padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', fontSize: '0.9rem', fontFamily: 'monospace', lineHeight: 1.6, resize: 'vertical', outline: 'none' }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'var(--space-md)' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    {pasteText.trim().length > 0 ? `${pasteText.trim().split('\n').length} lines` : 'No content'}
+                  </span>
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button onClick={() => setShowPasteModal(false)} className="btn btn-secondary">Cancel</button>
+                    <button
+                      onClick={handlePasteSubmit}
+                      className="btn btn-primary"
+                      disabled={!pasteText.trim() || pasteProcessing}
+                      style={{ minWidth: '140px' }}
+                    >
+                      {pasteProcessing ? <Loader2 size={16} className="auth-spinner" /> : <><ClipboardPaste size={14} style={{ marginRight: '0.4rem' }} /> Parse Questions</>}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
