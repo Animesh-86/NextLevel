@@ -361,6 +361,27 @@ export default function FocusTest() {
 
   const handlePasteSubmit = async () => {
     if (!pasteText.trim()) return;
+
+    // Fast path: if the user pasted raw JSON, parse it directly!
+    try {
+      const parsedJson = JSON.parse(pasteText);
+      const questionsArray = Array.isArray(parsedJson) ? parsedJson : [parsedJson];
+      
+      // Basic validation to ensure it looks like questions
+      if (questionsArray[0] && questionsArray[0].scenario) {
+        setPasteProcessing(true);
+        const toastId = toast.loading('Saving pasted JSON questions...');
+        const title = `Pasted JSON ${new Date().toLocaleDateString()}`;
+        await saveQuestionsToBackend(questionsArray, title, toastId);
+        setShowPasteModal(false);
+        setPasteText('');
+        setPasteProcessing(false);
+        return;
+      }
+    } catch (e) {
+      // Not JSON, continue to AI extraction
+    }
+
     setPasteProcessing(true);
     const toastId = toast.loading('Analyzing pasted questions with AI...');
 
