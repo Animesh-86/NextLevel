@@ -201,7 +201,7 @@ export default function FocusTest() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          examId: selectedExam,
+          examId: selectedExam || 'all',
           timeTaken,
           userAnswers: answers,
         }),
