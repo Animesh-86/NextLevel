@@ -22,8 +22,11 @@ export default function FocusTest() {
   const [deleteExamId, setDeleteExamId] = useState(null);
   const [showPasteModal, setShowPasteModal] = useState(false);
   const [pasteText, setPasteText] = useState('');
+  const [pasteTitle, setPasteTitle] = useState('');
   const [pasteProcessing, setPasteProcessing] = useState(false);
   const [showFormatGuide, setShowFormatGuide] = useState(false);
+  const [pendingUpload, setPendingUpload] = useState(null); // { file, suggestedName }
+  const [uploadName, setUploadName] = useState('');
 
   // Test state
   const [questions, setQuestions] = useState([]);
@@ -307,15 +310,26 @@ export default function FocusTest() {
   const handleUploadQuestions = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
-    const toastId = toast.loading(`Processing ${file.name}...`);
     e.target.value = '';
     
-    const docTitle = file.name.replace(/\.[^/.]+$/, "");
+    const suggestedName = file.name.replace(/\.[^/.]+$/, "");
+    setPendingUpload({ file });
+    setUploadName(suggestedName);
+  };
+
+  const confirmUpload = async () => {
+    if (!pendingUpload) return;
+    const { file } = pendingUpload;
+    const docTitle = uploadName.trim() || file.name.replace(/\.[^/.]+$/, "");
+    
     if (exams.some(e => e.title === docTitle)) {
-      toast.error(`A document named "${docTitle}" already exists.`, { id: toastId });
+      toast.error(`A document named "${docTitle}" already exists.`);
       return;
     }
+
+    setPendingUpload(null);
+    setUploadName('');
+    const toastId = toast.loading(`Processing ${file.name}...`);
 
     try {
       let questionsArray = [];
@@ -373,10 +387,11 @@ export default function FocusTest() {
         setPasteProcessing(true);
         const toastId = toast.loading('Saving pasted JSON questions...');
         
-        const title = `Pasted JSON ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
+        const title = pasteTitle.trim() || `Pasted JSON ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
         await saveQuestionsToBackend(rawArray, title, toastId);
         setShowPasteModal(false);
         setPasteText('');
+        setPasteTitle('');
         setPasteProcessing(false);
         return;
       }
@@ -399,10 +414,11 @@ export default function FocusTest() {
         throw new Error(genData.error || 'Failed to parse questions');
       }
 
-      const title = `Pasted ${new Date().toLocaleDateString()}`;
+      const title = pasteTitle.trim() || `Pasted ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
       await saveQuestionsToBackend(genData.data, title, toastId);
       setShowPasteModal(false);
       setPasteText('');
+      setPasteTitle('');
     } catch (err) {
       toast.error(err.message || 'Failed to process pasted questions', { id: toastId });
     } finally {
@@ -678,13 +694,21 @@ D) Mars
                   </button>
                 </div>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 'var(--space-sm)', lineHeight: 1.5 }}>
-                  Paste your questions below in any format — numbered, bulleted, with inline answers or a separate answer key. AI will parse them automatically.
+                  Give your test a name, then paste your questions below.
                 </p>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px', display: 'block' }}>Test Name</label>
+                <input
+                  type="text"
+                  value={pasteTitle}
+                  onChange={(e) => setPasteTitle(e.target.value)}
+                  placeholder="e.g. Java Collections, OOP Concepts, Spring Boot..."
+                  style={{ width: '100%', padding: '0.75rem 1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', fontSize: '0.9rem', outline: 'none', marginBottom: 'var(--space-sm)' }}
+                />
                 <textarea
                   value={pasteText}
                   onChange={(e) => setPasteText(e.target.value)}
                   placeholder={`Example:\n\n1. What is the capital of France?\n   a) London\n   b) Paris (correct)\n   c) Berlin\n   d) Madrid\n\n2. Which is the largest planet?\n   a) Earth\n   b) Jupiter (correct)\n   c) Mars\n   d) Venus`}
-                  style={{ width: '100%', minHeight: '280px', padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', fontSize: '0.9rem', fontFamily: 'monospace', lineHeight: 1.6, resize: 'vertical', outline: 'none' }}
+                  style={{ width: '100%', minHeight: '250px', padding: '1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', fontSize: '0.9rem', fontFamily: 'monospace', lineHeight: 1.6, resize: 'vertical', outline: 'none' }}
                 />
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'var(--space-md)' }}>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -701,6 +725,31 @@ D) Mars
                       {pasteProcessing ? <Loader2 size={16} className="auth-spinner" /> : <><ClipboardPaste size={14} style={{ marginRight: '0.4rem' }} /> Parse Questions</>}
                     </button>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Upload Name Prompt Modal */}
+          {pendingUpload && (
+            <div style={{ position: 'fixed', inset: 0, zIndex: 1001, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={(e) => { if (e.target === e.currentTarget) { setPendingUpload(null); setUploadName(''); } }}>
+              <div className="glass-panel" style={{ width: '90%', maxWidth: '440px', padding: 'var(--space-lg)', animation: 'fadeIn 0.2s ease-out' }}>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: 'var(--space-md)' }}>Name Your Test</h2>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 'var(--space-sm)', lineHeight: 1.5 }}>
+                  Give this uploaded test a name so you can find it easily later.
+                </p>
+                <input
+                  type="text"
+                  value={uploadName}
+                  onChange={(e) => setUploadName(e.target.value)}
+                  placeholder="e.g. Java Collections, OOP Concepts..."
+                  autoFocus
+                  onKeyDown={(e) => { if (e.key === 'Enter' && uploadName.trim()) confirmUpload(); }}
+                  style={{ width: '100%', padding: '0.75rem 1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', fontSize: '0.9rem', outline: 'none' }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: 'var(--space-md)' }}>
+                  <button onClick={() => { setPendingUpload(null); setUploadName(''); }} className="btn btn-secondary">Cancel</button>
+                  <button onClick={confirmUpload} className="btn btn-primary" disabled={!uploadName.trim()}>Upload</button>
                 </div>
               </div>
             </div>
