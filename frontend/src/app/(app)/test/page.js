@@ -15,7 +15,8 @@ export default function FocusTest() {
   const [phase, setPhase] = useState('config'); // config | testing | review | finished
   const [mode, setMode] = useState(searchParams.get('mode') === 'study' ? 'study' : 'simulation');
   const [exams, setExams] = useState([]);
-  const [selectedExam, setSelectedExam] = useState('');
+  const [selectedExams, setSelectedExams] = useState(['all']);
+  const [historySearch, setHistorySearch] = useState('');
   const [questionCount, setQuestionCount] = useState(20);
   const [timeMinutes, setTimeMinutes] = useState(60);
   const [configLoading, setConfigLoading] = useState(true);
@@ -68,7 +69,7 @@ export default function FocusTest() {
         const data = await res.json();
         if (data.success && data.data.length > 0) {
           setExams(data.data);
-          setSelectedExam(data.data[0]._id);
+          setSelectedExams([data.data[0]._id]);
           setTimeMinutes(data.data[0].timeLimit || 60);
         }
       } catch (err) {
@@ -94,8 +95,8 @@ export default function FocusTest() {
       if (res.ok) {
         toast.success('Document deleted successfully');
         setExams(prev => prev.filter(e => (e.id || e._id) !== examId));
-        if (selectedExam === examId) {
-          setSelectedExam('all');
+        if (selectedExams.includes(examId)) {
+          setSelectedExams(prev => prev.filter(id => id !== examId).length ? prev.filter(id => id !== examId) : ['all']);
         }
       } else {
         toast.error('Failed to delete document');
@@ -103,7 +104,7 @@ export default function FocusTest() {
     } catch (err) {
       toast.error('Failed to delete document');
     }
-  }, [deleteExamId, selectedExam, toast]);
+  }, [deleteExamId, selectedExams, toast]);
 
   const toggleOption = useCallback((optIdx) => {
     if (!currentQ) return;
@@ -127,9 +128,9 @@ export default function FocusTest() {
     const nextAnswers = { ...answers, [qId]: updated };
     setAnswers(nextAnswers);
     if (!isStudy) {
-      localStorage.setItem(`test_answers_${selectedExam}`, JSON.stringify(nextAnswers));
+      localStorage.setItem(`test_answers_${selectedExams.join(',')}`, JSON.stringify(nextAnswers));
     }
-  }, [currentQ, isStudy, checked, answers, selectedExam]);
+  }, [currentQ, isStudy, checked, answers, selectedExams]);
 
   const handleCheck = useCallback(async () => {
     const qId = currentQ?.id || currentQ?._id;
@@ -213,14 +214,14 @@ export default function FocusTest() {
     const timeTaken = (performance.now() - testStartTime) / 1000;
     
     // Clear auto-save
-    localStorage.removeItem(`test_answers_${selectedExam}`);
+    localStorage.removeItem(`test_answers_${selectedExams.join(',')}`);
 
     try {
       const res = await apiFetch('/api/results', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          examId: selectedExam || 'all',
+          examId: selectedExams.includes('all') ? 'all' : selectedExams.join(','),
           timeTaken,
           userAnswers: answers,
         }),
@@ -240,7 +241,7 @@ export default function FocusTest() {
       toast.error(err.message || 'Failed to submit');
       setSubmitting(false);
     }
-  }, [submitting, testStartTime, selectedExam, answers, router, toast]);
+  }, [submitting, testStartTime, selectedExams, answers, router, toast]);
 
   // Timer
   useEffect(() => {
@@ -317,7 +318,7 @@ export default function FocusTest() {
     if (data.success) {
       toast.success(`Successfully added ${questionsWithExam.length} questions!`, { id: toastId });
       setExams(prev => [...prev, newExam]);
-      setSelectedExam(newExam._id || newExam.id);
+      setSelectedExams([newExam._id || newExam.id]);
     } else {
       throw new Error(data.error || 'Failed to save questions');
     }
@@ -444,8 +445,8 @@ export default function FocusTest() {
 
   async function startTest() {
     try {
-      const endpoint = selectedExam && selectedExam !== 'all' 
-        ? `/api/questions?limit=1000&examId=${selectedExam}` 
+      const endpoint = !selectedExams.includes('all') && selectedExams.length > 0 
+        ? `/api/questions?limit=1000&examId=${selectedExams.join(',')}` 
         : `/api/questions?limit=1000`;
       const res = await apiFetch(endpoint);
       const resData = await res.json();
@@ -470,7 +471,7 @@ export default function FocusTest() {
       setAnswers({});
       setFlagged(new Set());
       setChecked(new Set());
-      const savedAnswers = localStorage.getItem(`test_answers_${selectedExam}`);
+      const savedAnswers = localStorage.getItem(`test_answers_${selectedExams.join(',')}`);
       if (savedAnswers && !isStudy) {
         try { setAnswers(JSON.parse(savedAnswers)); } catch (e) {}
       }
@@ -629,22 +630,34 @@ export default function FocusTest() {
             <div style={{ maxHeight: '220px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px' }}>
               {'Global Pool (All Questions)'.toLowerCase().includes(sourceSearch.toLowerCase()) && (
                 <button
-                  onClick={() => setSelectedExam('all')}
-                  style={{ width: '100%', padding: '0.6rem 0.75rem', background: selectedExam === 'all' || !selectedExam ? 'var(--brand-primary-alpha, rgba(99,102,241,0.15))' : 'transparent', border: selectedExam === 'all' || !selectedExam ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.9rem', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', transition: 'all 0.15s ease' }}
+                  onClick={() => setSelectedExams(['all'])}
+                  style={{ width: '100%', padding: '0.6rem 0.75rem', background: selectedExams.includes('all') ? 'var(--brand-primary-alpha, rgba(99,102,241,0.15))' : 'transparent', border: selectedExams.includes('all') ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.9rem', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', transition: 'all 0.15s ease' }}
                 >
-                  <span style={{ fontWeight: selectedExam === 'all' || !selectedExam ? 600 : 400 }}>Global Pool (All Questions)</span>
-                  {(selectedExam === 'all' || !selectedExam) && <Check size={14} style={{ color: 'var(--brand-primary)' }} />}
+                  <span style={{ fontWeight: selectedExams.includes('all') ? 600 : 400 }}>Global Pool (All Questions)</span>
+                  {selectedExams.includes('all') && <Check size={14} style={{ color: 'var(--brand-primary)' }} />}
                 </button>
               )}
               {exams
                 .filter(ex => ex.title.toLowerCase().includes(sourceSearch.toLowerCase()))
                 .map(ex => {
                   const id = ex._id || ex.id;
-                  const isSelected = selectedExam === id;
+                  const isSelected = selectedExams.includes(id);
                   return (
                     <button
                       key={id}
-                      onClick={() => setSelectedExam(id)}
+                      onClick={() => {
+                        if (selectedExams.includes('all')) {
+                          setSelectedExams([id]);
+                        } else {
+                          setSelectedExams(prev => {
+                            if (prev.includes(id)) {
+                              const next = prev.filter(x => x !== id);
+                              return next.length ? next : ['all'];
+                            }
+                            return [...prev, id];
+                          });
+                        }
+                      }}
                       style={{ width: '100%', padding: '0.6rem 0.75rem', background: isSelected ? 'var(--brand-primary-alpha, rgba(99,102,241,0.15))' : 'transparent', border: isSelected ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.9rem', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', transition: 'all 0.15s ease' }}
                     >
                       <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -663,14 +676,28 @@ export default function FocusTest() {
 
           {/* Document History */}
           <section className="glass-panel" style={{ padding: 'var(--space-md)', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-sm)' }}>
-              <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Document History</h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-sm)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Document History</h2>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)', padding: '4px 8px' }}>
+                <Search size={12} style={{ color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  value={historySearch}
+                  onChange={(e) => setHistorySearch(e.target.value)}
+                  placeholder="Search history..."
+                  style={{ width: '120px', background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: '0.8rem' }}
+                />
+              </div>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {exams.length === 0 ? (
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '2rem' }}>No documents uploaded yet.</p>
+              ) : exams.filter(ex => ex.title.toLowerCase().includes(historySearch.toLowerCase())).length === 0 ? (
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '2rem' }}>No matching history.</p>
               ) : (
-                exams.map(ex => (
+                exams.filter(ex => ex.title.toLowerCase().includes(historySearch.toLowerCase())).map(ex => (
                   <div key={ex._id || ex.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                       <span style={{ fontSize: '0.9rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ex.title}</span>
