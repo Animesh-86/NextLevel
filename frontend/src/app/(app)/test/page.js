@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/components/Toast';
 import { apiFetch } from '@/lib/api';
-import { BrainCircuit, Check, X, Clock, Play, Flag, AlertTriangle, ChevronLeft, ChevronRight, Loader2, Upload, Trash2, ClipboardPaste, Info, ChevronDown, FileText, Download } from 'lucide-react';
+import { BrainCircuit, Check, X, Clock, Play, Flag, AlertTriangle, ChevronLeft, ChevronRight, Loader2, Upload, Trash2, ClipboardPaste, Info, ChevronDown, FileText, Download, Search } from 'lucide-react';
 import ConfirmModal from '@/components/ConfirmModal';
 
 export default function FocusTest() {
@@ -27,6 +27,9 @@ export default function FocusTest() {
   const [showFormatGuide, setShowFormatGuide] = useState(false);
   const [pendingUpload, setPendingUpload] = useState(null); // { file, suggestedName }
   const [uploadName, setUploadName] = useState('');
+  const [sourceSearch, setSourceSearch] = useState('');
+  const [sourceDropdownOpen, setSourceDropdownOpen] = useState(false);
+  const sourceDropdownRef = useRef(null);
 
   // Test state
   const [questions, setQuestions] = useState([]);
@@ -43,6 +46,19 @@ export default function FocusTest() {
 
   const isStudy = mode === 'study';
   const currentQ = questions[currentIdx];
+
+  // Close source dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (sourceDropdownRef.current && !sourceDropdownRef.current.contains(e.target)) {
+        setSourceDropdownOpen(false);
+      }
+    }
+    if (sourceDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [sourceDropdownOpen]);
 
   // Fetch exams on mount
   useEffect(() => {
@@ -511,120 +527,206 @@ export default function FocusTest() {
             </p>
           </div>
         </header>
-        {/* Main Bento Grid */}
+        {/* Row 1: Session Mode + Parameters side by side */}
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
           gap: 'var(--space-md)' 
         }}>
-          {/* Left Column: Configuration & Parameters */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-            <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-md)' }}>
-                <Flag size={18} />
-                <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Session Mode</h2>
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button onClick={() => setMode('simulation')} className={`btn ${mode === 'simulation' ? 'btn-primary' : ''}`} style={{ flex: 1, padding: '0.8rem', background: mode === 'simulation' ? 'var(--brand-primary)' : 'var(--bg-surface)', color: mode === 'simulation' ? 'var(--brand-inverse)' : 'var(--text-primary)', border: mode === 'simulation' ? 'none' : '1px solid var(--border-light)' }}>
-                  Simulation
-                </button>
-                <button onClick={() => setMode('study')} className={`btn ${mode === 'study' ? 'btn-primary' : ''}`} style={{ flex: 1, padding: '0.8rem', background: mode === 'study' ? 'var(--brand-primary)' : 'var(--bg-surface)', color: mode === 'study' ? 'var(--brand-inverse)' : 'var(--text-primary)', border: mode === 'study' ? 'none' : '1px solid var(--border-light)' }}>
-                  Study (SRS)
-                </button>
-              </div>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4', marginTop: '1rem' }}>
-                {mode === 'simulation' ? 'Simulation mode runs a timed test mimicking a real exam environment.' : 'Study (SRS) mode uses Spaced Repetition System to help you memorize effectively, repeating harder questions more frequently.'}
-              </p>
-            </section>
-
-            <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-md)' }}>
-                <Clock size={18} />
-                <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Parameters</h2>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Time (min)</label>
-                  <input type="number" className="input" value={timeMinutes} onChange={(e) => setTimeMinutes(parseInt(e.target.value) || 60)} disabled={isStudy} style={{ opacity: isStudy ? 0.5 : 1, fontSize: '0.95rem' }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Questions</label>
-                  <input type="number" className="input" value={questionCount} onChange={(e) => setQuestionCount(parseInt(e.target.value) || 20)} min={1} max={200} style={{ fontSize: '0.95rem' }} />
-                </div>
-              </div>
-
-              <button onClick={startTest} className="btn btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1rem' }} disabled={configLoading}>
-                <Play size={18} style={{ marginRight: '0.5rem' }} /> Begin {isStudy ? 'Study Session' : 'Assessment'}
+          {/* Session Mode */}
+          <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-md)' }}>
+              <Flag size={18} />
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Session Mode</h2>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button onClick={() => setMode('simulation')} className={`btn ${mode === 'simulation' ? 'btn-primary' : ''}`} style={{ flex: 1, padding: '0.8rem', background: mode === 'simulation' ? 'var(--brand-primary)' : 'var(--bg-surface)', color: mode === 'simulation' ? 'var(--brand-inverse)' : 'var(--text-primary)', border: mode === 'simulation' ? 'none' : '1px solid var(--border-light)' }}>
+                Simulation
               </button>
-            </section>
-          </div>
+              <button onClick={() => setMode('study')} className={`btn ${mode === 'study' ? 'btn-primary' : ''}`} style={{ flex: 1, padding: '0.8rem', background: mode === 'study' ? 'var(--brand-primary)' : 'var(--bg-surface)', color: mode === 'study' ? 'var(--brand-inverse)' : 'var(--text-primary)', border: mode === 'study' ? 'none' : '1px solid var(--border-light)' }}>
+                Study (SRS)
+              </button>
+            </div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4', marginTop: '1rem' }}>
+              {mode === 'simulation' ? 'Simulation mode runs a timed test mimicking a real exam environment.' : 'Study (SRS) mode uses Spaced Repetition System to help you memorize effectively, repeating harder questions more frequently.'}
+            </p>
+          </section>
 
-          {/* Right Column: Documents */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-            <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-md)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <BrainCircuit size={18} />
-                  <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Document Source</h2>
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button onClick={() => setShowPasteModal(true)} className="btn btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
-                    <ClipboardPaste size={14} style={{ marginRight: '0.4rem' }} /> Paste
-                  </button>
-                  <label className="btn btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', cursor: 'pointer', margin: 0 }}>
-                    <Upload size={14} style={{ marginRight: '0.4rem' }} /> Upload
-                    <input type="file" accept=".json,.pdf,.docx,.txt,.csv" onChange={handleUploadQuestions} style={{ display: 'none' }} />
-                  </label>
-                </div>
+          {/* Parameters */}
+          <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-md)' }}>
+              <Clock size={18} />
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Parameters</h2>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Time (min)</label>
+                <input type="number" className="input" value={timeMinutes} onChange={(e) => setTimeMinutes(parseInt(e.target.value) || 60)} disabled={isStudy} style={{ opacity: isStudy ? 0.5 : 1, fontSize: '0.95rem' }} />
               </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Questions</label>
+                <input type="number" className="input" value={questionCount} onChange={(e) => setQuestionCount(parseInt(e.target.value) || 20)} min={1} max={200} style={{ fontSize: '0.95rem' }} />
+              </div>
+            </div>
+            <button onClick={startTest} className="btn btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1rem' }} disabled={configLoading}>
+              <Play size={18} style={{ marginRight: '0.5rem' }} /> Begin {isStudy ? 'Study Session' : 'Assessment'}
+            </button>
+          </section>
+        </div>
+
+        {/* Row 2: Document Source (full width) */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
+          gap: 'var(--space-md)' 
+        }}>
+          <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-md)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <select 
-                  className="select" 
-                  value={selectedExam} 
-                  onChange={(e) => setSelectedExam(e.target.value)}
-                  style={{ width: '100%', fontSize: '0.95rem' }}
+                <BrainCircuit size={18} />
+                <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Document Source</h2>
+                <button
+                  onClick={() => setShowFormatGuide(true)}
+                  className="icon-btn"
+                  title="View accepted formats"
+                  style={{ color: 'var(--text-muted)', marginLeft: '4px' }}
                 >
-                  <option value="all">Global Pool (All Questions)</option>
-                  {exams.map(ex => (
-                    <option key={ex._id || ex.id} value={ex._id || ex.id}>{ex.title}</option>
-                  ))}
-                </select>
+                  <Info size={16} />
+                </button>
               </div>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4', marginTop: '1rem' }}>
-                Upload a file or paste questions. AI will automatically extract questions from any format.
-              </p>
-            </section>
-
-            {/* Format Guide */}
-            <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button onClick={() => setShowPasteModal(true)} className="btn btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
+                  <ClipboardPaste size={14} style={{ marginRight: '0.4rem' }} /> Paste
+                </button>
+                <label className="btn btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', cursor: 'pointer', margin: 0 }}>
+                  <Upload size={14} style={{ marginRight: '0.4rem' }} /> Upload
+                  <input type="file" accept=".json,.pdf,.docx,.txt,.csv" onChange={handleUploadQuestions} style={{ display: 'none' }} />
+                </label>
+              </div>
+            </div>
+            {/* Custom Searchable Dropdown */}
+            <div ref={sourceDropdownRef} style={{ position: 'relative' }}>
               <button
-                onClick={() => setShowFormatGuide(!showFormatGuide)}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', padding: 0 }}
+                onClick={() => { setSourceDropdownOpen(!sourceDropdownOpen); setSourceSearch(''); }}
+                style={{ width: '100%', padding: '0.75rem 1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', textAlign: 'left' }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Info size={16} style={{ color: 'var(--text-muted)' }} />
-                  <span style={{ fontSize: '0.95rem', fontWeight: 600 }}>Accepted Formats</span>
-                </div>
-                <ChevronDown size={16} style={{ transition: 'transform 0.2s', transform: showFormatGuide ? 'rotate(180deg)' : 'rotate(0)' }} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {selectedExam === 'all' || !selectedExam ? 'Global Pool (All Questions)' : (exams.find(e => (e._id || e.id) === selectedExam)?.title || 'Select source...')}
+                </span>
+                <ChevronDown size={16} style={{ flexShrink: 0, transition: 'transform 0.2s', transform: sourceDropdownOpen ? 'rotate(180deg)' : 'rotate(0)' }} />
               </button>
-              {showFormatGuide && (
-                <div style={{ marginTop: '1rem', animation: 'fadeIn 0.2s ease-out' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <div style={{ padding: '0.75rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--brand-primary)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.5rem' }}>
-                        <FileText size={14} />
-                        <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>AI-Powered (Recommended)</span>
-                      </div>
-                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
-                        Just paste or upload questions in <strong>any format</strong> — numbered, bulleted, with or without answer keys. AI will detect and parse them automatically.
-                      </p>
+              {sourceDropdownOpen && (
+                <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 50, background: 'var(--bg-secondary)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', boxShadow: '0 8px 24px rgba(0,0,0,0.3)', maxHeight: '280px', display: 'flex', flexDirection: 'column', animation: 'fadeIn 0.15s ease-out' }}>
+                  <div style={{ padding: '0.5rem', borderBottom: '1px solid var(--border-light)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.5rem 0.75rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
+                      <Search size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                      <input
+                        type="text"
+                        value={sourceSearch}
+                        onChange={(e) => setSourceSearch(e.target.value)}
+                        placeholder="Search documents..."
+                        autoFocus
+                        style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: '0.85rem' }}
+                      />
                     </div>
-                    <div style={{ padding: '0.75rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--text-muted)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.5rem' }}>
-                        <Download size={14} />
-                        <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>Manual Format (Fallback)</span>
-                      </div>
-                      <pre style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'monospace', background: 'var(--bg-primary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', marginTop: '0.5rem' }}>{`1. What is the capital of France?
+                  </div>
+                  <div style={{ overflowY: 'auto', padding: '0.25rem' }}>
+                    {/* Global Pool option */}
+                    {'Global Pool (All Questions)'.toLowerCase().includes(sourceSearch.toLowerCase()) && (
+                      <button
+                        onClick={() => { setSelectedExam('all'); setSourceDropdownOpen(false); }}
+                        style={{ width: '100%', padding: '0.65rem 0.75rem', background: selectedExam === 'all' || !selectedExam ? 'var(--brand-primary-alpha, rgba(99,102,241,0.15))' : 'transparent', border: 'none', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.9rem', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                      >
+                        <span>Global Pool (All Questions)</span>
+                        {(selectedExam === 'all' || !selectedExam) && <Check size={14} style={{ color: 'var(--brand-primary)' }} />}
+                      </button>
+                    )}
+                    {/* Exam options */}
+                    {exams
+                      .filter(ex => ex.title.toLowerCase().includes(sourceSearch.toLowerCase()))
+                      .map(ex => {
+                        const id = ex._id || ex.id;
+                        const isSelected = selectedExam === id;
+                        return (
+                          <button
+                            key={id}
+                            onClick={() => { setSelectedExam(id); setSourceDropdownOpen(false); }}
+                            style={{ width: '100%', padding: '0.65rem 0.75rem', background: isSelected ? 'var(--brand-primary-alpha, rgba(99,102,241,0.15))' : 'transparent', border: 'none', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.9rem', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                          >
+                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <span>{ex.title}</span>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '8px' }}>{ex.questionCount ?? ''} Q</span>
+                            </div>
+                            {isSelected && <Check size={14} style={{ flexShrink: 0, color: 'var(--brand-primary)' }} />}
+                          </button>
+                        );
+                      })}
+                    {exams.filter(ex => ex.title.toLowerCase().includes(sourceSearch.toLowerCase())).length === 0 && !'Global Pool (All Questions)'.toLowerCase().includes(sourceSearch.toLowerCase()) && (
+                      <p style={{ padding: '1rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>No matching documents</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4', marginTop: '1rem' }}>
+              Upload a file or paste questions. AI will automatically extract questions from any format.
+            </p>
+          </section>
+
+          {/* Document History */}
+          <section className="glass-panel" style={{ padding: 'var(--space-md)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-sm)' }}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Document History</h2>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {exams.length === 0 ? (
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '2rem' }}>No documents uploaded yet.</p>
+              ) : (
+                exams.map(ex => (
+                  <div key={ex._id || ex.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ex.title}</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(ex.createdAt || Date.now()).toLocaleDateString()}</span>
+                    </div>
+                    <button onClick={() => handleDeleteExam(ex._id || ex.id)} className="icon-btn" title="Delete document" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        </div>
+
+        {/* Accepted Formats Popup */}
+        {showFormatGuide && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={(e) => { if (e.target === e.currentTarget) setShowFormatGuide(false); }}>
+            <div className="glass-panel" style={{ width: '90%', maxWidth: '560px', padding: 'var(--space-lg)', animation: 'fadeIn 0.2s ease-out', maxHeight: '85vh', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-md)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Info size={18} />
+                  <h2 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Accepted Formats</h2>
+                </div>
+                <button onClick={() => setShowFormatGuide(false)} className="icon-btn" style={{ color: 'var(--text-muted)' }}>
+                  <X size={20} />
+                </button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ padding: '0.75rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--brand-primary)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.5rem' }}>
+                    <FileText size={14} />
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>AI-Powered (Recommended)</span>
+                  </div>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
+                    Just paste or upload questions in <strong>any format</strong> — numbered, bulleted, with or without answer keys. AI will detect and parse them automatically.
+                  </p>
+                </div>
+                <div style={{ padding: '0.75rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--text-muted)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.5rem' }}>
+                    <Download size={14} />
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>Manual Format (Fallback)</span>
+                  </div>
+                  <pre style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'monospace', background: 'var(--bg-primary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', marginTop: '0.5rem' }}>{`1. What is the capital of France?
 A) London
 B) Paris
 C) Berlin
@@ -639,49 +741,25 @@ D) Mars
 ---ANSWERS---
 1 B
 2 C`}</pre>
-                    </div>
-                    <div style={{ padding: '0.75rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--text-muted)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.5rem' }}>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>JSON Format</span>
-                      </div>
-                      <pre style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'monospace', background: 'var(--bg-primary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', marginTop: '0.5rem' }}>{`[{
+                </div>
+                <div style={{ padding: '0.75rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--text-muted)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>JSON Format</span>
+                  </div>
+                  <pre style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'monospace', background: 'var(--bg-primary)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', marginTop: '0.5rem' }}>{`[{
   "scenario": "What is 2+2?",
   "options": ["3", "4", "5", "6"],
   "answer": [1],
   "type": "MCQ"
 }]`}</pre>
-                    </div>
-                  </div>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.75rem' }}>
-                    Supported file types: PDF, DOCX, TXT, JSON
-                  </p>
                 </div>
-              )}
-            </section>
-
-            <section className="glass-panel" style={{ padding: 'var(--space-md)', flex: 1, display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-sm)' }}>
-                <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Document History</h2>
               </div>
-              <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {exams.length === 0 ? (
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '2rem' }}>No documents uploaded yet.</p>
-                ) : (
-                  exams.map(ex => (
-                    <div key={ex._id || ex.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                        <span style={{ fontSize: '0.9rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ex.title}</span>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(ex.createdAt || Date.now()).toLocaleDateString()}</span>
-                      </div>
-                      <button onClick={() => handleDeleteExam(ex._id || ex.id)} className="icon-btn" title="Delete document" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </section>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.75rem' }}>
+                Supported file types: PDF, DOCX, TXT, JSON
+              </p>
+            </div>
           </div>
+        )}
 
           {/* Paste Questions Modal */}
           {showPasteModal && (
