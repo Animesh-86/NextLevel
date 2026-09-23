@@ -581,18 +581,10 @@ export default function FocusTest() {
           gap: 'var(--space-md)' 
         }}>
           <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-md)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <BrainCircuit size={18} />
                 <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Document Source</h2>
-                <button
-                  onClick={() => setShowFormatGuide(true)}
-                  className="icon-btn"
-                  title="View accepted formats"
-                  style={{ color: 'var(--text-muted)', marginLeft: '4px' }}
-                >
-                  <Info size={16} />
-                </button>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button onClick={() => setShowPasteModal(true)} className="btn btn-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
@@ -604,73 +596,69 @@ export default function FocusTest() {
                 </label>
               </div>
             </div>
-            {/* Custom Searchable Dropdown */}
-            <div ref={sourceDropdownRef} style={{ position: 'relative' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-md)' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4', margin: 0 }}>
+                Upload a file or paste questions. AI will automatically extract questions from any format.
+              </p>
               <button
-                onClick={() => { setSourceDropdownOpen(!sourceDropdownOpen); setSourceSearch(''); }}
-                style={{ width: '100%', padding: '0.75rem 1rem', background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', textAlign: 'left' }}
+                onClick={() => setShowFormatGuide(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', whiteSpace: 'nowrap', padding: '4px 0' }}
+                title="View accepted formats"
               >
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {selectedExam === 'all' || !selectedExam ? 'Global Pool (All Questions)' : (exams.find(e => (e._id || e.id) === selectedExam)?.title || 'Select source...')}
-                </span>
-                <ChevronDown size={16} style={{ flexShrink: 0, transition: 'transform 0.2s', transform: sourceDropdownOpen ? 'rotate(180deg)' : 'rotate(0)' }} />
+                <Info size={14} />
+                <span>Accepted Formats</span>
               </button>
-              {sourceDropdownOpen && (
-                <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 50, background: 'var(--bg-secondary)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', boxShadow: '0 8px 24px rgba(0,0,0,0.3)', maxHeight: '280px', display: 'flex', flexDirection: 'column', animation: 'fadeIn 0.15s ease-out' }}>
-                  <div style={{ padding: '0.5rem', borderBottom: '1px solid var(--border-light)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.5rem 0.75rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
-                      <Search size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                      <input
-                        type="text"
-                        value={sourceSearch}
-                        onChange={(e) => setSourceSearch(e.target.value)}
-                        placeholder="Search documents..."
-                        autoFocus
-                        style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: '0.85rem' }}
-                      />
-                    </div>
-                  </div>
-                  <div style={{ overflowY: 'auto', padding: '0.25rem' }}>
-                    {/* Global Pool option */}
-                    {'Global Pool (All Questions)'.toLowerCase().includes(sourceSearch.toLowerCase()) && (
-                      <button
-                        onClick={() => { setSelectedExam('all'); setSourceDropdownOpen(false); }}
-                        style={{ width: '100%', padding: '0.65rem 0.75rem', background: selectedExam === 'all' || !selectedExam ? 'var(--brand-primary-alpha, rgba(99,102,241,0.15))' : 'transparent', border: 'none', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.9rem', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-                      >
-                        <span>Global Pool (All Questions)</span>
-                        {(selectedExam === 'all' || !selectedExam) && <Check size={14} style={{ color: 'var(--brand-primary)' }} />}
-                      </button>
-                    )}
-                    {/* Exam options */}
-                    {exams
-                      .filter(ex => ex.title.toLowerCase().includes(sourceSearch.toLowerCase()))
-                      .map(ex => {
-                        const id = ex._id || ex.id;
-                        const isSelected = selectedExam === id;
-                        return (
-                          <button
-                            key={id}
-                            onClick={() => { setSelectedExam(id); setSourceDropdownOpen(false); }}
-                            style={{ width: '100%', padding: '0.65rem 0.75rem', background: isSelected ? 'var(--brand-primary-alpha, rgba(99,102,241,0.15))' : 'transparent', border: 'none', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.9rem', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-                          >
-                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              <span>{ex.title}</span>
-                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '8px' }}>{ex.questionCount ?? ''} Q</span>
-                            </div>
-                            {isSelected && <Check size={14} style={{ flexShrink: 0, color: 'var(--brand-primary)' }} />}
-                          </button>
-                        );
-                      })}
-                    {exams.filter(ex => ex.title.toLowerCase().includes(sourceSearch.toLowerCase())).length === 0 && !'Global Pool (All Questions)'.toLowerCase().includes(sourceSearch.toLowerCase()) && (
-                      <p style={{ padding: '1rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>No matching documents</p>
-                    )}
-                  </div>
-                </div>
+            </div>
+            {/* Search bar */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.6rem 0.75rem', background: 'var(--bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', marginBottom: 'var(--space-sm)' }}>
+              <Search size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+              <input
+                type="text"
+                value={sourceSearch}
+                onChange={(e) => setSourceSearch(e.target.value)}
+                placeholder="Search documents..."
+                style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: '0.85rem' }}
+              />
+              {sourceSearch && (
+                <button onClick={() => setSourceSearch('')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex' }}>
+                  <X size={14} />
+                </button>
               )}
             </div>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4', marginTop: '1rem' }}>
-              Upload a file or paste questions. AI will automatically extract questions from any format.
-            </p>
+            {/* Inline list */}
+            <div style={{ maxHeight: '220px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              {'Global Pool (All Questions)'.toLowerCase().includes(sourceSearch.toLowerCase()) && (
+                <button
+                  onClick={() => setSelectedExam('all')}
+                  style={{ width: '100%', padding: '0.6rem 0.75rem', background: selectedExam === 'all' || !selectedExam ? 'var(--brand-primary-alpha, rgba(99,102,241,0.15))' : 'transparent', border: selectedExam === 'all' || !selectedExam ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.9rem', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', transition: 'all 0.15s ease' }}
+                >
+                  <span style={{ fontWeight: selectedExam === 'all' || !selectedExam ? 600 : 400 }}>Global Pool (All Questions)</span>
+                  {(selectedExam === 'all' || !selectedExam) && <Check size={14} style={{ color: 'var(--brand-primary)' }} />}
+                </button>
+              )}
+              {exams
+                .filter(ex => ex.title.toLowerCase().includes(sourceSearch.toLowerCase()))
+                .map(ex => {
+                  const id = ex._id || ex.id;
+                  const isSelected = selectedExam === id;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => setSelectedExam(id)}
+                      style={{ width: '100%', padding: '0.6rem 0.75rem', background: isSelected ? 'var(--brand-primary-alpha, rgba(99,102,241,0.15))' : 'transparent', border: isSelected ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.9rem', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', transition: 'all 0.15s ease' }}
+                    >
+                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontWeight: isSelected ? 600 : 400 }}>{ex.title}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '8px' }}>{ex.questionCount ?? ''} Q</span>
+                      </div>
+                      {isSelected && <Check size={14} style={{ flexShrink: 0, color: 'var(--brand-primary)' }} />}
+                    </button>
+                  );
+                })}
+              {exams.filter(ex => ex.title.toLowerCase().includes(sourceSearch.toLowerCase())).length === 0 && !'Global Pool (All Questions)'.toLowerCase().includes(sourceSearch.toLowerCase()) && (
+                <p style={{ padding: '1rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>No matching documents</p>
+              )}
+            </div>
           </section>
 
           {/* Document History */}
