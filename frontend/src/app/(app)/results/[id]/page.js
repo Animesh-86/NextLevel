@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import { Check, X, ArrowLeft, BarChart3, Trash } from "lucide-react";
+import { Check, X, ArrowLeft, BarChart3, Trash, Zap, Clock, AlertTriangle } from "lucide-react";
 import { SkeletonCard, SkeletonText } from "@/components/SkeletonLoader";
 import { apiFetch } from "@/lib/api";
 import ConfirmModal from "@/components/ConfirmModal";
@@ -31,7 +31,7 @@ export default function ResultReview({ params }) {
     try {
       const res = await apiFetch(`/api/results/${id}`, { method: 'DELETE' });
       if (res.ok) {
-        router.push("/results");
+        router.push("/test?tab=results");
       }
     } catch (err) {
       console.error("Failed to delete result:", err);
@@ -64,11 +64,11 @@ export default function ResultReview({ params }) {
         Result not found. <br />{" "}
         <button
           className="btn btn-secondary"
-          onClick={() => router.push("/results")}
+          onClick={() => router.push("/test?tab=results")}
           style={{ marginTop: "1rem" }}
         >
           {" "}
-          Back to Results{" "}
+          Back to Exam Results{" "}
         </button>{" "}
       </div>
     );
@@ -86,7 +86,7 @@ export default function ResultReview({ params }) {
       />
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
         <button
-          onClick={() => router.push("/results")}
+          onClick={() => router.push("/test?tab=results")}
           className="btn btn-secondary"
           style={{
             display: "inline-flex",
@@ -95,7 +95,7 @@ export default function ResultReview({ params }) {
           }}
         >
           {" "}
-          <ArrowLeft size={16} /> Back to Results{" "}
+          <ArrowLeft size={16} /> Back to Exam Results{" "}
         </button>
         <button
           onClick={() => setShowDeleteModal(true)}
@@ -131,9 +131,26 @@ export default function ResultReview({ params }) {
                 fontSize: "1.5rem",
                 fontWeight: 800,
                 marginBottom: "0.25rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                flexWrap: "wrap",
               }}
             >
-              {data.exam?.title || "Exam Review"}
+              <span>{data.exam?.title || "Exam Review"}</span>
+              {data.testMode === "oa_blitz" && (
+                <span
+                  className="badge"
+                  style={{
+                    fontSize: "0.75rem",
+                    padding: "3px 8px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                  }}
+                >
+                  OA Blitz ({data.perQuestionTimeLimitSeconds || 60}s/Q)
+                </span>
+              )}
             </h1>{" "}
             <p style={{ color: "var(--text-muted)", fontSize: "0.875rem" }}>
               {" "}
@@ -169,7 +186,7 @@ export default function ResultReview({ params }) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
             gap: "1rem",
             marginTop: "1.5rem",
             paddingTop: "1.5rem",
@@ -251,7 +268,7 @@ export default function ResultReview({ params }) {
             <div style={{ textAlign: "center" }}>
               {" "}
               <div style={{ fontSize: "1.5rem", fontWeight: 800 }}>
-                {Math.round(data.timeTaken / 60)}m
+                {data.timeTaken < 60 ? `${data.timeTaken}s` : `${Math.round(data.timeTaken / 60)}m`}
               </div>{" "}
               <div
                 style={{
@@ -261,12 +278,118 @@ export default function ResultReview({ params }) {
                   fontWeight: 600,
                 }}
               >
-                Time
+                Time Taken
               </div>{" "}
             </div>
           )}{" "}
+          {data.speedAccuracyRatio != null && (
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "#10b981" }}>
+                {data.speedAccuracyRatio}
+              </div>
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  color: "var(--text-muted)",
+                  textTransform: "uppercase",
+                  fontWeight: 600,
+                }}
+              >
+                Correct/Min
+              </div>
+            </div>
+          )}
+          {data.timedOutQuestionIds?.length > 0 && (
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "#ef4444" }}>
+                {data.timedOutQuestionIds.length}
+              </div>
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  color: "var(--text-muted)",
+                  textTransform: "uppercase",
+                  fontWeight: 600,
+                }}
+              >
+                Timeouts
+              </div>
+            </div>
+          )}
         </div>{" "}
       </div>{" "}
+      {/* OA Blitz Pacing Breakdown */}{" "}
+      {data.testMode === "oa_blitz" && data.questionReview?.length > 0 && (
+        <div className="card" style={{ marginBottom: "2rem" }}>
+          <h2
+            className="card-title"
+            style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+          >
+            <Clock size={20} style={{ color: "#10b981" }} /> OA Blitz Pacing Analytics
+          </h2>
+          <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: "0.25rem", marginBottom: "1.25rem" }}>
+            Speed and time-pressure telemetry per question. Pacing limit was {data.perQuestionTimeLimitSeconds || 60} seconds per question.
+          </p>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem" }}>
+            {data.questionReview.map((q, idx) => {
+              const limit = data.perQuestionTimeLimitSeconds || 60;
+              const spent = q.timeSpent != null ? q.timeSpent : Math.round(data.timeTaken / data.totalCount);
+              const percent = Math.min(100, Math.round((spent / limit) * 100));
+              const isUrgent = spent >= limit * 0.85;
+
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    padding: "0.85rem 1rem",
+                    background: "var(--bg-surface)",
+                    borderRadius: "var(--radius-sm)",
+                    border: "1px solid var(--border-light)",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span style={{ fontWeight: 700, fontSize: "0.85rem" }}>Q{idx + 1}</span>
+                      {q.isCorrect ? (
+                        <Check size={14} style={{ color: "#10b981" }} />
+                      ) : (
+                        <X size={14} style={{ color: "#ef4444" }} />
+                      )}
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      {q.isTimedOut && (
+                        <span style={{ fontSize: "0.68rem", color: "#ef4444", fontWeight: 700, background: "rgba(239, 68, 68, 0.15)", padding: "1px 6px", borderRadius: "8px" }}>
+                          TIMED OUT
+                        </span>
+                      )}
+                      <span style={{ fontSize: "0.8rem", fontWeight: 700, fontFamily: "monospace", color: isUrgent ? "#ef4444" : "var(--text-secondary)" }}>
+                        {spent}s / {limit}s
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ height: "6px", background: "rgba(255, 255, 255, 0.08)", borderRadius: "3px", overflow: "hidden" }}>
+                    <div
+                      style={{
+                        height: "100%",
+                        width: `${percent}%`,
+                        background: q.isTimedOut
+                          ? "#ef4444"
+                          : percent > 75
+                          ? "#f59e0b"
+                          : "#10b981",
+                        borderRadius: "3px",
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}{" "}
       {/* Module Breakdown */}{" "}
       {data.moduleBreakdown?.length > 0 && (
         <div className="card" style={{ marginBottom: "2rem" }}>
@@ -360,7 +483,17 @@ export default function ResultReview({ params }) {
                   Q{idx + 1}
                 </span>{" "}
                 <span className="badge">{q.module}</span>{" "}
-                <span className="badge">{q.type}</span>{" "}
+                <span
+                  className="badge"
+                  style={{
+                    backgroundColor: q.type === 'MSQ' ? 'rgba(234, 179, 8, 0.15)' : 'rgba(99, 102, 241, 0.15)',
+                    color: q.type === 'MSQ' ? '#eab308' : '#818cf8',
+                    borderColor: q.type === 'MSQ' ? 'rgba(234, 179, 8, 0.3)' : 'rgba(99, 102, 241, 0.3)',
+                    fontWeight: 700,
+                  }}
+                >
+                  {q.type || 'MCQ'}
+                </span>{" "}
               </div>{" "}
               <div
                 style={{

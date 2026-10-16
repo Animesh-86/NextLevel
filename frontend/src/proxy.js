@@ -4,7 +4,7 @@ async function handleProxy(req) {
   const { pathname } = req.nextUrl;
 
   // Public paths that don't require auth
-  const publicPaths = ['/login', '/api/auth', '/'];
+  const publicPaths = ['/login', '/api/auth', '/', '/pyramid-preloader.html', '/test-pyramid.html', '/framer-shim.js'];
   const isPublicPath = publicPaths.some(path => {
     if (path === '/') return pathname === '/';
     return pathname.startsWith(path);

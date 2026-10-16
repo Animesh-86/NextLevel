@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NextLevel · Room Arena Loader</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000000;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .svg-container {
+      width: 280px;
+      height: 220px;
+      filter: drop-shadow(0 14px 28px rgba(255, 255, 255, 0.08));
+      animation: hoverFloat 4.8s ease-in-out infinite;
+    }
+    @keyframes hoverFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    .shadow {
+      width: 240px;
+      height: 60px;
+      border-radius: 50%;
+      background: radial-gradient(ellipse 60% 40% at 50% 50%, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.9) 50%, transparent 75%);
+      margin-top: -20px;
+    }
+    .label {
+      margin-top: 24px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+      display: inline-block;
+      animation: pulse 1.2s infinite ease-in-out;
+    }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; transform: scale(0.85); }
+      50% { opacity: 1; transform: scale(1.3); }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div id="svg-stage" class="svg-container"></div>
+    <div class="shadow"></div>
+    <div class="label">
+      <span>Entering Study Room</span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+    </div>
+  </div>
+
+  <script>
+    const W = 42, H = 24, Z = 20;
+    const cubes = [];
+
+    // Generate 30 cubes: Tier 0 (16), Tier 1 (9), Tier 2 (4), Tier 3 (1)
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) cubes.push({ layer: 0, x: c, y: r });
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) cubes.push({ layer: 1, x: c + 0.5, y: r + 0.5 });
+    for (let r = 0; r < 2; r++) for (let c = 0; c < 2; c++) cubes.push({ layer: 2, x: c + 1.0, y: r + 1.0 });
+    cubes.push({ layer: 3, x: 1.5, y: 1.5 });
+
+    cubes.sort((a, b) => a.layer !== b.layer ? a.layer - b.layer : (a.x + a.y) - (b.x + b.y));
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "-150 -140 300 240");
+    svg.setAttribute("width", "100%");
+    svg.setAttribute("height", "100%");
+
+    cubes.forEach((cube, i) => {
+      const sx = (cube.x - cube.y) * (W / 2);
+      const sy = (cube.x + cube.y) * (H / 2) - cube.layer * Z;
+
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      g.setAttribute("transform", `translate(${sx}, ${sy})`);
+
+      // Left face
+      const left = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+      left.setAttribute("points", `${-W/2},${-Z} 0,${-Z+H/2} 0,${H/2} ${-W/2},0`);
+      left.setAttribute("fill", "#e2e8f0");
+      left.setAttribute("stroke", "rgba(0,0,0,0.25)");
+      left.setAttribute("stroke-width", "0.6");
+      g.appendChild(left);
+
+      // Right face
+      const right = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+      right.setAttribute("points", `0,${-Z+H/2} ${W/2},${-Z} ${W/2},0 0,${H/2}`);
+      right.setAttribute("fill", "#cbd5e1");
+      right.setAttribute("stroke", "rgba(0,0,0,0.25)");
+      right.setAttribute("stroke-width", "0.6");
+      g.appendChild(right);
+
+      // Top face
+      const top = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+      top.setAttribute("points", `0,${-Z-H/2} ${W/2},${-Z} 0,${-Z+H/2} ${-W/2},${-Z}`);
+      top.setAttribute("fill", "#ffffff");
+      top.setAttribute("stroke", "rgba(0,0,0,0.3)");
+      top.setAttribute("stroke-width", "0.6");
+      g.appendChild(top);
+
+      svg.appendChild(g);
+    });
+
+    document.getElementById("svg-stage").appendChild(svg);
+  </script>
+</body>
+</html>

@@ -534,7 +534,7 @@ export default function JourneyPage() {
             ) : (
               <div style={{ textAlign: 'center', padding: '1rem' }}>
                 <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Keep Pushing!</h2>
-                <p style={{ color: 'var(--text-secondary)' }}>Every 'No' brings you one step closer to a 'Yes'. Your next opportunity is out there.</p>
+                <p style={{ color: 'var(--text-secondary)' }}>Every &lsquo;No&rsquo; brings you one step closer to a &lsquo;Yes&rsquo;. Your next opportunity is out there.</p>
                 <button className="btn btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => setRejectFlow({ active: false, appId: null, note: '', completed: false })}>Got it</button>
               </div>
             )}

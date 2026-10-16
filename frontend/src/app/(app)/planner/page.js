@@ -11,6 +11,8 @@ const categoryOptions = [
   { value: 'study', label: 'Study' },
   { value: 'revision', label: 'Revision' },
   { value: 'practice', label: 'Practice' },
+  { value: 'mock-interview', label: 'Mock Interview' },
+  { value: 'practice-exam', label: 'Practice Exam' },
   { value: 'project', label: 'Project' },
   { value: 'assignment', label: 'Assignment' },
   { value: 'exam-prep', label: 'Exam Prep' },
@@ -385,6 +387,55 @@ export default function StudyPlanner() {
             {/* Form Fields */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
               
+              {/* Quick Presets */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Quick Presets:</span>
+                <button
+                  type="button"
+                  onClick={() => setNewTask(t => ({
+                    ...t,
+                    title: 'Practice Exam: Study Test',
+                    category: 'practice-exam',
+                    priority: 'high',
+                    duration: 60
+                  }))}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    background: 'rgba(99, 102, 241, 0.12)',
+                    color: 'var(--brand-primary, #6366f1)',
+                    border: '1px solid rgba(99, 102, 241, 0.3)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  + Practice Exam
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewTask(t => ({
+                    ...t,
+                    title: 'Mock Interview: System Design & Architecture',
+                    category: 'mock-interview',
+                    priority: 'high',
+                    duration: 30
+                  }))}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    background: 'rgba(245, 166, 35, 0.12)',
+                    color: 'var(--accent, #f5a623)',
+                    border: '1px solid rgba(245, 166, 35, 0.3)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  + Mock Interview
+                </button>
+              </div>
+
               {/* Task Title & Date */}
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 'var(--space-sm)' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -425,11 +476,11 @@ export default function StudyPlanner() {
 
               {/* Category & Priority Row */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
                   <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>CATEGORY</label>
                   <select
                     className="input"
-                    style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)' }}
+                    style={{ width: '100%', padding: '10px 36px 10px 12px', borderRadius: 'var(--radius-md)' }}
                     value={newTask.category}
                     onChange={(e) => setNewTask(t => ({ ...t, category: e.target.value }))}
                   >
@@ -439,11 +490,11 @@ export default function StudyPlanner() {
                   </select>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
                   <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>PRIORITY</label>
                   <select
                     className="input"
-                    style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)' }}
+                    style={{ width: '100%', padding: '10px 36px 10px 12px', borderRadius: 'var(--radius-md)' }}
                     value={newTask.priority}
                     onChange={(e) => setNewTask(t => ({ ...t, priority: e.target.value }))}
                   >
@@ -456,22 +507,22 @@ export default function StudyPlanner() {
 
               {/* Start Time & Duration Row */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
                   <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>START TIME</label>
                   <input
                     className="input"
-                    style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--radius-md)' }}
                     type="time"
                     value={newTask.startTime}
                     onChange={(e) => setNewTask(t => ({ ...t, startTime: e.target.value }))}
                   />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 }}>
                   <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>DURATION</label>
                   <select
                     className="input"
-                    style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)' }}
+                    style={{ width: '100%', padding: '10px 36px 10px 12px', borderRadius: 'var(--radius-md)' }}
                     value={newTask.duration}
                     onChange={(e) => setNewTask(t => ({ ...t, duration: Number(e.target.value) }))}
                   >

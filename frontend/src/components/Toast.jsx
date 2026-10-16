@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, createContext, useContext, useCallback } from 'react';
+import { useState, useEffect, createContext, useContext, useCallback, useMemo } from 'react';
 import { CheckCircle, XCircle, Info, AlertTriangle, X, Loader2 } from 'lucide-react';
 
 const ToastContext = createContext(null);
@@ -29,13 +29,18 @@ export function ToastProvider({ children }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const toast = {
-    success: (msg, opts) => addToast(msg, 'success', 4000, opts?.id),
-    error: (msg, opts) => addToast(msg, 'error', 4000, opts?.id),
-    info: (msg, opts) => addToast(msg, 'info', 4000, opts?.id),
-    warning: (msg, opts) => addToast(msg, 'warning', 4000, opts?.id),
-    loading: (msg, opts) => addToast(msg, 'loading', 999999, opts?.id),
-  };
+  const toast = useMemo(() => {
+    return Object.assign(
+      (msg, opts) => addToast(msg, typeof opts === 'string' ? opts : 'info', 4000, opts?.id),
+      {
+        success: (msg, opts) => addToast(msg, 'success', 4000, opts?.id),
+        error: (msg, opts) => addToast(msg, 'error', 4000, opts?.id),
+        info: (msg, opts) => addToast(msg, 'info', 4000, opts?.id),
+        warning: (msg, opts) => addToast(msg, 'warning', 4000, opts?.id),
+        loading: (msg, opts) => addToast(msg, 'loading', 999999, opts?.id),
+      }
+    );
+  }, [addToast]);
 
   return (
     <ToastContext.Provider value={toast}>

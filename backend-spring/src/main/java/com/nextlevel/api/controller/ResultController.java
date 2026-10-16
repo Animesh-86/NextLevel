@@ -63,6 +63,11 @@ public class ResultController {
             row.put("passed", result.getPassed());
             row.put("timeTaken", result.getTimeTaken());
             row.put("userAnswers", result.getUserAnswers());
+            row.put("testMode", result.getTestMode());
+            row.put("perQuestionTimeLimitSeconds", result.getPerQuestionTimeLimitSeconds());
+            row.put("questionTimeTaken", result.getQuestionTimeTaken());
+            row.put("timedOutQuestionIds", result.getTimedOutQuestionIds());
+            row.put("speedAccuracyRatio", result.getSpeedAccuracyRatio());
             row.put("createdAt", result.getCreatedAt());
 
             resultService.getExam(result.getExamId()).ifPresent(exam -> {
@@ -120,6 +125,11 @@ public class ResultController {
         response.put("passed", result.getPassed());
         response.put("timeTaken", result.getTimeTaken());
         response.put("userAnswers", result.getUserAnswers());
+        response.put("testMode", result.getTestMode());
+        response.put("perQuestionTimeLimitSeconds", result.getPerQuestionTimeLimitSeconds());
+        response.put("questionTimeTaken", result.getQuestionTimeTaken());
+        response.put("timedOutQuestionIds", result.getTimedOutQuestionIds());
+        response.put("speedAccuracyRatio", result.getSpeedAccuracyRatio());
         response.put("createdAt", result.getCreatedAt());
 
         resultService.getExam(result.getExamId()).ifPresent(exam -> {

@@ -20,15 +20,19 @@ export default function ReminderBell() {
   async function fetchNotifications() {
     try {
       const res = await apiFetch('/api/notifications');
-      const data = await res.json();
-      if (data.success) {
-        setNotifications(data.data || []);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setNotifications(data.data || []);
+        }
       }
 
       const countRes = await apiFetch('/api/notifications/unread-count');
-      const countData = await countRes.json();
-      if (countData.success) {
-        setUnreadCount(countData.data || 0);
+      if (countRes.ok) {
+        const countData = await countRes.json();
+        if (countData.success) {
+          setUnreadCount(countData.data || 0);
+        }
       }
     } catch (err) {
       // Silently fail

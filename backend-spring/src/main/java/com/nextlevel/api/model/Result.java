@@ -27,5 +27,10 @@ public class Result {
     private Boolean passed;
     private Integer timeTaken;
     private Map<String, List<Integer>> userAnswers;
+    private String testMode;
+    private Integer perQuestionTimeLimitSeconds;
+    private Map<String, Integer> questionTimeTaken;
+    private List<String> timedOutQuestionIds;
+    private Double speedAccuracyRatio;
     private Instant createdAt;
 }

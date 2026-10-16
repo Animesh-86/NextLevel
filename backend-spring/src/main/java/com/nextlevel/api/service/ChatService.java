@@ -73,7 +73,8 @@ public class ChatService {
         return chatClient.prompt()
                 .messages(springMessages)
                 .stream()
-                .content();
+                .content()
+                .onErrorResume(e -> Flux.just("I'm sorry, I encountered an issue processing your request right now. Please try again."));
     }
     
     // Non-streaming version for getting the sources

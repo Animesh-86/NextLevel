@@ -173,3 +173,176 @@ export function parseCSVRows(rows, examId) {
 
   return { questions, errors };
 }
+
+/**
+ * Universal JSON Question Extractor.
+ * Parses question banks from any JSON structure:
+ * - Direct array of questions
+ * - Nested sections / chapters (e.g. part_1_..., part_2_...)
+ * - Containers with questions/mcqs/data/items keys
+ * Normalizes question, scenario, options, answer indices (supports 0-based, letters, strings), MSQ detection, chooseCount, explanation.
+ */
+export function extractQuestionsFromJson(data, examId = null, defaultModule = 'General') {
+  if (!data) return [];
+
+  let rawItems = [];
+
+  if (Array.isArray(data)) {
+    rawItems = data;
+  } else if (typeof data === 'object' && data !== null) {
+    // 1. Check known container keys: questions, mcqs, data, items, questionList, examQuestions
+    for (const key of ['questions', 'mcqs', 'data', 'items', 'questionList', 'examQuestions']) {
+      if (Array.isArray(data[key])) {
+        rawItems = data[key];
+        break;
+      }
+    }
+
+    // 2. If not found, scan all object properties for arrays of objects (e.g. part_1_..., part_2_..., chapter_1_...)
+    if (rawItems.length === 0) {
+      for (const [key, val] of Object.entries(data)) {
+        if (Array.isArray(val) && val.length > 0 && typeof val[0] === 'object' && val[0] !== null) {
+          if (val.some(item => item && (item.scenario || item.question || item.text || item.prompt))) {
+            rawItems.push(...val);
+          }
+        }
+      }
+    }
+
+    // 3. If still empty, check if the object itself is a single question
+    if (rawItems.length === 0 && (data.scenario || data.question || data.text || data.prompt)) {
+      rawItems = [data];
+    }
+  }
+
+  const normalized = [];
+
+  for (const item of rawItems) {
+    if (!item || typeof item !== 'object') continue;
+
+    // 1. Extract scenario/question prompt
+    const scenario = item.scenario || item.question || item.text || item.prompt || item.q || '';
+    if (!scenario || typeof scenario !== 'string' || !scenario.trim()) continue;
+
+    // 2. Extract options
+    let rawOptions = item.options || item.choices || item.answers;
+    let options = [];
+    if (Array.isArray(rawOptions)) {
+      options = rawOptions.map(opt => typeof opt === 'string' ? opt.trim() : (opt?.text || String(opt || '')).trim());
+    } else if (typeof rawOptions === 'object' && rawOptions !== null) {
+      options = Object.values(rawOptions).map(opt => String(opt || '').trim());
+    }
+
+    options = options.filter(Boolean);
+    if (options.length < 2) continue;
+
+    // 3. Extract answer
+    let rawAnswer = item.answer ?? item.correct_answer ?? item.correctAnswer ?? item.correct ?? item.correctOptions ?? item.key ?? item.ans;
+    let answerIndices = [];
+
+    const parseAnswerValue = (val) => {
+      if (val === null || val === undefined) return;
+      if (typeof val === 'number') {
+        if (val >= 0 && val < options.length) answerIndices.push(val);
+      } else if (typeof val === 'string') {
+        const trimmed = val.trim();
+        if (/^[A-Za-z]$/.test(trimmed)) {
+          const idx = trimmed.toUpperCase().charCodeAt(0) - 65;
+          if (idx >= 0 && idx < options.length) answerIndices.push(idx);
+        } else if (!isNaN(parseInt(trimmed))) {
+          const idx = parseInt(trimmed);
+          if (idx >= 0 && idx < options.length) answerIndices.push(idx);
+        } else {
+          const idx = options.findIndex(opt => opt.toLowerCase() === trimmed.toLowerCase());
+          if (idx !== -1) answerIndices.push(idx);
+        }
+      }
+    };
+
+    if (Array.isArray(rawAnswer)) {
+      for (const a of rawAnswer) parseAnswerValue(a);
+    } else {
+      parseAnswerValue(rawAnswer);
+    }
+
+    if (answerIndices.length === 0) {
+      answerIndices = [0];
+    }
+
+    answerIndices = [...new Set(answerIndices)].sort((a, b) => a - b);
+    if (answerIndices.length === 0) answerIndices = [0];
+
+    // 4. Determine type (MCQ or MSQ)
+    let type = (item.type || '').toUpperCase();
+    if (type !== 'MCQ' && type !== 'MSQ') {
+      type = answerIndices.length > 1 ? 'MSQ' : 'MCQ';
+    }
+
+    // 5. Explanation
+    const explanation = item.explanation || item.rationale || item.solution || item.detail || '';
+    const moduleName = item.chapter || item.module || item.category || defaultModule;
+
+    const qObj = {
+      scenario: scenario.trim(),
+      options,
+      answer: answerIndices,
+      type,
+      explanation: typeof explanation === 'string' ? explanation.trim() : '',
+      module: typeof moduleName === 'string' ? moduleName.trim() : defaultModule,
+      chooseCount: answerIndices.length > 1 ? answerIndices.length : 1,
+    };
+
+    if (examId) qObj.examId = examId;
+
+    normalized.push(qObj);
+  }
+
+  return normalized;
+}
+
+/**
+ * Strict check for whether a question is a multiple-select (MSQ) question.
+ */
+export function isMSQQuestion(q) {
+  if (!q) return false;
+  // 1. Explicit question type check
+  const type = String(q.type || '').trim().toUpperCase();
+  if (type === 'MSQ' || type === 'MULTIPLE_SELECT' || type.includes('MSQ') || type.includes('MULTI') || type.includes('CHECKBOX')) {
+    return true;
+  }
+  // 2. chooseCount > 1
+  const cc = Number(q.chooseCount);
+  if (!isNaN(cc) && cc > 1) return true;
+
+  // 3. answer array with multiple indices
+  if (Array.isArray(q.answer) && q.answer.length > 1) return true;
+  if (Array.isArray(q.answers) && q.answers.length > 1) return true;
+  if (Array.isArray(q.correctAnswers) && q.correctAnswers.length > 1) return true;
+
+  // 4. answer string formatted like "[0, 1]" or "0, 1, 2" or "A, B"
+  if (typeof q.answer === 'string') {
+    const trimmed = q.answer.trim();
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed) && parsed.length > 1) return true;
+      } catch (e) {}
+    }
+    if (trimmed.includes(',') || trimmed.includes(';') || trimmed.includes('&')) return true;
+  }
+
+  // 5. Scenario text indicators for multiple-select questions
+  const scenario = String(q.scenario || '').toLowerCase();
+  if (
+    scenario.includes('select all') ||
+    scenario.includes('choose all') ||
+    scenario.includes('multiple options') ||
+    scenario.includes('which workarounds are described') ||
+    scenario.includes('which of the following are')
+  ) {
+    return true;
+  }
+
+  return false;
+}
+

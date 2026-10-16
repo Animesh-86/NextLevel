@@ -146,14 +146,14 @@ export default function ManageQuestions() {
 
   return (
     <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
-      <header style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+      <header className="glass-panel" style={{ padding: 'var(--space-lg)', position: 'relative', overflow: 'hidden', marginBottom: 'var(--space-lg)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.02em' }}>Question Bank</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Manage and import questions for your exams.</p>
+          <h1 style={{ fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-0.04em', marginBottom: 'var(--space-xs)' }}>Question Bank</h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', maxWidth: '600px', margin: 0 }}>Manage and import questions for your exams.</p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button className="btn btn-secondary" onClick={() => setShowImport(!showImport)}>
-            <Upload size={16} style={{ marginRight: '0.5rem' }} /> Import
+          <button className="btn btn-secondary" onClick={() => setShowImport(!showImport)} style={{ padding: '0.65rem 1.25rem', fontSize: '0.88rem', fontWeight: 700 }}>
+            <Upload size={16} style={{ marginRight: '0.5rem' }} /> Import Questions
           </button>
         </div>
       </header>

@@ -9,6 +9,7 @@ import {
 import FileCard from '@/components/FileCard';
 import FileViewer from '@/components/FileViewer';
 import { SkeletonCard } from '@/components/SkeletonLoader';
+import ConfirmModal from '@/components/ConfirmModal';
 
 const categoryOptions = [
   { value: 'all', label: 'All' },
@@ -322,48 +323,27 @@ export default function FileVault() {
         }}
       />
 
-      {/* Custom Delete Confirmation Modal */}
-      {deleteTargetId && (
-        <div className="dialog-overlay" onClick={() => setDeleteTargetId(null)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="glass-panel" onClick={(e) => e.stopPropagation()} style={{
-            width: '90%',
-            maxWidth: '400px',
-            padding: 'var(--space-lg)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 'var(--space-md)',
-            animation: 'fadeIn 0.2s ease-out'
-          }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Delete File</h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.5 }}>
-              Are you sure you want to delete this file? This action is permanent and cannot be undone.
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: 'var(--space-xs)' }}>
-              <button className="btn btn-secondary" onClick={() => setDeleteTargetId(null)}>
-                Cancel
-              </button>
-              <button 
-                className="btn btn-primary" 
-                style={{ background: 'var(--urgency-critical)', border: 'none', color: '#fff' }}
-                onClick={async () => {
-                  const id = deleteTargetId;
-                  setDeleteTargetId(null);
-                  try {
-                    await apiFetch(`/api/files/${id}`, { method: 'DELETE' });
-                    fetchFiles();
-                    toast.success('File deleted successfully');
-                  } catch (err) {
-                    console.error('Delete failed:', err);
-                    toast.error('Failed to delete file');
-                  }
-                }}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* File Deletion Confirmation Modal */}
+      <ConfirmModal
+        open={!!deleteTargetId}
+        onCancel={() => setDeleteTargetId(null)}
+        onConfirm={async () => {
+          const id = deleteTargetId;
+          setDeleteTargetId(null);
+          try {
+            await apiFetch(`/api/files/${id}`, { method: 'DELETE' });
+            fetchFiles();
+            toast.success('File deleted successfully');
+          } catch (err) {
+            console.error('Delete failed:', err);
+            toast.error('Failed to delete file');
+          }
+        }}
+        title="Delete this file?"
+        message="Are you sure you want to delete this file? This action is permanent and cannot be undone."
+        confirmText="Delete File"
+        danger={true}
+      />
 
       {/* Floating Compare Action Bar */}
       {selectedFileIds.length > 0 && (

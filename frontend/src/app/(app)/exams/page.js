@@ -94,16 +94,17 @@ export default function ExamsPage() {
 
   return (
     <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
-      <header style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+      <header className="glass-panel" style={{ padding: 'var(--space-lg)', position: 'relative', overflow: 'hidden', marginBottom: 'var(--space-lg)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.02em' }}>Exam Management</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Create and manage exams for your question bank.</p>
+          <h1 style={{ fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-0.04em', marginBottom: 'var(--space-xs)' }}>Exam Management</h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', maxWidth: '600px', margin: 0 }}>Create and manage exams for your question bank.</p>
         </div>
         <button
           className="btn btn-primary"
           onClick={() => { setShowForm(true); setEditingExam(null); setForm({ title: '', description: '', timeLimit: 60, passPercentage: 75 }); }}
+          style={{ padding: '0.65rem 1.25rem', fontSize: '0.88rem', fontWeight: 700 }}
         >
-          <Plus size={18} style={{ marginRight: '0.5rem' }} /> New Exam
+          <Plus size={16} style={{ marginRight: '0.5rem' }} /> New Exam
         </button>
       </header>
 

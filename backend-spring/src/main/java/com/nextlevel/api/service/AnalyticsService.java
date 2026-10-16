@@ -29,15 +29,30 @@ public class AnalyticsService {
     private final StudyFileRepository studyFileRepository;
     private final RoadmapRepository roadmapRepository;
     private final ApplicationRepository applicationRepository;
+    private final com.nextlevel.api.repository.ResultRepository resultRepository;
+    private final com.nextlevel.api.repository.InterviewSessionRepository interviewSessionRepository;
+    private final com.nextlevel.api.repository.StudySessionRepository studySessionRepository;
+    private final com.nextlevel.api.repository.UserRepository userRepository;
+    private final com.nextlevel.api.repository.StudyRoomRepository studyRoomRepository;
 
     public AnalyticsService(CaptureRepository captureRepository, PlannerTaskRepository plannerTaskRepository,
             StudyFileRepository studyFileRepository, RoadmapRepository roadmapRepository,
-            ApplicationRepository applicationRepository) {
+            ApplicationRepository applicationRepository,
+            com.nextlevel.api.repository.ResultRepository resultRepository,
+            com.nextlevel.api.repository.InterviewSessionRepository interviewSessionRepository,
+            com.nextlevel.api.repository.StudySessionRepository studySessionRepository,
+            com.nextlevel.api.repository.UserRepository userRepository,
+            com.nextlevel.api.repository.StudyRoomRepository studyRoomRepository) {
         this.captureRepository = captureRepository;
         this.plannerTaskRepository = plannerTaskRepository;
         this.studyFileRepository = studyFileRepository;
         this.roadmapRepository = roadmapRepository;
         this.applicationRepository = applicationRepository;
+        this.resultRepository = resultRepository;
+        this.interviewSessionRepository = interviewSessionRepository;
+        this.studySessionRepository = studySessionRepository;
+        this.userRepository = userRepository;
+        this.studyRoomRepository = studyRoomRepository;
     }
 
     public Map<String, Object> getAnalyticsData(String uid) {
@@ -56,9 +71,34 @@ public class AnalyticsService {
             heatmap.put(d.toString(), 0);
         }
 
+        List<com.nextlevel.api.model.Result> results = resultRepository.findByUserId(uid);
+        List<com.nextlevel.api.model.InterviewSession> interviewSessions = interviewSessionRepository.findByUserId(uid);
+        List<com.nextlevel.api.model.StudySession> studySessions = studySessionRepository.findByUserId(uid);
+        List<com.nextlevel.api.model.StudyRoom> rooms = studyRoomRepository.findAll();
+
         captures.forEach(c -> bump(heatmap, c.getCreatedAt()));
-        tasks.forEach(t -> bump(heatmap, t.getScheduledDate()));
+        tasks.forEach(t -> {
+            bump(heatmap, t.getScheduledDate());
+            if (t.getScheduledDate() == null) bump(heatmap, t.getCreatedAt());
+        });
         files.forEach(f -> bump(heatmap, f.getCreatedAt()));
+        results.forEach(r -> bump(heatmap, r.getCreatedAt()));
+        interviewSessions.forEach(s -> bump(heatmap, s.getCreatedAt()));
+        studySessions.forEach(s -> {
+            bump(heatmap, s.getStartTime());
+            if (s.getStartTime() == null) bump(heatmap, s.getCreatedAt());
+        });
+        rooms.forEach(rm -> {
+            if (rm.getPastChallenges() != null) {
+                rm.getPastChallenges().forEach(ch -> {
+                    boolean attended = ch.getLeaderboard() != null && ch.getLeaderboard().stream()
+                            .anyMatch(sc -> uid.equals(sc.getUserId()));
+                    if (attended && ch.getCreatedAt() != null) {
+                        bump(heatmap, ch.getCreatedAt());
+                    }
+                });
+            }
+        });
 
         List<Map<String, Object>> weeklyData = new ArrayList<>();
         for (int w = 3; w >= 0; w--) {
@@ -95,12 +135,26 @@ public class AnalyticsService {
         Map<String, Integer> pipeline = new HashMap<>();
         apps.forEach(a -> pipeline.merge(a.getStatus(), 1, Integer::sum));
 
-        int streak = 0;
-        for (int i = 0; i < 90; i++) {
-            LocalDate d = now.minusDays(i);
-            if (heatmap.getOrDefault(d.toString(), 0) > 0) streak++;
-            else if (i > 0) break;
+        int storedUserStreak = userRepository.findById(uid)
+                .map(u -> u.getStreak() != null ? u.getStreak() : 0)
+                .orElse(0);
+
+        int calculatedStreak = 0;
+        int startDay = 0;
+        // If today has activity, streak starts from today (i=0).
+        // If today has no activity yet, streak continues from yesterday (i=1) because today is not over!
+        if (heatmap.getOrDefault(now.toString(), 0) == 0) {
+            startDay = 1;
         }
+        for (int i = startDay; i < 90; i++) {
+            LocalDate d = now.minusDays(i);
+            if (heatmap.getOrDefault(d.toString(), 0) > 0) {
+                calculatedStreak++;
+            } else {
+                break;
+            }
+        }
+        int streak = Math.max(calculatedStreak, storedUserStreak);
 
         Map<String, Object> counts = new HashMap<>();
         counts.put("captures", captures.size());

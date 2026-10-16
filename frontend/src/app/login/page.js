@@ -157,7 +157,7 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="auth-form">
           {!isLogin && (
             <div className="auth-field">
-              <label className="auth-label">Full Name</label>
+              <label className="auth-label">Display Name / Username *</label>
               <div className="auth-input-wrapper">
                 <User size={18} className="auth-input-icon" />
                 <input
@@ -165,7 +165,7 @@ export default function LoginPage() {
                   name="name"
                   value={form.name}
                   onChange={handleChange}
-                  placeholder="Enter your full name"
+                  placeholder="e.g. Animesh Sharma or codewarrior"
                   className="input auth-input"
                   required={!isLogin}
                   autoComplete="name"

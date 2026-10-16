@@ -68,6 +68,13 @@ public class ResultService {
             questions = questionRepository.findByExamIdAndUserId(request.getExamId(), userId);
         }
         
+        if (request.getQuestionIds() != null && !request.getQuestionIds().isEmpty()) {
+            java.util.Set<String> targetIds = new java.util.HashSet<>(request.getQuestionIds());
+            questions = questions.stream()
+                    .filter(q -> targetIds.contains(q.getId()))
+                    .toList();
+        }
+        
         int correctCount = 0;
         int wrongCount = 0;
         int skippedCount = 0;
@@ -104,6 +111,17 @@ public class ResultService {
         result.setPassed(passed);
         result.setTimeTaken(request.getTimeTaken() == null ? Integer.valueOf(0) : (int) Math.round(request.getTimeTaken()));
         result.setUserAnswers(userAnswers);
+        result.setTestMode(request.getTestMode() != null ? request.getTestMode() : "simulation");
+        result.setPerQuestionTimeLimitSeconds(request.getPerQuestionTimeLimitSeconds());
+        result.setQuestionTimeTaken(request.getQuestionTimeTaken());
+        result.setTimedOutQuestionIds(request.getTimedOutQuestionIds());
+
+        if ("oa_blitz".equalsIgnoreCase(request.getTestMode()) && result.getTimeTaken() != null && result.getTimeTaken() > 0) {
+            double totalMinutes = result.getTimeTaken() / 60.0;
+            double speedAccuracy = totalMinutes > 0 ? (double) correctCount / totalMinutes : 0.0;
+            result.setSpeedAccuracyRatio(Math.round(speedAccuracy * 100.0) / 100.0);
+        }
+
         result.setCreatedAt(Instant.now());
 
         Result saved = resultRepository.save(result);
@@ -185,6 +203,12 @@ public class ResultService {
             row.put("userAnswer", given);
             row.put("isCorrect", isCorrect);
             row.put("explanation", q.getExplanation() == null ? "" : q.getExplanation());
+
+            Integer timeSpent = result.getQuestionTimeTaken() != null ? result.getQuestionTimeTaken().get(q.getId()) : null;
+            boolean isTimedOut = result.getTimedOutQuestionIds() != null && result.getTimedOutQuestionIds().contains(q.getId());
+            row.put("timeSpent", timeSpent);
+            row.put("isTimedOut", isTimedOut);
+
             review.add(row);
         }
 

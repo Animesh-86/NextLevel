@@ -1,14 +1,18 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { useRouter } from 'next/navigation';
 import { 
-  Play, Pause, RotateCcw, Maximize2, Minimize2, 
-  Volume2, VolumeX, Sparkles, Clock, ArrowLeft, 
-  CheckCircle2, AlertCircle, Award
+  Play, Pause, RotateCcw, 
+  Volume2, VolumeX, Sparkles, ArrowLeft, Award,
+  ChevronDown, Plus, CheckCircle2, Circle, X,
+  Eye, EyeOff, Gauge
 } from 'lucide-react';
-import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { useToast } from '@/components/Toast';
+import StarsGalaxy from '@/components/StarsGalaxy';
+import { useFocusTimer, PARTICLE_SPEEDS, HUMOROUS_EXIT_QUOTES } from '@/lib/FocusContext';
 
 const createBrownNoise = (ctx) => {
   const bufferSize = 2 * ctx.sampleRate;
@@ -28,88 +32,116 @@ const createBrownNoise = (ctx) => {
 };
 
 export default function FocusPage() {
+  const router = useRouter();
   const toast = useToast();
+  const [mounted, setMounted] = useState(false);
 
-  // Timer Configuration
-  const [mode, setMode] = useState('focus'); // focus | shortBreak | longBreak | custom
-  const [timeLeft, setTimeLeft] = useState(25 * 60);
-  const [duration, setDuration] = useState(25 * 60);
-  const [isRunning, setIsRunning] = useState(false);
-  const [customMinutes, setCustomMinutes] = useState(25);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  // Stats Counters
-  const [sessionsCompletedToday, setSessionsCompletedToday] = useState(0);
-  const [totalFocusMinutesToday, setTotalFocusMinutesToday] = useState(0);
+  const {
+    mode,
+    timeLeft,
+    duration,
+    isRunning,
+    customMinutes, setCustomMinutes,
+    particlesEnabled, setParticlesEnabled,
+    particleSpeedIndex, setParticleSpeedIndex,
+    isFullscreen,
+    soundType, setSoundType,
+    volume, setVolume,
+    isMuted, setIsMuted,
+    tasks, setTasks,
+    selectedTaskId, setSelectedTaskId,
+    sessionsCompletedToday,
+    totalFocusMinutesToday,
+    showCelebration, setShowCelebration,
+    awardedXp,
+    showExitModal, setShowExitModal,
+    exitQuoteIndex,
+    pendingNavUrl,
+    cancelExit,
+    confirmExit,
+    handleTogglePlay,
+    handleModeChange,
+    resetTimer,
+    handleInitiateExit,
+    handleBackClick
+  } = useFocusTimer();
 
-  // Fullscreen State
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  // Sound Synth Configuration
-  const [soundType, setSoundType] = useState('none'); // none | rain | noise | beats | ticking
-  const [volume, setVolume] = useState(50); // 0-100
-  const [isMuted, setIsMuted] = useState(false);
-
-  // Planner Task Linkage
-  const [tasks, setTasks] = useState([]);
-  const [selectedTaskId, setSelectedTaskId] = useState('');
+  // Task Quick Add State
+  const [isAddingTask, setIsAddingTask] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [sessionNotes, setSessionNotes] = useState('');
-  const [showCelebration, setShowCelebration] = useState(false);
-  const [awardedXp, setAwardedXp] = useState(0);
 
-  // Refs for audio nodes and interval
-  const timerRef = useRef(null);
+  // Refs for local audio synthesis
   const audioCtxRef = useRef(null);
   const masterGainRef = useRef(null);
   const activeSourcesRef = useRef([]);
   const metronomeRef = useRef(null);
 
-  // 1. Fetch Today's Tasks & Completed Sessions
-  const loadInitialData = useCallback(async () => {
+  // Quick Task Creation for Linked Task
+  const handleCreateQuickTask = async () => {
+    if (!newTaskTitle.trim()) return;
+    setIsCreatingTask(true);
     try {
-      // Fetch tasks
       const d = new Date();
       const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      const tasksRes = await apiFetch(`/api/planner?start=${todayStr}&end=${todayStr}`);
-      const tasksData = await tasksRes.json();
-      if (tasksData.success) {
-        setTasks(tasksData.data || []);
-      }
-
-      // Fetch completed sessions
-      const sessionsRes = await apiFetch('/api/study/sessions');
-      const sessionsData = await sessionsRes.json();
-      if (sessionsData.success) {
-        const list = sessionsData.data || [];
-        // Filter sessions completed today
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
-        const todaySessions = list.filter(s => new Date(s.createdAt) >= startOfDay);
-        setSessionsCompletedToday(todaySessions.length);
-        const mins = todaySessions.reduce((acc, s) => acc + (s.durationMinutes || 0), 0);
-        setTotalFocusMinutesToday(mins);
+      const payload = {
+        title: newTaskTitle.trim(),
+        category: 'study',
+        priority: 'medium',
+        scheduledDate: todayStr,
+        duration: Math.max(15, Math.round(duration / 60)),
+        status: 'todo'
+      };
+      const res = await apiFetch('/api/planner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setTasks((prev) => [data.data, ...prev]);
+        setSelectedTaskId(data.data.id);
+        setNewTaskTitle('');
+        setIsAddingTask(false);
+        toast.success(`Task "${data.data.title}" created & linked!`);
+      } else {
+        toast.error(data.error || 'Failed to create task');
       }
     } catch (err) {
-      console.error('Failed to load initial focus data:', err);
+      toast.error('Failed to create task');
+    } finally {
+      setIsCreatingTask(false);
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    loadInitialData();
-  }, [loadInitialData]);
+  // Toggle Task Status (done / todo)
+  const handleToggleTaskStatus = async (taskId, newStatus) => {
+    try {
+      const res = await apiFetch(`/api/planner/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
+        toast.success(newStatus === 'done' ? 'Task marked as completed! 🎉' : 'Task marked as todo');
+      } else {
+        toast.error(data.error || 'Failed to update task');
+      }
+    } catch (err) {
+      toast.error('Failed to update task status');
+    }
+  };
 
-  // 2. Track Fullscreen Change Event
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    };
-  }, []);
 
   // 3. Audio Context & Master Gain Initializer
-  const initAudio = () => {
+  const initAudio = useCallback(() => {
     if (!audioCtxRef.current) {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       const ctx = new AudioContextClass();
@@ -124,7 +156,7 @@ export default function FocusPage() {
     if (audioCtxRef.current.state === 'suspended') {
       audioCtxRef.current.resume();
     }
-  };
+  }, [isMuted, volume]);
 
   // 4. Update Volume
   useEffect(() => {
@@ -323,7 +355,7 @@ export default function FocusPage() {
       scheduler();
       metronomeRef.current = { stop: () => clearTimeout(timerId) };
     }
-  }, [stopAmbientSounds, volume, isMuted]);
+  }, [initAudio, stopAmbientSounds]);
 
   // Restart/stop sounds when type changes or play starts/pauses
   useEffect(() => {
@@ -338,88 +370,10 @@ export default function FocusPage() {
   useEffect(() => {
     return () => {
       stopAmbientSounds();
-      if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [stopAmbientSounds]);
 
-  // 6. Mode Switch Logic
-  const handleModeChange = (newMode, minutes) => {
-    setMode(newMode);
-    setIsRunning(false);
-    if (timerRef.current) clearInterval(timerRef.current);
-    
-    const secs = minutes * 60;
-    setTimeLeft(secs);
-    setDuration(secs);
-  };
-
-  // 7. Save Focus Session API Call
-  const logFocusSession = async () => {
-    const focusedMinutes = Math.max(1, Math.round(duration / 60));
-    try {
-      const payload = {
-        durationMinutes: focusedMinutes,
-        taskId: selectedTaskId || null,
-        notes: sessionNotes || 'Focused session'
-      };
-      
-      const res = await apiFetch('/api/study/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      
-      if (data.success) {
-        // Calculate XP
-        const xpEarned = Math.max(5, Math.round(focusedMinutes / 5) * 5);
-        setAwardedXp(xpEarned);
-        setShowCelebration(true);
-        loadInitialData(); // Reload stats
-        toast.success(`Session saved! You earned ${xpEarned} XP.`);
-      }
-    } catch (err) {
-      console.error('Failed to save study session:', err);
-      toast.error('Session finished! Failed to log XP to server.');
-    }
-  };
-
-  // 8. Timer Ticker Loop
-  useEffect(() => {
-    if (isRunning) {
-      timerRef.current = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            setIsRunning(false);
-            clearInterval(timerRef.current);
-            playZenBell();
-            logFocusSession();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current);
-    }
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isRunning, duration, selectedTaskId, sessionNotes]);
-
-  // 9. Fullscreen Actions
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(err => {
-        toast.error('Fullscreen mode not supported on this browser');
-      });
-    } else {
-      document.exitFullscreen();
-    }
-  };
-
-  // 10. Format Time MM:SS
+  // Format Time MM:SS
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -428,7 +382,7 @@ export default function FocusPage() {
 
   // Circular progress calculations
   const progressPercent = duration > 0 ? (timeLeft / duration) * 100 : 0;
-  const radius = 120;
+  const radius = 110;
   const strokeWidth = 8;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progressPercent / 100) * circumference;
@@ -437,196 +391,253 @@ export default function FocusPage() {
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      height: isFullscreen ? '100vh' : 'calc(100vh - 120px)',
-      background: isFullscreen ? '#0b0b0f' : 'transparent',
-      padding: isFullscreen ? '2rem' : '0',
-      transition: 'all 0.3s ease-in-out',
-      position: 'relative',
-      overflow: 'hidden',
-      justifyContent: 'center',
-      alignItems: 'center'
+      height: isFullscreen ? '100vh' : 'calc(100vh - 75px)',
+      maxHeight: isFullscreen ? '100vh' : 'calc(100vh - 75px)',
+      background: '#000000',
+      padding: isFullscreen ? '1.5rem' : '0.85rem 1.5rem 1rem',
+      boxSizing: 'border-box',
+      overflowY: 'auto',
+      overflowX: 'hidden',
+      color: '#f4f4f6',
+      position: 'relative'
     }}>
-      {/* Background Particles Decoration */}
+      {/* High-density Cosmic Stars Galaxy Background (Active ONLY when timer is running) */}
+      {isRunning && particlesEnabled && (
+        <StarsGalaxy
+          stars={1600}
+          speed={0.42 * PARTICLE_SPEEDS[particleSpeedIndex].multiplier}
+          twinkle={0.45}
+          background="#000000"
+        />
+      )}
+
+      {/* Subtle ambient lighting vignette */}
       <div style={{
         position: 'absolute',
         top: 0, left: 0, right: 0, bottom: 0,
-        background: 'radial-gradient(circle at center, rgba(180, 255, 100, 0.03) 0%, transparent 70%)',
+        background: 'radial-gradient(circle at 50% 30%, rgba(52, 211, 153, 0.05) 0%, transparent 70%)',
         pointerEvents: 'none',
         zIndex: 0
       }} />
 
-      {/* Header Panel */}
+      {/* Top Header Panel (Full Width, Left-Aligned with Big Header & Subheader) */}
       <div style={{
-        position: isFullscreen ? 'absolute' : 'relative',
-        top: isFullscreen ? '2rem' : '0',
-        left: isFullscreen ? '2rem' : '0',
-        right: isFullscreen ? '2rem' : '0',
+        position: 'relative',
         width: '100%',
-        maxWidth: '1200px',
+        margin: '0 0 0.5rem 0',
+        padding: '0 0.25rem',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '1rem',
         zIndex: 10,
-        marginBottom: isFullscreen ? '0' : '1.5rem',
-        padding: '0 1rem'
+        flexShrink: 0
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {!isFullscreen && (
-            <Link href="/dashboard" className="icon-btn" title="Back to Dashboard">
-              <ArrowLeft size={20} />
-            </Link>
-          )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <button
+            type="button"
+            onClick={handleBackClick}
+            className="icon-btn"
+            title="Exit Focus Mode"
+            style={{
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.16)',
+              color: '#f4f4f6',
+              borderRadius: '10px',
+              padding: '10px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <ArrowLeft size={19} />
+          </button>
           <div>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)' }}>Focus Workspace</h1>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Completed today: {sessionsCompletedToday} sessions ({totalFocusMinutesToday} mins)
+            <h1 style={{
+              fontSize: '1.9rem',
+              fontWeight: 800,
+              color: '#ffffff',
+              letterSpacing: '-0.03em',
+              margin: 0,
+              lineHeight: 1.15
+            }}>
+              Focus Timer
+            </h1>
+            <p style={{
+              fontSize: '0.92rem',
+              color: '#9ca3af',
+              margin: '3px 0 0',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              Today: <strong style={{ color: '#ffffff', fontWeight: 700 }}>{sessionsCompletedToday}</strong> sessions
+              <span style={{ color: 'rgba(255, 255, 255, 0.3)' }}>•</span>
+              <span style={{ color: '#34d399', fontWeight: 600 }}>{totalFocusMinutesToday} mins focused</span>
             </p>
           </div>
         </div>
-
-        <button className="icon-btn" onClick={toggleFullscreen} title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}>
-          {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
-        </button>
       </div>
 
-      {/* Timer & Core Workspace */}
+      {/* Centered Focus Viewport Container (Centers Focus Box Vertically & Horizontally) */}
       <div style={{
         flex: 1,
-        width: '100%',
-        maxWidth: '700px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
+        width: '100%',
+        minHeight: 0,
         zIndex: 1,
-        gap: '2.5rem'
+        padding: '0.25rem 0'
       }}>
-        {/* Toggle Mode Tabs */}
-        <div style={{
-          display: 'flex',
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid var(--border-light)',
-          padding: '4px',
-          borderRadius: 'var(--radius-full)',
-          backdropFilter: 'blur(10px)',
-          gap: '2px'
-        }}>
-          <button 
-            onClick={() => handleModeChange('focus', 25)}
-            style={{ 
-              border: 'none', 
-              padding: '6px 16px', 
-              fontSize: '0.85rem', 
-              cursor: 'pointer', 
-              borderRadius: 'var(--radius-full)',
-              background: mode === 'focus' ? 'var(--text-primary)' : 'transparent',
-              color: mode === 'focus' ? '#121212' : 'var(--text-muted)',
-              fontWeight: mode === 'focus' ? 700 : 500,
-              transition: 'all 0.2s'
-            }}
-          >
-            Focus (25m)
-          </button>
-          <button 
-            onClick={() => handleModeChange('shortBreak', 5)}
-            style={{ 
-              border: 'none', 
-              padding: '6px 16px', 
-              fontSize: '0.85rem', 
-              cursor: 'pointer', 
-              borderRadius: 'var(--radius-full)',
-              background: mode === 'shortBreak' ? 'var(--text-primary)' : 'transparent',
-              color: mode === 'shortBreak' ? '#121212' : 'var(--text-muted)',
-              fontWeight: mode === 'shortBreak' ? 700 : 500,
-              transition: 'all 0.2s'
-            }}
-          >
-            Short Break (5m)
-          </button>
-          <button 
-            onClick={() => handleModeChange('longBreak', 15)}
-            style={{ 
-              border: 'none', 
-              padding: '6px 16px', 
-              fontSize: '0.85rem', 
-              cursor: 'pointer', 
-              borderRadius: 'var(--radius-full)',
-              background: mode === 'longBreak' ? 'var(--text-primary)' : 'transparent',
-              color: mode === 'longBreak' ? '#121212' : 'var(--text-muted)',
-              fontWeight: mode === 'longBreak' ? 700 : 500,
-              transition: 'all 0.2s'
-            }}
-          >
-            Long Break (15m)
-          </button>
-          <button 
-            onClick={() => handleModeChange('custom', customMinutes)}
-            style={{ 
-              border: 'none', 
-              padding: '6px 16px', 
-              fontSize: '0.85rem', 
-              cursor: 'pointer', 
-              borderRadius: 'var(--radius-full)',
-              background: mode === 'custom' ? 'var(--text-primary)' : 'transparent',
-              color: mode === 'custom' ? '#121212' : 'var(--text-muted)',
-              fontWeight: mode === 'custom' ? 700 : 500,
-              transition: 'all 0.2s'
-            }}
-          >
-            Custom
-          </button>
-        </div>
-
-        {/* Circular Immersive Clock */}
+        {/* Main Focus Timer Card (Generous & Spacious Size) */}
         <div style={{
           position: 'relative',
-          width: '280px',
-          height: '280px',
+          width: '100%',
+          maxWidth: '820px',
+          margin: '0 auto',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          background: 'rgba(9, 9, 13, 0.88)',
+          backdropFilter: 'blur(24px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: '24px',
+          padding: '1.75rem 2.25rem',
+          boxShadow: '0 16px 48px rgba(0, 0, 0, 0.85)',
+          gap: '1.35rem'
+        }}>
+          {/* Mode Presets */}
+          <div style={{
+            display: 'flex',
+            background: 'rgba(255, 255, 255, 0.04)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          padding: '3px',
+          borderRadius: '30px',
+          gap: '4px',
+          flexWrap: 'wrap',
+          justifyContent: 'center'
+        }}>
+          {[
+            { m: 'focus', mins: 25, label: 'Focus (25m)' },
+            { m: 'shortBreak', mins: 5, label: 'Short Break (5m)' },
+            { m: 'longBreak', mins: 15, label: 'Long Break (15m)' },
+            { m: 'custom', mins: customMinutes, label: 'Custom' }
+          ].map(({ m, mins, label }) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => handleModeChange(m, mins)}
+              style={{
+                border: 'none',
+                padding: '6px 16px',
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                borderRadius: '20px',
+                background: mode === m ? '#ffffff' : 'transparent',
+                color: mode === m ? '#000000' : '#a1a1ad',
+                fontWeight: mode === m ? 700 : 500,
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Dual Info Callouts: Fullscreen & Practice Section Notice */}
+        <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          gap: '8px',
+          flexWrap: 'wrap',
+          width: '100%',
+          maxWidth: '680px'
         }}>
-          {/* Radial breathing background glow */}
+          {/* Info 1: Fullscreen Info */}
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '5px 12px',
+            background: 'rgba(52, 211, 153, 0.08)',
+            border: '1px solid rgba(52, 211, 153, 0.22)',
+            borderRadius: '20px',
+            fontSize: '0.74rem',
+            color: '#a7f3d0'
+          }}>
+            <span style={{ color: '#34d399', fontWeight: 700 }}>✦ Fullscreen:</span>
+            <span>Automatically enters full screen mode when started</span>
+          </div>
+
+          {/* Info 2: Practice Section Notice */}
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '5px 12px',
+            background: 'rgba(245, 158, 11, 0.08)',
+            border: '1px solid rgba(245, 158, 11, 0.24)',
+            borderRadius: '20px',
+            fontSize: '0.74rem',
+            color: '#fde68a'
+          }}>
+            <span style={{ color: '#f59e0b', fontWeight: 700 }}>⚠ Practice Notice:</span>
+            <span>Timer ends automatically if you move to Practice section</span>
+          </div>
+        </div>
+
+        {/* Circular Immersive Clock (260px diameter) */}
+        <div style={{
+          position: 'relative',
+          width: '260px',
+          height: '260px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          {/* Breathing ambient glow */}
           <div style={{
             position: 'absolute',
-            width: '240px',
-            height: '240px',
+            width: '220px',
+            height: '220px',
             borderRadius: '50%',
-            background: isRunning ? 'var(--brand)' : 'transparent',
-            opacity: 0.04,
-            filter: 'blur(30px)',
+            background: isRunning ? (mode.includes('Break') ? '#f59e0b' : '#34d399') : 'transparent',
+            opacity: 0.08,
+            filter: 'blur(35px)',
             transition: 'all 0.5s ease',
             animation: isRunning ? 'pulse 3s infinite ease-in-out' : 'none'
           }} />
 
-          <svg width="280" height="280" style={{ transform: 'rotate(-90deg)', position: 'absolute' }}>
-            {/* Track Circle */}
+          <svg width="260" height="260" style={{ transform: 'rotate(-90deg)', position: 'absolute' }}>
             <circle
-              cx="140"
-              cy="140"
+              cx="130"
+              cy="130"
               r={radius}
-              stroke="rgba(255, 255, 255, 0.02)"
+              stroke="rgba(255, 255, 255, 0.06)"
               strokeWidth={strokeWidth}
               fill="transparent"
             />
-            {/* Progress Circle */}
             <circle
-              cx="140"
-              cy="140"
+              cx="130"
+              cy="130"
               r={radius}
-              stroke={mode.includes('Break') ? '#eab308' : 'var(--brand)'}
+              stroke={mode.includes('Break') ? '#f5a623' : '#34d399'}
               strokeWidth={strokeWidth}
               fill="transparent"
               strokeDasharray={circumference}
               strokeDashoffset={strokeDashoffset}
               strokeLinecap="round"
-              style={{
-                transition: 'stroke-dashoffset 0.5s ease-out'
-              }}
+              style={{ transition: 'stroke-dashoffset 0.5s ease-out' }}
             />
           </svg>
 
-          {/* Time text inside the clock */}
+          {/* Time digits */}
           <div style={{
             display: 'flex',
             flexDirection: 'column',
@@ -636,173 +647,442 @@ export default function FocusPage() {
             <span style={{
               fontSize: '3.6rem',
               fontWeight: 800,
-              fontFamily: 'var(--font-geist, monospace)',
               letterSpacing: '-0.02em',
-              color: 'var(--text-primary)',
+              color: '#ffffff',
               lineHeight: 1,
-              filter: 'drop-shadow(0 0 10px rgba(180, 255, 100, 0.2))'
+              fontVariantNumeric: 'tabular-nums'
             }}>
               {formatTime(timeLeft)}
             </span>
             <span style={{
-              fontSize: '0.75rem',
-              color: 'var(--text-muted)',
+              fontSize: '0.72rem',
+              color: '#a1a1ad',
               textTransform: 'uppercase',
-              letterSpacing: '0.1em',
+              letterSpacing: '0.12em',
               marginTop: '8px',
               fontWeight: 600
             }}>
-              {mode === 'focus' ? 'Stay Focused' : mode.includes('Break') ? 'Take a Break' : 'Focus Session'}
+              {mode === 'focus' ? 'Focus Session' : mode.includes('Break') ? 'Zen Break' : 'Custom Session'}
             </span>
           </div>
         </div>
 
-        {/* Timer Control Panel */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-          <button 
-            className="icon-btn" 
-            onClick={() => handleModeChange(mode, mode === 'custom' ? customMinutes : mode === 'focus' ? 25 : mode === 'shortBreak' ? 5 : 15)} 
-            title="Reset"
-            style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '50%', border: '1px solid var(--border-light)' }}
+        {/* Timer Control Panel (Play / Pause / Reset / Mute) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={resetTimer}
+            title="Reset Session"
+            style={{
+              padding: '10px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '50%',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              color: '#f4f4f6',
+              cursor: 'pointer'
+            }}
           >
-            <RotateCcw size={18} />
+            <RotateCcw size={15} />
           </button>
-          
-          <button 
-            onClick={() => setIsRunning(!isRunning)} 
-            style={{ 
-              padding: '1.25rem 2.5rem', 
-              background: isRunning ? 'rgba(255,255,255,0.05)' : 'var(--brand)', 
-              color: isRunning ? 'var(--text-primary)' : '#000',
-              border: isRunning ? '1px solid var(--border-light)' : 'none',
-              borderRadius: 'var(--radius-full)',
-              fontSize: '1rem',
+
+          <button
+            type="button"
+            onClick={handleTogglePlay}
+            style={{
+              padding: '0.85rem 2rem',
+              background: isRunning ? 'rgba(255, 255, 255, 0.1)' : '#ffffff',
+              color: isRunning ? '#ffffff' : '#000000',
+              border: isRunning ? '1px solid rgba(255, 255, 255, 0.2)' : 'none',
+              borderRadius: '32px',
+              fontSize: '0.92rem',
               fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '10px',
-              boxShadow: isRunning ? 'none' : '0 10px 25px rgba(180, 255, 100, 0.3)',
+              gap: '8px',
+              boxShadow: isRunning ? 'none' : '0 4px 18px rgba(255, 255, 255, 0.2)',
               transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
           >
             {isRunning ? (
               <>
-                <Pause size={18} fill="currentColor" /> Pause
+                <Pause size={16} fill="currentColor" /> Pause
               </>
             ) : (
               <>
-                <Play size={18} fill="currentColor" /> Start Focus
+                <Play size={16} fill="currentColor" /> Start Focus
               </>
             )}
           </button>
 
-          {/* Sound Mute Toggle */}
-          <button 
-            className="icon-btn" 
-            onClick={() => setIsMuted(!isMuted)} 
-            title={isMuted ? "Unmute sound" : "Mute sound"}
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => setIsMuted(!isMuted)}
+            title={isMuted ? 'Unmute sound' : 'Mute sound'}
             disabled={soundType === 'none'}
-            style={{ 
-              padding: '12px', 
-              background: 'rgba(255,255,255,0.02)', 
-              borderRadius: '50%', 
-              border: '1px solid var(--border-light)',
-              opacity: soundType === 'none' ? 0.3 : 1 
+            style={{
+              padding: '10px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '50%',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              color: '#f4f4f6',
+              opacity: soundType === 'none' ? 0.35 : 1,
+              cursor: soundType === 'none' ? 'not-allowed' : 'pointer'
             }}
           >
-            {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+            {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
           </button>
         </div>
 
-        {/* Ambient Settings Drawer */}
-        <div className="glass-panel" style={{
+        {/* Ambient Sound & Task Association Drawer */}
+        <div style={{
           width: '100%',
-          padding: '1.25rem',
+          padding: '1.25rem 1.5rem',
+          background: 'rgba(255, 255, 255, 0.035)',
+          borderRadius: '16px',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '1rem',
-          border: '1px solid var(--border-light)'
+          gap: '1rem'
         }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            {/* Ambient Sound Selector */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+            {/* Ambient Sound */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <label style={{ fontSize: '0.72rem', fontWeight: 600, color: '#a1a1ad', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 Ambient Sound
               </label>
-              <select
-                className="select"
-                value={soundType}
-                onChange={(e) => setSoundType(e.target.value)}
-                style={{ height: '36px', fontSize: '0.85rem' }}
-              >
-                <option value="none">Silence (No Sound)</option>
-                <option value="rain">Relaxing Rain</option>
-                <option value="noise">White Noise</option>
-                <option value="beats">Deep Focus (Binaural Beats)</option>
-                <option value="ticking">Ticking Metronome</option>
-              </select>
+              <div style={{ position: 'relative', width: '100%' }}>
+                <select
+                  value={soundType}
+                  onChange={(e) => setSoundType(e.target.value)}
+                  style={{
+                    width: '100%',
+                    height: '38px',
+                    fontSize: '0.84rem',
+                    background: '#121217',
+                    color: '#f4f4f6',
+                    border: '1px solid rgba(255, 255, 255, 0.14)',
+                    borderRadius: '8px',
+                    padding: '0 34px 0 12px',
+                    appearance: 'none',
+                    WebkitAppearance: 'none',
+                    MozAppearance: 'none',
+                    cursor: 'pointer',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="none">Silence (No Sound)</option>
+                  <option value="rain">Relaxing Rain</option>
+                  <option value="noise">White Noise</option>
+                  <option value="beats">Binaural Beats</option>
+                  <option value="ticking">Metronome</option>
+                </select>
+                <ChevronDown
+                  size={15}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    pointerEvents: 'none',
+                    color: 'rgba(255, 255, 255, 0.7)'
+                  }}
+                />
+              </div>
             </div>
 
-            {/* Linked Planner Task */}
+            {/* Linked Task with Quick Add */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Associate Task
-              </label>
-              <select
-                className="select"
-                value={selectedTaskId}
-                onChange={(e) => setSelectedTaskId(e.target.value)}
-                style={{ height: '36px', fontSize: '0.85rem' }}
-              >
-                <option value="">None (General Study)</option>
-                {tasks.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.status === 'done' ? '✓ ' : ''}{t.title}
-                  </option>
-                ))}
-              </select>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 600, color: '#a1a1ad', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Linked Task
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsAddingTask(!isAddingTask)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#34d399',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    padding: 0
+                  }}
+                >
+                  <Plus size={12} /> {isAddingTask ? 'Cancel' : 'Quick Add'}
+                </button>
+              </div>
+
+              {isAddingTask ? (
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    placeholder="New task title..."
+                    value={newTaskTitle}
+                    onChange={(e) => setNewTaskTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleCreateQuickTask();
+                    }}
+                    style={{
+                      flex: 1,
+                      height: '38px',
+                      padding: '0 12px',
+                      background: '#121217',
+                      border: '1px solid rgba(52, 211, 153, 0.45)',
+                      borderRadius: '8px',
+                      color: '#ffffff',
+                      fontSize: '0.84rem',
+                      outline: 'none'
+                    }}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCreateQuickTask}
+                    disabled={isCreatingTask || !newTaskTitle.trim()}
+                    style={{
+                      height: '38px',
+                      padding: '0 14px',
+                      background: '#34d399',
+                      color: '#000000',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontWeight: 700,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      opacity: !newTaskTitle.trim() ? 0.5 : 1
+                    }}
+                  >
+                    {isCreatingTask ? '...' : 'Add'}
+                  </button>
+                </div>
+              ) : (
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <select
+                    value={selectedTaskId}
+                    onChange={(e) => setSelectedTaskId(e.target.value)}
+                    style={{
+                      width: '100%',
+                      height: '38px',
+                      fontSize: '0.84rem',
+                      background: '#121217',
+                      color: '#f4f4f6',
+                      border: '1px solid rgba(255, 255, 255, 0.14)',
+                      borderRadius: '8px',
+                      padding: '0 34px 0 12px',
+                      appearance: 'none',
+                      WebkitAppearance: 'none',
+                      MozAppearance: 'none',
+                      cursor: 'pointer',
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="">None (General Focus)</option>
+                    {tasks.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.status === 'done' ? '✓ ' : ''}{t.title}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    size={15}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      pointerEvents: 'none',
+                      color: 'rgba(255, 255, 255, 0.7)'
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Render sliders depending on custom/sound selections */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', borderTop: '1px solid var(--border-light)', paddingTop: '0.75rem' }}>
-            {mode === 'custom' && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1.5rem' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', minWidth: '100px' }}>Custom Time:</span>
-                <input 
-                  type="range"
-                  min="1"
-                  max="120"
-                  value={customMinutes}
-                  onChange={(e) => {
-                    const mins = parseInt(e.target.value);
-                    setCustomMinutes(mins);
-                    handleModeChange('custom', mins);
-                  }}
-                  style={{ flex: 1, accentColor: 'var(--brand)' }}
-                />
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, width: '40px', textAlign: 'right' }}>{customMinutes}m</span>
-              </div>
-            )}
+          {/* Linked Task Active Status Pill */}
+          {(() => {
+            const linkedTask = tasks.find((t) => t.id === selectedTaskId);
+            if (!linkedTask) return null;
+            return (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 12px',
+                background: 'rgba(52, 211, 153, 0.08)',
+                border: '1px solid rgba(52, 211, 153, 0.22)',
+                borderRadius: '8px',
+                fontSize: '0.8rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleTaskStatus(linkedTask.id, linkedTask.status === 'done' ? 'todo' : 'done')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: linkedTask.status === 'done' ? '#34d399' : 'rgba(255, 255, 255, 0.4)',
+                      cursor: 'pointer',
+                      padding: 0,
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    title={linkedTask.status === 'done' ? 'Mark as Incomplete' : 'Mark as Done'}
+                  >
+                    {linkedTask.status === 'done' ? <CheckCircle2 size={16} /> : <Circle size={16} />}
+                  </button>
+                  <span style={{
+                    color: '#ffffff',
+                    fontWeight: 600,
+                    textDecoration: linkedTask.status === 'done' ? 'line-through' : 'none',
+                    opacity: linkedTask.status === 'done' ? 0.7 : 1,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}>
+                    {linkedTask.title}
+                  </span>
+                  <span style={{
+                    fontSize: '0.68rem',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    background: linkedTask.status === 'done' ? 'rgba(52, 211, 153, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                    color: linkedTask.status === 'done' ? '#34d399' : '#f59e0b',
+                    fontWeight: 700,
+                    flexShrink: 0
+                  }}>
+                    {linkedTask.status === 'done' ? 'DONE' : 'IN PROGRESS'}
+                  </span>
+                </div>
 
-            {soundType !== 'none' && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1.5rem' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', minWidth: '100px' }}>Sound Vol:</span>
-                <input 
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={volume}
-                  onChange={(e) => setVolume(parseInt(e.target.value))}
-                  style={{ flex: 1, accentColor: 'var(--brand)' }}
-                />
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, width: '40px', textAlign: 'right' }}>{volume}%</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedTaskId('')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'rgba(255, 255, 255, 0.4)',
+                    cursor: 'pointer',
+                    padding: '2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    marginLeft: '8px'
+                  }}
+                  title="Unlink task"
+                >
+                  <X size={14} />
+                </button>
               </div>
-            )}
+            );
+          })()}
+
+          {/* Slider for volume or custom duration */}
+          {mode === 'custom' && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.85rem', paddingTop: '0.4rem', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
+              <span style={{ fontSize: '0.74rem', color: '#a1a1ad' }}>Minutes:</span>
+              <input
+                type="range"
+                min="1"
+                max="120"
+                value={customMinutes}
+                onChange={(e) => {
+                  const mins = parseInt(e.target.value);
+                  setCustomMinutes(mins);
+                  handleModeChange('custom', mins);
+                }}
+                style={{ flex: 1, accentColor: '#34d399' }}
+              />
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', width: '34px', textAlign: 'right' }}>{customMinutes}m</span>
+            </div>
+          )}
+
+          {soundType !== 'none' && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.85rem', paddingTop: '0.4rem', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
+              <span style={{ fontSize: '0.74rem', color: '#a1a1ad' }}>Volume:</span>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={volume}
+                onChange={(e) => setVolume(parseInt(e.target.value))}
+                style={{ flex: 1, accentColor: '#34d399' }}
+              />
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#ffffff', width: '34px', textAlign: 'right' }}>{volume}%</span>
+            </div>
+          )}
+
+          {/* Cosmic Background Drift Settings */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.85rem',
+            paddingTop: '0.5rem',
+            borderTop: '1px solid rgba(255, 255, 255, 0.06)'
+          }}>
+            <span style={{ fontSize: '0.74rem', color: '#a1a1ad', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Background:
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setParticlesEnabled(prev => !prev)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '5px 12px',
+                  borderRadius: '20px',
+                  background: particlesEnabled ? 'rgba(52, 211, 153, 0.12)' : 'rgba(255, 255, 255, 0.06)',
+                  border: particlesEnabled ? '1px solid rgba(52, 211, 153, 0.35)' : '1px solid rgba(255, 255, 255, 0.14)',
+                  color: particlesEnabled ? '#34d399' : '#a1a1ad',
+                  fontSize: '0.76rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                title={particlesEnabled ? 'Turn off galaxy stars during session' : 'Turn on galaxy stars during session'}
+              >
+                {particlesEnabled ? <Sparkles size={13} /> : <EyeOff size={13} />}
+                <span>{particlesEnabled ? 'Galaxy Stars' : 'Stars Off'}</span>
+              </button>
+
+              {particlesEnabled && (
+                <button
+                  type="button"
+                  onClick={() => setParticleSpeedIndex(prev => (prev + 1) % PARTICLE_SPEEDS.length)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '5px 12px',
+                    borderRadius: '20px',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.16)',
+                    color: '#f4f4f6',
+                    fontSize: '0.76rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  title="Cycle cosmic drift speed"
+                >
+                  <Gauge size={13} color="#34d399" />
+                  <span>{PARTICLE_SPEEDS[particleSpeedIndex].label}</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
+    </div>
 
       {/* Completion XP Celebration Modal */}
       {showCelebration && (
@@ -857,6 +1137,37 @@ export default function FocusPage() {
               <Sparkles size={16} /> +{awardedXp} XP Awarded
             </div>
 
+            {/* Quick action to complete linked task */}
+            {selectedTaskId && (() => {
+              const linkedTask = tasks.find(t => t.id === selectedTaskId);
+              if (linkedTask && linkedTask.status !== 'done') {
+                return (
+                  <button
+                    type="button"
+                    onClick={() => handleToggleTaskStatus(linkedTask.id, 'done')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '8px 16px',
+                      background: 'rgba(52, 211, 153, 0.12)',
+                      border: '1px solid rgba(52, 211, 153, 0.35)',
+                      borderRadius: '8px',
+                      color: '#34d399',
+                      fontSize: '0.84rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      width: '100%'
+                    }}
+                  >
+                    <CheckCircle2 size={16} /> Mark &ldquo;{linkedTask.title}&rdquo; as Completed
+                  </button>
+                );
+              }
+              return null;
+            })()}
+
             <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '8px', marginTop: '8px' }}>
               <input
                 type="text"
@@ -879,6 +1190,108 @@ export default function FocusPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Humorous Exit Confirmation Modal (Rendered to Body Portal) */}
+      {mounted && showExitModal && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            width: '100vw',
+            height: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 999999,
+            backdropFilter: 'blur(16px)',
+            background: 'rgba(0, 0, 0, 0.85)',
+            padding: '1.25rem',
+            boxSizing: 'border-box'
+          }}
+          onClick={cancelExit}
+        >
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: '460px',
+              padding: '2.25rem 2rem',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '1.25rem',
+              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.95), 0 0 45px rgba(52, 211, 153, 0.22)',
+              border: '1px solid rgba(255, 255, 255, 0.16)',
+              borderRadius: '24px',
+              background: '#0d0d14',
+              animation: 'scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+              boxSizing: 'border-box'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div>
+              <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#ffffff', marginBottom: '8px', letterSpacing: '-0.02em' }}>
+                {HUMOROUS_EXIT_QUOTES[exitQuoteIndex]?.title || 'Leaving so soon, Space Cadet?'}
+              </h2>
+              <p style={{ color: '#d1d5db', fontSize: '0.94rem', lineHeight: '1.55', margin: 0 }}>
+                {HUMOROUS_EXIT_QUOTES[exitQuoteIndex]?.msg || "Don't break your momentum. Stay and finish strong."}
+              </p>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              width: '100%',
+              gap: '10px',
+              marginTop: '8px'
+            }}>
+              <button
+                type="button"
+                onClick={cancelExit}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  background: '#34d399',
+                  color: '#000000',
+                  border: 'none',
+                  fontSize: '0.92rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 18px rgba(52, 211, 153, 0.35)',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Stay and Finish
+              </button>
+
+              <button
+                type="button"
+                onClick={() => confirmExit('/dashboard')}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  borderRadius: '12px',
+                  background: 'transparent',
+                  color: 'rgba(255, 255, 255, 0.55)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Surrender and Exit
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* Inline styles for pulse and slideUp animations */}

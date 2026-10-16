@@ -297,6 +297,7 @@ public class KnowledgeGraphService {
                 .stream()
                 .content()
                 .map(chunk -> "data: " + chunk + "\n\n")
+                .onErrorResume(e -> Flux.just("data: Unable to analyze connections right now.\n\n"))
                 .concatWith(Flux.just("data: [DONE]\n\n"));
     }
 

@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import Groq from 'groq-sdk';
+import { extractQuestionsFromJson } from './questionParser';
 
 let genAI = null;
 let groqClient = null;
@@ -46,12 +47,12 @@ ${text.slice(0, 2000)}
 
 Return ONLY valid JSON, no markdown formatting.`;
 
-  // 1. Try Groq (Llama 3) First (Free & Super Fast)
+  // 1. Try Groq First (Free & Super Fast)
   if (groq) {
     try {
       const completion = await groq.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
-        model: "llama-3.1-8b-instant", // Lightning fast open-source model
+        model: "openai/gpt-oss-120b",
         response_format: { type: "json_object" }
       });
       const response = completion.choices[0]?.message?.content;
@@ -302,7 +303,24 @@ export async function generateEmbeddings(text) {
  * Regex fallback: Handles the legacy "---ANSWERS---" delimited format.
  */
 export async function generateQuestionsFromText(text) {
-  // 1. Try AI-powered parsing first
+  if (!text || typeof text !== 'string') return [];
+
+  const trimmed = text.trim();
+
+  // 1. Fast path: If the input text is JSON, extract directly (handles 100+ questions instantly with 0 loss)
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      const jsonQuestions = extractQuestionsFromJson(parsed);
+      if (jsonQuestions && jsonQuestions.length > 0) {
+        return jsonQuestions;
+      }
+    } catch (e) {
+      // Not pure JSON, proceed to AI
+    }
+  }
+
+  // 2. Try AI-powered parsing
   try {
     const aiQuestions = await parseQuestionsWithAI(text);
     if (aiQuestions && aiQuestions.length > 0) {
@@ -312,7 +330,7 @@ export async function generateQuestionsFromText(text) {
     console.error('AI question parsing failed, trying regex fallback:', err.message);
   }
 
-  // 2. Fallback: legacy regex parser for ---ANSWERS--- format
+  // 3. Fallback: legacy regex parser for ---ANSWERS--- format
   return parseQuestionsWithRegex(text);
 }
 
@@ -352,7 +370,7 @@ Return ONLY a valid JSON array.`;
     try {
       const completion = await groq.chat.completions.create({
         messages: [{ role: "user", content: prompt }],
-        model: "llama-3.1-8b-instant",
+        model: "openai/gpt-oss-120b",
         response_format: { type: "json_object" },
         temperature: 0.1,
       });
@@ -482,5 +500,84 @@ function parseQuestionsWithRegex(text) {
   }
 
   return questions;
+}
+
+/**
+ * Explain a question and answer with AI tutor feedback.
+ */
+export async function explainQuestionWithAI({
+  scenario,
+  options = [],
+  userAnswer = [],
+  correctAnswer = [],
+  type = 'MCQ',
+  existingExplanation = ''
+}) {
+  const groq = getGroq();
+  const ai = getGenAI();
+
+  const userSelectedTexts = (userAnswer || []).map(idx => options[idx]).filter(Boolean);
+  const correctSelectedTexts = (correctAnswer || []).map(idx => options[idx]).filter(Boolean);
+
+  const prompt = `You are an expert tutor providing concise, helpful, and student-friendly feedback.
+The student just answered this ${type === 'MSQ' ? 'Multiple-Select Question (MSQ)' : 'Multiple-Choice Question (MCQ)'}.
+
+Question:
+"${scenario}"
+
+Options:
+${options.map((opt, i) => `${String.fromCharCode(65 + i)}) ${opt}`).join('\n')}
+
+Student's Selection: ${userSelectedTexts.length > 0 ? userSelectedTexts.join(', ') : 'None selected'}
+Correct Answer: ${correctSelectedTexts.length > 0 ? correctSelectedTexts.join(', ') : 'Not specified'}
+${existingExplanation ? `Reference Note: ${existingExplanation}` : ''}
+
+Provide a well-structured explanation:
+1. Explain why the correct option(s) is right.
+2. Briefly explain why the other options are wrong or common misconceptions.
+3. A quick key takeaway or mnemonic for exam recall.
+
+Guidelines:
+- Keep the explanation concise and direct (around 3 to 5 paragraphs or bullet points).
+- Do not use markdown heading tags (# or ##). Use bold text and bullet points for readability.`;
+
+  // 1. Try Groq First (Fastest)
+  if (groq) {
+    try {
+      const completion = await groq.chat.completions.create({
+        messages: [{ role: "user", content: prompt }],
+        model: "openai/gpt-oss-120b",
+        temperature: 0.3,
+        max_tokens: 600,
+      });
+      const response = completion.choices[0]?.message?.content?.trim();
+      if (response) return response;
+    } catch (err) {
+      console.error('Groq explanation failed, trying Gemini fallback:', err.message);
+    }
+  }
+
+  // 2. Fallback to Gemini 2.0 Flash
+  if (ai) {
+    try {
+      const model = ai.getGenerativeModel({ model: 'gemini-2.0-flash' });
+      const result = await model.generateContent(prompt);
+      const response = result.response.text().trim();
+      if (response) return response;
+    } catch (err) {
+      console.error('Gemini explanation failed:', err.message);
+    }
+  }
+
+  // 3. Fallback to static explanation if available
+  if (existingExplanation && existingExplanation !== 'Parsed from document.') {
+    return existingExplanation;
+  }
+
+  if (correctSelectedTexts.length > 0) {
+    return `The correct answer is: ${correctSelectedTexts.join(', ')}.`;
+  }
+
+  return 'Unable to generate explanation at this time. Please check your AI API key configuration.';
 }
 

@@ -102,7 +102,7 @@ export default function AiChatModal({ isOpen, onClose }) {
                                     {activeContext && (
                                         <div className="ai-chat-quick-actions" style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
                                             <button onClick={() => sendQuickAction("Explain the page I am currently looking at like I am 5 years old.")} className="btn-secondary" style={{ fontSize: '12px', padding: '4px 12px' }}>
-                                                Explain Like I'm 5
+                                                Explain Like I&apos;m 5
                                             </button>
                                             <button onClick={() => sendQuickAction("Generate 5 practice flashcard questions based on the page I am currently looking at.")} className="btn-secondary" style={{ fontSize: '12px', padding: '4px 12px' }}>
                                                 Generate Flashcards

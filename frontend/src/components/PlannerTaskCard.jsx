@@ -1,5 +1,6 @@
 'use client';
-import { CheckCircle2, Circle, Clock, Trash2, GripVertical, FileText, Inbox, Play } from 'lucide-react';
+import Link from 'next/link';
+import { CheckCircle2, Circle, Clock, Trash2, GripVertical, FileText, Inbox, Play, Mic } from 'lucide-react';
 
 const priorityColors = {
   high: 'var(--error)',
@@ -57,6 +58,26 @@ export default function PlannerTaskCard({ task, onStatusToggle, onDelete }) {
           </div>
         )}
         <div className="planner-task-badges">
+          {task.category === 'mock-interview' && (
+            <Link
+              href="/interview"
+              className="planner-link-badge"
+              style={{ textDecoration: 'none', background: 'rgba(245, 166, 35, 0.15)', color: '#f5a623', border: '1px solid rgba(245, 166, 35, 0.3)' }}
+              title="Open AI Mock Interview"
+            >
+              <Mic size={10} /> Interview
+            </Link>
+          )}
+          {task.category === 'practice-exam' && (
+            <Link
+              href="/test"
+              className="planner-link-badge"
+              style={{ textDecoration: 'none', background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8', border: '1px solid rgba(99, 102, 241, 0.3)' }}
+              title="Open Focus Test"
+            >
+              <Play size={10} /> Focus Exam
+            </Link>
+          )}
           {task.linkedFileId && <span className="planner-link-badge"><FileText size={10} /> File</span>}
           {task.linkedCaptureId && <span className="planner-link-badge"><Inbox size={10} /> Capture</span>}
         </div>

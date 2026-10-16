@@ -24,11 +24,15 @@ public class UserProfileService {
     private final UserRepository userRepository;
     private final ResultRepository resultRepository;
     private final PasswordEncoder passwordEncoder;
+    private final com.nextlevel.api.repository.StudyRoomRepository studyRoomRepository;
 
-    public UserProfileService(UserRepository userRepository, ResultRepository resultRepository, PasswordEncoder passwordEncoder) {
+    public UserProfileService(UserRepository userRepository, ResultRepository resultRepository,
+                              PasswordEncoder passwordEncoder,
+                              com.nextlevel.api.repository.StudyRoomRepository studyRoomRepository) {
         this.userRepository = userRepository;
         this.resultRepository = resultRepository;
         this.passwordEncoder = passwordEncoder;
+        this.studyRoomRepository = studyRoomRepository;
     }
 
     public Map<String, Object> getProfile(String userId) {
@@ -44,6 +48,52 @@ public class UserProfileService {
         int liveQuestionsAnswered = resultRepository.findByUserId(userId).stream()
                 .mapToInt(r -> r.getTotalCount() != null ? r.getTotalCount() : 0)
                 .sum();
+
+        // Calculate Room & Arena stats
+        List<com.nextlevel.api.model.StudyRoom> allRooms = studyRoomRepository.findAll();
+        long roomsHosted = allRooms.stream().filter(r -> userId.equals(r.getHostUserId())).count();
+        long roomsJoined = allRooms.stream().filter(r -> r.getParticipants() != null && r.getParticipants().stream().anyMatch(p -> userId.equals(p.getUserId()))).count();
+
+        int arenaAttended = 0;
+        int arenaPoints = 0;
+        for (com.nextlevel.api.model.StudyRoom room : allRooms) {
+            if (room.getPastChallenges() != null) {
+                for (com.nextlevel.api.model.StudyRoom.RoomChallenge ch : room.getPastChallenges()) {
+                    if (ch.getLeaderboard() != null) {
+                        for (com.nextlevel.api.model.StudyRoom.ChallengeScore sc : ch.getLeaderboard()) {
+                            if (userId.equals(sc.getUserId())) {
+                                arenaAttended++;
+                                arenaPoints += (sc.getScore() != null ? sc.getScore() : 0);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        String activeRoomName = null;
+        String activeRoomCode = null;
+        for (com.nextlevel.api.model.StudyRoom room : allRooms) {
+            if (Boolean.TRUE.equals(room.getActive())) {
+                boolean inRoom = userId.equals(room.getHostUserId()) || 
+                    (room.getParticipants() != null && room.getParticipants().stream().anyMatch(p -> userId.equals(p.getUserId())));
+                if (inRoom) {
+                    activeRoomName = room.getTitle();
+                    activeRoomCode = room.getRoomCode();
+                    break;
+                }
+            }
+        }
+
+        // XP & Level calculation
+        int xp = user.getXp() != null ? user.getXp() : 0;
+        if (xp == 0) {
+            xp = Math.max(35, safeInt(user.getStreak()) * 15 + liveQuestionsAnswered * 2 + (int) totalResults * 20 + arenaPoints / 10);
+            user.setXp(xp);
+            user.setLevel((xp / 100) + 1);
+            userRepository.save(user);
+        }
+        int level = user.getLevel() != null && user.getLevel() > 0 ? user.getLevel() : (xp / 100) + 1;
 
         List<Map<String, Object>> achievements = new ArrayList<>();
         if (totalResults >= 1) achievements.add(achievement("first_exam", "First Exam", "Completed your first exam"));
@@ -68,6 +118,14 @@ public class UserProfileService {
         data.put("updatedAt", user.getUpdatedAt());
         data.put("totalExams", totalResults);
         data.put("passedExams", passedResults);
+        data.put("xp", xp);
+        data.put("level", level);
+        data.put("roomsHosted", roomsHosted);
+        data.put("roomsJoined", roomsJoined);
+        data.put("arenaAttended", arenaAttended);
+        data.put("arenaPoints", arenaPoints);
+        data.put("activeRoomName", activeRoomName);
+        data.put("activeRoomCode", activeRoomCode);
         data.put("achievements", achievements);
         data.put("customCategories", user.getCustomCategories());
 

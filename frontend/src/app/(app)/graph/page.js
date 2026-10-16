@@ -4,11 +4,12 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
-import { Loader2, X, Sparkles, ExternalLink } from "lucide-react";
+import { Loader2, X, Sparkles, ExternalLink, Box, Layers, PlusCircle, Network } from "lucide-react";
 
 import * as THREE from 'three';
 
 const ForceGraph3D = dynamic(() => import("react-force-graph-3d"), { ssr: false });
+const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), { ssr: false });
 
 const NODE_COLORS = {
   capture: "#38bdf8", // Sky blue
@@ -29,6 +30,28 @@ export default function KnowledgeGraphPage() {
     const [error, setError] = useState("");
     const router = useRouter();
     const fgRef = useRef();
+    const [is3D, setIs3D] = useState(true);
+
+    const loadDemoData = () => {
+        const demoNodes = [
+            { id: "capture_1", name: "System Design: Microservices Architecture", type: "capture", category: "college", createdAt: new Date().toISOString(), clusterId: 0 },
+            { id: "capture_2", name: "Spring Boot 3.5 & Resilience4j Circuit Breaker", type: "capture", category: "college", createdAt: new Date().toISOString(), clusterId: 0 },
+            { id: "capture_3", name: "MongoDB Vector Search & Embedding Pipeline", type: "capture", category: "projects", createdAt: new Date().toISOString(), clusterId: 1 },
+            { id: "file_1", name: "Distributed_Systems_Course_Notes.pdf", type: "file", category: "college", createdAt: new Date().toISOString(), clusterId: 0 },
+            { id: "roadmap_1", name: "Full-Stack Backend Mastery Roadmap", type: "roadmap", category: "projects", createdAt: new Date().toISOString(), clusterId: 1 },
+            { id: "capture_4", name: "React 19 Server Components & Hooks", type: "capture", category: "tutorial", createdAt: new Date().toISOString(), clusterId: 2 },
+            { id: "capture_5", name: "Next.js App Router & Force Graph 3D", type: "capture", category: "tutorial", createdAt: new Date().toISOString(), clusterId: 2 },
+        ];
+        const demoLinks = [
+            { source: "capture_1", target: "capture_2", strength: 0.9, type: "semantic" },
+            { source: "capture_2", target: "file_1", strength: 0.85, type: "category" },
+            { source: "capture_2", target: "capture_3", strength: 0.75, type: "semantic" },
+            { source: "capture_3", target: "roadmap_1", strength: 0.88, type: "category" },
+            { source: "capture_4", target: "capture_5", strength: 0.95, type: "semantic" },
+            { source: "capture_5", target: "roadmap_1", strength: 0.65, type: "category" },
+        ];
+        setGraphData({ nodes: demoNodes, links: demoLinks });
+    };
 
     // Time Travel State
     const [timeRange, setTimeRange] = useState({ min: Date.now() - 86400000, max: Date.now() });
@@ -242,6 +265,38 @@ export default function KnowledgeGraphPage() {
                     <div className="graph-legend-item"><span className="graph-legend-dot" style={{ background: NODE_COLORS.roadmap }} /> Roadmaps</div>
                     <div className="graph-legend-item"><span className="graph-legend-dot" style={{ background: 'linear-gradient(45deg, #FF3366, #33CCFF)' }} /> AI Semantic Clusters</div>
                 </div>
+
+                {/* 3D / 2D View Toggle */}
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', alignItems: 'center' }}>
+                    <button
+                        onClick={() => setIs3D(true)}
+                        className={`btn ${is3D ? 'btn-primary' : 'btn-secondary'}`}
+                        style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem', borderRadius: 'var(--radius-sm)' }}
+                    >
+                        <Box size={14} /> 3D Orbit
+                    </button>
+                    <button
+                        onClick={() => setIs3D(false)}
+                        className={`btn ${!is3D ? 'btn-primary' : 'btn-secondary'}`}
+                        style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem', borderRadius: 'var(--radius-sm)' }}
+                    >
+                        <Layers size={14} /> 2D Canvas
+                    </button>
+                    {filteredNodes.length > 0 && (
+                        <button
+                            onClick={() => {
+                                if (fgRef.current && fgRef.current.zoomToFit) {
+                                    fgRef.current.zoomToFit(400, 50);
+                                }
+                            }}
+                            className="btn btn-secondary"
+                            style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+                            title="Reset Camera Zoom"
+                        >
+                            Fit
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Explore Mode Side-Panel */}
@@ -324,52 +379,126 @@ export default function KnowledgeGraphPage() {
                 </div>
             )}
 
-            {/* 3D Graph Engine */}
-            <ForceGraph3D
-                ref={fgRef}
-                width={dimensions.width}
-                height={dimensions.height}
-                graphData={{ nodes: filteredNodes, links: filteredLinks }}
-                nodeLabel="name"
-                nodeThreeObject={node => {
-                    const color = getNodeColor(node);
-                    const group = new THREE.Group();
-                    
-                    const geometry = new THREE.SphereGeometry(14, 32, 32);
-                    const material = new THREE.MeshBasicMaterial({ color: color });
-                    const mesh = new THREE.Mesh(geometry, material);
-                    group.add(mesh);
+            {/* Empty State Overlay */}
+            {filteredNodes.length === 0 && (
+                <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 20,
+                    textAlign: 'center',
+                    background: 'rgba(20, 20, 25, 0.92)',
+                    backdropFilter: 'blur(16px)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    borderRadius: '16px',
+                    padding: '2.5rem',
+                    maxWidth: '480px',
+                    width: '90%',
+                    boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
+                }}>
+                    <div style={{
+                        width: '60px',
+                        height: '60px',
+                        margin: '0 auto 1.25rem',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(167, 139, 250, 0.2))',
+                        border: '1px solid rgba(167, 139, 250, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#a78bfa'
+                    }}>
+                        <Network size={30} />
+                    </div>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem', color: '#ffffff' }}>
+                        Knowledge Graph is Empty
+                    </h2>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+                        The graph connects your notes, documents, and learning roadmaps into clusters. Capture new items or preview sample data to explore connections in 3D.
+                    </p>
+                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <button
+                            onClick={loadDemoData}
+                            className="btn btn-primary"
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'linear-gradient(135deg, #38bdf8, #a78bfa)', color: '#fff', border: 'none' }}
+                        >
+                            <Sparkles size={15} /> Load Demo Graph
+                        </button>
+                        <button
+                            onClick={() => router.push('/captures')}
+                            className="btn btn-secondary"
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                        >
+                            <PlusCircle size={15} /> Create Capture
+                        </button>
+                    </div>
+                </div>
+            )}
 
-                    const haloGeometry = new THREE.SphereGeometry(22, 32, 32);
-                    const haloMaterial = new THREE.MeshBasicMaterial({ 
-                        color: color, 
-                        transparent: true, 
-                        opacity: 0.4, 
-                        blending: THREE.AdditiveBlending,
-                        depthWrite: false
-                    });
-                    const halo = new THREE.Mesh(haloGeometry, haloMaterial);
-                    group.add(halo);
+            {/* Graph Engine (3D or 2D) */}
+            {is3D ? (
+                <ForceGraph3D
+                    ref={fgRef}
+                    width={dimensions.width}
+                    height={dimensions.height}
+                    graphData={{ nodes: filteredNodes, links: filteredLinks }}
+                    nodeLabel="name"
+                    nodeThreeObject={node => {
+                        const color = getNodeColor(node);
+                        const group = new THREE.Group();
+                        
+                        const geometry = new THREE.SphereGeometry(14, 32, 32);
+                        const material = new THREE.MeshBasicMaterial({ color: color });
+                        const mesh = new THREE.Mesh(geometry, material);
+                        group.add(mesh);
 
-                    group.__pulsePhase = Math.random() * Math.PI * 2;
-                    group.__halo = halo;
+                        const haloGeometry = new THREE.SphereGeometry(22, 32, 32);
+                        const haloMaterial = new THREE.MeshBasicMaterial({ 
+                            color: color, 
+                            transparent: true, 
+                            opacity: 0.4, 
+                            blending: THREE.AdditiveBlending,
+                            depthWrite: false
+                        });
+                        const halo = new THREE.Mesh(haloGeometry, haloMaterial);
+                        group.add(halo);
 
-                    return group;
-                }}
-                linkColor={link => link.type === 'semantic' ? 'rgba(124, 58, 237, 0.4)' : 'rgba(255, 255, 255, 0.1)'}
-                linkWidth={link => link.strength * 2}
-                linkResolution={6}
-                onNodeClick={handleNodeClick}
-                cooldownTicks={100}
-                onEngineStop={() => {
-                    if (fgRef.current && !fgRef.current.initialZoomDone) {
-                        fgRef.current.zoomToFit(400, 50);
-                        fgRef.current.initialZoomDone = true;
-                    }
-                }}
-                backgroundColor="#0a0a0a"
-                showNavInfo={false}
-            />
+                        group.__pulsePhase = Math.random() * Math.PI * 2;
+                        group.__halo = halo;
+
+                        return group;
+                    }}
+                    linkColor={link => link.type === 'semantic' ? 'rgba(124, 58, 237, 0.4)' : 'rgba(255, 255, 255, 0.1)'}
+                    linkWidth={link => link.strength * 2}
+                    linkResolution={6}
+                    onNodeClick={handleNodeClick}
+                    cooldownTicks={100}
+                    onEngineStop={() => {
+                        if (fgRef.current && !fgRef.current.initialZoomDone) {
+                            fgRef.current.zoomToFit(400, 50);
+                            fgRef.current.initialZoomDone = true;
+                        }
+                    }}
+                    backgroundColor="#0a0a0a"
+                    showNavInfo={false}
+                />
+            ) : (
+                <ForceGraph2D
+                    ref={fgRef}
+                    width={dimensions.width}
+                    height={dimensions.height}
+                    graphData={{ nodes: filteredNodes, links: filteredLinks }}
+                    nodeLabel="name"
+                    nodeColor={getNodeColor}
+                    nodeRelSize={6}
+                    linkColor={link => link.type === 'semantic' ? 'rgba(124, 58, 237, 0.7)' : 'rgba(255, 255, 255, 0.25)'}
+                    linkWidth={link => Math.max(1, (link.strength || 0.5) * 2.5)}
+                    onNodeClick={handleNodeClick}
+                    cooldownTicks={100}
+                    backgroundColor="#0a0a0a"
+                />
+            )}
         </div>
     );
 }

@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.1",
     "@serwist/next": "^9.5.11",
     "ai": "^6.0.182",
     "bcryptjs": "^3.0.3",
@@ -21,6 +23,7 @@
     "jose": "^6.2.3",
     "lucide-react": "^1.7.0",
     "mammoth": "^1.12.0",
+    "matter-js": "^0.20.0",
     "mongodb": "^7.2.0",
     "next": "^16.2.10",
     "pdf-parse": "^2.4.5",

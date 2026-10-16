@@ -1,0 +1,150 @@
+/* Uses your global tokens; fallbacks match the palette we set. */
+
+.rkl {
+  position: relative;
+  min-height: 100dvh;
+  background: var(--bg, #08080a);
+  color: var(--text, #f4f4f6);
+}
+
+/* No transforms or perspective on ancestors of the room, so
+   position: fixed children (modals, the AI button) behave normally. */
+.rkl-room {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+}
+
+.rkl-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--bg, #08080a);
+}
+.is-leaving .rkl-overlay {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+.rkl-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.rkl-code {
+  font: 500 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.12em;
+  color: var(--text-muted, #a1a1ad);
+}
+.rkl-name {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text, #f4f4f6);
+}
+
+.rkl-scene {
+  display: block;
+  width: min(680px, 92vw);
+  height: auto;
+}
+
+.rkl-label {
+  margin: 0;
+  min-height: 20px;
+  font-size: 13px;
+  color: var(--text-muted, #a1a1ad);
+}
+
+/* ---------- static state ---------- */
+
+.rkl-door {
+  transform-origin: 300px 215px;
+  transition: transform 1.3s cubic-bezier(0.6, 0, 0.2, 1);
+}
+.rkl-arm {
+  transform-origin: 226px 236px;
+  transform: rotate(-16deg);
+}
+.rkl-rip {
+  transform-origin: 300px 215px;
+  opacity: 0;
+  transform: scale(0.15);
+}
+.rkl-spill,
+.rkl-halo,
+.rkl-rim {
+  opacity: 0;
+  transition: opacity 1.4s ease 0.35s;
+}
+
+/* ---------- door ajar + light ---------- */
+
+.is-open .rkl-door {
+  transform: scaleX(0.62);
+}
+.is-open .rkl-spill,
+.is-open .rkl-halo,
+.is-open .rkl-rim {
+  opacity: 1;
+}
+
+/* ---------- knocking: three knocks, a pause, repeat ---------- */
+
+.is-knock .rkl-arm {
+  animation: rkl-arm 2.4s ease-in-out 0.5s infinite;
+}
+.is-knock .rkl-shake {
+  animation: rkl-shake 2.4s linear 0.5s infinite;
+}
+.is-knock .rkl-rip {
+  animation: rkl-rip 2.4s ease-out 0.5s infinite;
+}
+
+@keyframes rkl-arm {
+  0%, 100% { transform: rotate(-16deg); }
+  8.7%     { transform: rotate(0deg); }
+  22.9%    { transform: rotate(-16deg); }
+  31.6%    { transform: rotate(0deg); }
+  45.8%    { transform: rotate(-16deg); }
+  54.5%    { transform: rotate(0deg); }
+  68.7%    { transform: rotate(-16deg); }
+}
+
+@keyframes rkl-shake {
+  0%, 7%, 13%, 30%, 36%, 53%, 59%, 100% { transform: translateX(0); }
+  8.7%  { transform: translateX(1.6px); }
+  11%   { transform: translateX(-0.8px); }
+  31.6% { transform: translateX(1.6px); }
+  34%   { transform: translateX(-0.8px); }
+  54.5% { transform: translateX(1.6px); }
+  57%   { transform: translateX(-0.8px); }
+}
+
+@keyframes rkl-rip {
+  0%, 7%, 30%, 53%, 100% { opacity: 0; transform: scale(0.15); }
+  8.7%, 31.6%, 54.5%     { opacity: 0.6; transform: scale(0.3); }
+  15.5%, 38.5%, 61.4%    { opacity: 0; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-knock .rkl-arm,
+  .is-knock .rkl-shake,
+  .is-knock .rkl-rip {
+    animation: none;
+  }
+  .rkl-door,
+  .rkl-spill,
+  .rkl-halo,
+  .rkl-rim,
+  .is-leaving .rkl-overlay {
+    transition: none;
+  }
+}

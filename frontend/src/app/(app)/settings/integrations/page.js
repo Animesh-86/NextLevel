@@ -6,41 +6,31 @@ import IntegrationCard from '@/components/IntegrationCard';
 import { Upload, Download, FileText, Calendar, Cloud } from 'lucide-react';
 
 export default function IntegrationsPage() {
-  const [notionConnected, setNotionConnected] = useState(false);
-  const [gcalConnected, setGcalConnected] = useState(false);
+  const [notionConnected, setNotionConnected] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('connected') === 'notion') {
+        localStorage.setItem('notionConnected', 'true');
+        return true;
+      }
+      return localStorage.getItem('notionConnected') === 'true';
+    }
+    return false;
+  });
+
+  const [gcalConnected, setGcalConnected] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('connected') === 'google') {
+        localStorage.setItem('gcalConnected', 'true');
+        return true;
+      }
+      return localStorage.getItem('gcalConnected') === 'true';
+    }
+    return false;
+  });
+
   const [isExporting, setIsExporting] = useState(false);
-
-  useEffect(() => {
-    console.log("Integrations page mounted");
-    console.log("Current window.location.search:", window.location.search);
-    console.log("localStorage gcalConnected:", localStorage.getItem('gcalConnected'));
-    console.log("localStorage notionConnected:", localStorage.getItem('notionConnected'));
-
-    // Check local storage first
-    if (localStorage.getItem('notionConnected') === 'true') {
-      console.log("Setting notionConnected to true from localStorage");
-      setNotionConnected(true);
-    }
-    if (localStorage.getItem('gcalConnected') === 'true') {
-      console.log("Setting gcalConnected to true from localStorage");
-      setGcalConnected(true);
-    }
-
-    // Then check query params from a fresh OAuth redirect
-    const params = new URLSearchParams(window.location.search);
-    const connectedParam = params.get('connected');
-    console.log("URL connectedParam:", connectedParam);
-    
-    if (connectedParam === 'notion') {
-      console.log("Setting notionConnected to true from URL param");
-      setNotionConnected(true);
-      localStorage.setItem('notionConnected', 'true');
-    } else if (connectedParam === 'google') {
-      console.log("Setting gcalConnected to true from URL param");
-      setGcalConnected(true);
-      localStorage.setItem('gcalConnected', 'true');
-    }
-  }, []);
 
   const handleNotionConnect = () => {
     const clientId = '398d872b-594c-811b-bd9c-00370889bddf';

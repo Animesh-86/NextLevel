@@ -94,7 +94,7 @@ public class DailyDigestService {
             }
 
             StringBuilder promptBuilder = new StringBuilder();
-            promptBuilder.append("Write a short, encouraging morning briefing for ").append(name).append(".\n");
+            promptBuilder.append("Write a short, encouraging daily progress briefing for ").append(name).append(".\n");
             promptBuilder.append("Here is their current status:\n");
             promptBuilder.append("- Current study streak: ").append(streak).append(" days\n");
             promptBuilder.append("- Tasks planned for today: ").append(todaysTasks.size()).append("\n");
@@ -104,15 +104,21 @@ public class DailyDigestService {
             promptBuilder.append("- Pending reminders: ").append(pendingReminders.size()).append("\n");
             promptBuilder.append("- Active learning roadmaps: ").append(activeRoadmaps.size()).append("\n");
             
-            promptBuilder.append("\nCRITICAL CONSTRAINTS: Your response must be EXACTLY ONE SENTENCE. Maximum 20 words. Absolutely DO NOT use any emojis. Use plain text only.");
+            promptBuilder.append("\nCRITICAL CONSTRAINTS: Your response must be EXACTLY ONE SENTENCE. Maximum 20 words. Absolutely DO NOT use any emojis. Do NOT include time-of-day greetings like 'Good morning' or 'Good evening' so the briefing stays accurate all day. Use plain text only.");
 
-            String message = chatClient.prompt()
-                    .user(u -> u.text(promptBuilder.toString()))
-                    .call()
-                    .content();
+            String message;
+            try {
+                message = chatClient.prompt()
+                        .user(u -> u.text(promptBuilder.toString()))
+                        .call()
+                        .content();
+            } catch (Exception e) {
+                org.slf4j.LoggerFactory.getLogger(DailyDigestService.class).warn("Failed to generate AI briefing: {}", e.getMessage());
+                message = "Welcome back, " + name + "! Ready to make progress on your goals today?";
+            }
 
             if (message == null || message.trim().isEmpty()) {
-                message = "Good morning! Ready to tackle the day?";
+                message = "Welcome back! Ready to stay focused and make real progress today?";
             }
 
             if (user != null) {
