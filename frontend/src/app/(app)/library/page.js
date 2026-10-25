@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { FileText, Link2, Search, Upload, Plus, ExternalLink, FolderOpen, X, Loader2, Eye } from 'lucide-react';
+import { FileText, Link2, Search, Upload, Plus, ExternalLink, FolderOpen, Eye } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { SkeletonCard } from '@/components/SkeletonLoader';
 import { useCurrentContext } from '@/lib/CurrentContext';
 import FileViewer from '@/components/FileViewer';
+import FileUploadModal from './components/FileUploadModal';
+import AddLinkModal from './components/AddLinkModal';
 
 function itemId(item) {
   return item._id || item.id;
@@ -295,213 +297,32 @@ export default function LibraryPage() {
         </section>
       </div>
       {/* Upload File Modal */}
-      {uploadModalOpen && (
-        <div className="dialog-overlay" onClick={() => !uploading && setUploadModalOpen(false)}>
-          <div className="capture-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
-            <div className="capture-modal-header">
-              <h2 className="capture-modal-title">Upload File</h2>
-              <button className="icon-btn" onClick={() => !uploading && setUploadModalOpen(false)}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleFileUploadSubmit} className="capture-form">
-              <div 
-                className={`capture-dropzone ${dragover ? 'dragover' : ''}`}
-                onDragOver={(e) => { e.preventDefault(); setDragover(true); }}
-                onDragLeave={() => setDragover(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDragover(false);
-                  if (e.dataTransfer.files?.length) {
-                    setFileToUpload(e.dataTransfer.files[0]);
-                  }
-                }}
-                onClick={() => document.getElementById('modal-file-input').click()}
-              >
-                <input 
-                  id="modal-file-input"
-                  type="file"
-                  style={{ display: 'none' }}
-                  onChange={(e) => {
-                    if (e.target.files?.length) {
-                      setFileToUpload(e.target.files[0]);
-                    }
-                  }}
-                />
-                <div className="capture-dropzone-content">
-                  <Upload size={28} />
-                  {fileToUpload ? (
-                    <div>
-                      <p style={{ color: 'var(--text-primary)' }}>{fileToUpload.name}</p>
-                      <span style={{ fontSize: '0.8rem' }}>
-                        {(fileToUpload.size / (1024 * 1024)).toFixed(2)} MB
-                      </span>
-                    </div>
-                  ) : (
-                    <div>
-                      <p>Drag and drop or click to choose a file</p>
-                      <span style={{ fontSize: '0.8rem' }}>Max file size 10MB</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="capture-field">
-                <label className="auth-label">Custom Title (Optional)</label>
-                <input 
-                  type="text"
-                  className="input"
-                  placeholder={fileToUpload ? fileToUpload.name.split('.').slice(0, -1).join('.') : "Enter custom title"}
-                  value={uploadTitle}
-                  onChange={(e) => setUploadTitle(e.target.value)}
-                  disabled={uploading}
-                />
-              </div>
-
-              <div className="capture-field">
-                <label className="auth-label">Category</label>
-                <select
-                  className="select"
-                  value={uploadCategory}
-                  onChange={(e) => setUploadCategory(e.target.value)}
-                  disabled={uploading}
-                >
-                  {fileCategoryOptions.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
-                  onClick={() => setUploadModalOpen(false)}
-                  disabled={uploading}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="btn btn-primary"
-                  disabled={uploading || !fileToUpload}
-                >
-                  {uploading ? (
-                    <>
-                      <Loader2 size={16} className="spin" style={{ marginRight: '6px' }} />
-                      Uploading...
-                    </>
-                  ) : 'Upload File'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <FileUploadModal
+        isOpen={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        onSubmit={handleFileUploadSubmit}
+        uploading={uploading}
+        dragover={dragover}
+        setDragover={setDragover}
+        fileToUpload={fileToUpload}
+        setFileToUpload={setFileToUpload}
+        uploadTitle={uploadTitle}
+        setUploadTitle={setUploadTitle}
+        uploadCategory={uploadCategory}
+        setUploadCategory={setUploadCategory}
+        fileCategoryOptions={fileCategoryOptions}
+      />
 
       {/* Add Link Modal */}
-      {linkModalOpen && (
-        <div className="dialog-overlay" onClick={() => !savingLink && setLinkModalOpen(false)}>
-          <div className="capture-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
-            <div className="capture-modal-header">
-              <h2 className="capture-modal-title">Add Link</h2>
-              <button className="icon-btn" onClick={() => !savingLink && setLinkModalOpen(false)}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleLinkSubmit} className="capture-form">
-              <div className="capture-field">
-                <label className="auth-label">URL *</label>
-                <input 
-                  type="url"
-                  className="input"
-                  placeholder="https://example.com"
-                  required
-                  value={linkForm.url}
-                  onChange={(e) => setLinkForm({ ...linkForm, url: e.target.value })}
-                  disabled={savingLink}
-                />
-              </div>
-
-              <div className="capture-field">
-                <label className="auth-label">Title *</label>
-                <input 
-                  type="text"
-                  className="input"
-                  placeholder="Link Title"
-                  required
-                  value={linkForm.title}
-                  onChange={(e) => setLinkForm({ ...linkForm, title: e.target.value })}
-                  disabled={savingLink}
-                />
-              </div>
-
-              <div className="capture-field">
-                <label className="auth-label">Description (Optional)</label>
-                <textarea 
-                  className="textarea"
-                  placeholder="Add details about this link..."
-                  rows={3}
-                  value={linkForm.description}
-                  onChange={(e) => setLinkForm({ ...linkForm, description: e.target.value })}
-                  disabled={savingLink}
-                />
-              </div>
-
-              <div className="capture-field">
-                <label className="auth-label">Category</label>
-                <select
-                  className="select"
-                  value={linkForm.category}
-                  onChange={(e) => setLinkForm({ ...linkForm, category: e.target.value })}
-                  disabled={savingLink}
-                >
-                  {linkCategoryOptions.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="capture-field">
-                <label className="auth-label">Tags (comma-separated)</label>
-                <input 
-                  type="text"
-                  className="input"
-                  placeholder="tag1, tag2, tag3"
-                  value={linkForm.tags}
-                  onChange={(e) => setLinkForm({ ...linkForm, tags: e.target.value })}
-                  disabled={savingLink}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
-                  onClick={() => setLinkModalOpen(false)}
-                  disabled={savingLink}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="btn btn-primary"
-                  disabled={savingLink || !linkForm.url || !linkForm.title}
-                >
-                  {savingLink ? (
-                    <>
-                      <Loader2 size={16} className="spin" style={{ marginRight: '6px' }} />
-                      Saving...
-                    </>
-                  ) : 'Save Link'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <AddLinkModal
+        isOpen={linkModalOpen}
+        onClose={() => setLinkModalOpen(false)}
+        onSubmit={handleLinkSubmit}
+        linkForm={linkForm}
+        setLinkForm={setLinkForm}
+        savingLink={savingLink}
+        linkCategoryOptions={linkCategoryOptions}
+      />
       
       {/* File Viewer Workspace Overlay */}
       <FileViewer

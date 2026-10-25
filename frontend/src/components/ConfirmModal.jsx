@@ -45,8 +45,9 @@ export default function ConfirmModal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'rgba(0, 0, 0, 0.6)',
-        backdropFilter: 'blur(4px)',
+        background: 'rgba(5, 5, 8, 0.95)',
+        backdropFilter: 'blur(30px)',
+        WebkitBackdropFilter: 'blur(30px)',
         animation: 'fadeIn 0.15s ease-out',
       }}
     >

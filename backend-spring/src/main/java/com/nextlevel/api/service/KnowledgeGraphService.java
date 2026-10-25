@@ -206,18 +206,19 @@ public class KnowledgeGraphService {
             // Related Captures
             for (Capture c : captures) {
                 if (c.getId().equals(itemId)) continue;
+                String cTitle = c.getTitle() != null ? c.getTitle() : "Capture";
                 if (target.getEmbedding() != null && !target.getEmbedding().isEmpty() &&
                     c.getEmbedding() != null && !c.getEmbedding().isEmpty()) {
                     double sim = cosineSimilarity(target.getEmbedding(), c.getEmbedding());
                     if (sim > 0.75) {
-                        related.add(Map.of("id", c.getId(), "title", c.getTitle(), "type", "capture", "score", sim));
+                        related.add(Map.of("id", c.getId(), "title", cTitle, "type", "capture", "score", sim));
                     }
                 } else {
                     Set<String> t1 = Set.copyOf(target.getTags() != null ? target.getTags() : List.of());
                     Set<String> t2 = Set.copyOf(c.getTags() != null ? c.getTags() : List.of());
                     t1.retainAll(t2);
                     if (!t1.isEmpty()) {
-                        related.add(Map.of("id", c.getId(), "title", c.getTitle(), "type", "capture", "score", 0.5));
+                        related.add(Map.of("id", c.getId(), "title", cTitle, "type", "capture", "score", 0.5));
                     }
                 }
             }
@@ -225,14 +226,16 @@ public class KnowledgeGraphService {
             // Related Files
             for (StudyFile f : files) {
                 if (f.getCategory() != null && !"other".equals(f.getCategory()) && f.getCategory().equals(target.getCategory())) {
-                    related.add(Map.of("id", f.getId(), "title", f.getFileName(), "type", "file", "score", 0.6));
+                    String fTitle = f.getFileName() != null ? f.getFileName() : "File";
+                    related.add(Map.of("id", f.getId(), "title", fTitle, "type", "file", "score", 0.6));
                 }
             }
             
             // Related Roadmaps
             for (Roadmap r : roadmaps) {
                 if (r.getCategory() != null && !"other".equals(r.getCategory()) && r.getCategory().equals(target.getCategory())) {
-                    related.add(Map.of("id", r.getId(), "title", r.getTitle(), "type", "roadmap", "score", 0.6));
+                    String rTitle = r.getTitle() != null ? r.getTitle() : "Roadmap";
+                    related.add(Map.of("id", r.getId(), "title", rTitle, "type", "roadmap", "score", 0.6));
                 }
             }
         }
@@ -256,25 +259,25 @@ public class KnowledgeGraphService {
         
         if ("capture".equals(type)) {
             Capture c = captureRepository.findById(realId).orElse(null);
-            if (c != null && c.getUserId().equals(userId)) {
-                nodeTitle = c.getTitle();
+            if (c != null && userId.equals(c.getUserId())) {
+                nodeTitle = c.getTitle() != null ? c.getTitle() : "Capture";
                 nodeContent = c.getRawContent();
             }
         } else if ("file".equals(type)) {
             StudyFile f = studyFileRepository.findById(realId).orElse(null);
-            if (f != null && f.getUserId().equals(userId)) {
-                nodeTitle = f.getFileName();
+            if (f != null && userId.equals(f.getUserId())) {
+                nodeTitle = f.getFileName() != null ? f.getFileName() : "File";
                 nodeContent = ""; // StudyFile doesn't have a description field
             }
         } else if ("roadmap".equals(type)) {
             Roadmap r = roadmapRepository.findById(realId).orElse(null);
-            if (r != null && r.getUserId().equals(userId)) {
-                nodeTitle = r.getTitle();
+            if (r != null && userId.equals(r.getUserId())) {
+                nodeTitle = r.getTitle() != null ? r.getTitle() : "Roadmap";
                 nodeContent = r.getDescription();
             }
         }
         
-        if (nodeTitle.isEmpty()) return Flux.just("data: Could not find the requested node.\n\n");
+        if (nodeTitle == null || nodeTitle.isEmpty()) return Flux.just("data: Could not find the requested node.\n\n");
 
         List<Map<String, Object>> related = getRelatedItems(userId, realId, type);
         String neighborsContext = related.stream()

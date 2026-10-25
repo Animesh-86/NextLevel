@@ -87,7 +87,10 @@ export function parseTextFormat(text, examId, moduleName = 'General') {
     const type = answer.length > 1 ? 'MSQ' : 'MCQ';
     const chooseCount = answer.length || 1;
 
+    const generatedId = `q_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 7)}`;
     questions.push({
+      id: generatedId,
+      _id: generatedId,
       examId,
       module: moduleName,
       type,
@@ -159,7 +162,10 @@ export function parseCSVRows(rows, examId) {
     const moduleName = row.module || row.category || 'General';
     const explanation = row.explanation || row.explain || '';
 
+    const generatedId = row.id || row._id || `q_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 7)}`;
     questions.push({
+      id: generatedId,
+      _id: generatedId,
       examId,
       module: moduleName.trim(),
       type: answer.length > 1 ? 'MSQ' : 'MCQ',
@@ -217,7 +223,8 @@ export function extractQuestionsFromJson(data, examId = null, defaultModule = 'G
 
   const normalized = [];
 
-  for (const item of rawItems) {
+  for (let i = 0; i < rawItems.length; i++) {
+    const item = rawItems[i];
     if (!item || typeof item !== 'object') continue;
 
     // 1. Extract scenario/question prompt
@@ -273,8 +280,16 @@ export function extractQuestionsFromJson(data, examId = null, defaultModule = 'G
     if (answerIndices.length === 0) answerIndices = [0];
 
     // 4. Determine type (MCQ or MSQ)
-    let type = (item.type || '').toUpperCase();
-    if (type !== 'MCQ' && type !== 'MSQ') {
+    // Normalize non-standard types: TRUE_FALSE, FILL_IN_THE_BLANKS, etc. → MCQ/MSQ
+    let type = (item.type || '').toUpperCase().trim();
+    if (type === 'MSQ' || type === 'MULTIPLE_SELECT' || type === 'CHECKBOX') {
+      type = 'MSQ';
+    } else if (type === 'MCQ' || type === 'TRUE_FALSE' || type === 'FILL_IN_THE_BLANKS' ||
+               type === 'TRUEFALSE' || type === 'TF' || type === 'FITB' || type === 'FIB' ||
+               type === 'SINGLE_SELECT') {
+      type = 'MCQ';
+    } else {
+      // Fallback: infer from answer count
       type = answerIndices.length > 1 ? 'MSQ' : 'MCQ';
     }
 
@@ -282,7 +297,10 @@ export function extractQuestionsFromJson(data, examId = null, defaultModule = 'G
     const explanation = item.explanation || item.rationale || item.solution || item.detail || '';
     const moduleName = item.chapter || item.module || item.category || defaultModule;
 
+    const generatedId = item.id || item._id || `q_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 7)}`;
     const qObj = {
+      id: generatedId,
+      _id: generatedId,
       scenario: scenario.trim(),
       options,
       answer: answerIndices,

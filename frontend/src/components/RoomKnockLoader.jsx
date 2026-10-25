@@ -18,14 +18,22 @@ const reducedMotion = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export default function RoomKnockLoader({
-  step = 'join',
+  step,
+  joinStep,
+  loading,
+  room,
   code = '',
   name,
   initials = '?',
   children,
-  minMs = 900,
+  minMs = 800,
   onOpened,
 }) {
+  const currentStep = step || joinStep || (loading === false && room ? 'ready' : 'join');
+  const roomCode = code || room?.roomCode || '';
+  const roomName = name || room?.title || 'Entering room';
+  const isReady = currentStep === 'ready' || (loading === false && Boolean(room));
+
   const [minDone, setMinDone] = useState(false);
   const [phase, setPhase] = useState('waiting'); // 'waiting' | 'open' | 'leaving' | 'done'
 
@@ -41,10 +49,11 @@ export default function RoomKnockLoader({
 
   // waiting -> open: only when the room is really ready
   useEffect(() => {
-    if (step === 'ready' && minDone && phase === 'waiting') {
-      setPhase('open');
+    if (isReady && minDone && phase === 'waiting') {
+      const t = setTimeout(() => setPhase('open'), 0);
+      return () => clearTimeout(t);
     }
-  }, [step, minDone, phase]);
+  }, [isReady, minDone, phase]);
 
   // open -> leaving
   useEffect(() => {
@@ -82,13 +91,13 @@ export default function RoomKnockLoader({
 
   return (
     <div className={cls}>
-      {step === 'ready' && <div className="rkl-room">{children}</div>}
+      {(isReady || phase !== 'waiting') && <div className="rkl-room">{children}</div>}
 
       {phase !== 'done' && (
         <div className="rkl-overlay" role="status" aria-live="polite">
           <div className="rkl-meta">
-            {code && <span className="rkl-code">{code}</span>}
-            <h2 className="rkl-name">{name ?? 'Entering room'}</h2>
+            {roomCode && <span className="rkl-code">{roomCode}</span>}
+            <h2 className="rkl-name">{roomName}</h2>
           </div>
 
           <svg
@@ -138,7 +147,7 @@ export default function RoomKnockLoader({
             </g>
           </svg>
 
-          <p className="rkl-label">{LABELS[step] || LABELS.join}</p>
+          <p className="rkl-label">{LABELS[currentStep] || LABELS.join}</p>
         </div>
       )}
     </div>

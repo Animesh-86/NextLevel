@@ -45,7 +45,7 @@ public class PlannerService {
             pt.setScheduledDate(c.getReminderAt());
             pt.setCategory(c.getCategory());
             pt.setPriority(c.getUrgency());
-            pt.setStatus(c.getIsArchived() != null && c.getIsArchived() ? "completed" : "todo");
+            pt.setStatus(c.getIsArchived() != null && c.getIsArchived() ? "done" : "todo");
             pt.setLinkedCaptureId(c.getId());
             tasks.add(pt);
         }
@@ -97,12 +97,13 @@ public class PlannerService {
             String realId = id.substring(8);
             return captureRepository.findByIdAndUserId(realId, userId).map(c -> {
                 if (request.status() != null) {
-                    c.setIsArchived("completed".equals(request.status()));
+                    boolean isDone = "done".equals(request.status()) || "completed".equals(request.status());
+                    c.setIsArchived(isDone);
                     captureRepository.save(c);
                 }
                 PlannerTask pt = new PlannerTask();
                 pt.setId(id);
-                pt.setStatus(c.getIsArchived() != null && c.getIsArchived() ? "completed" : "todo");
+                pt.setStatus(c.getIsArchived() != null && c.getIsArchived() ? "done" : "todo");
                 return pt;
             });
         }
@@ -117,7 +118,9 @@ public class PlannerService {
             if (request.category() != null) task.setCategory(request.category());
             if (request.priority() != null) task.setPriority(request.priority());
             if (request.status() != null) {
-                if (!"completed".equals(task.getStatus()) && "completed".equals(request.status())) {
+                boolean wasDone = "done".equals(task.getStatus()) || "completed".equals(task.getStatus());
+                boolean nowDone = "done".equals(request.status()) || "completed".equals(request.status());
+                if (!wasDone && nowDone) {
                     gamificationService.awardXp(userId, 20, "Completed a task");
                 }
                 task.setStatus(request.status());

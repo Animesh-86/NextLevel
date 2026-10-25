@@ -189,7 +189,7 @@ public class GoogleCalendarService {
                             task.setStartTime(startTimeStr);
                             task.setEndTime(endTimeStr);
                             task.setDuration(duration);
-                            task.setCategory(null);
+                            task.setCategory("study");
                             task.setPriority("medium");
                             task.setStatus("todo");
                             task.setCreatedAt(java.time.Instant.now());
@@ -256,6 +256,10 @@ public class GoogleCalendarService {
             body.put("summary", task.getTitle());
             body.put("description", task.getDescription());
             
+            if (task.getScheduledDate() == null) {
+                log.warn("Cannot push task {} to Google Calendar: scheduledDate is null", task.getId());
+                return;
+            }
             java.time.LocalDate localDate = task.getScheduledDate().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
             String startHourMin = task.getStartTime() == null || task.getStartTime().isEmpty() ? "09:00" : task.getStartTime();
             String endHourMin = task.getEndTime() == null || task.getEndTime().isEmpty() ? "10:00" : task.getEndTime();

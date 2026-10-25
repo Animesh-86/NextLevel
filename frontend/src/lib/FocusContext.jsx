@@ -4,38 +4,12 @@ import { createContext, useContext, useState, useEffect, useRef, useCallback } f
 import { usePathname, useRouter } from 'next/navigation';
 import { useToast } from '@/components/Toast';
 import { apiFetch } from '@/lib/api';
+import { PARTICLE_SPEEDS, HUMOROUS_EXIT_QUOTES } from './focusConstants';
+import { initAudioContext, stopAudioSources, playZenBellSound } from './focusAudio';
+
+export { PARTICLE_SPEEDS, HUMOROUS_EXIT_QUOTES };
 
 const FocusContext = createContext(null);
-
-export const PARTICLE_SPEEDS = [
-  { label: '0.2x Zen', multiplier: 0.5 },
-  { label: '0.5x Slow', multiplier: 1.0 },
-  { label: '1.0x Cosmic', multiplier: 1.8 },
-  { label: '2.0x Warp', multiplier: 3.2 }
-];
-
-export const HUMOROUS_EXIT_QUOTES = [
-  {
-    title: "Leaving so soon, Space Cadet?",
-    msg: "The dopamine you're looking for isn't on Instagram... stay here and finish what you started."
-  },
-  {
-    title: "Hold up, Legend!",
-    msg: "Even my CPU is running hotter than your focus session right now. Don't break your momentum."
-  },
-  {
-    title: "Your future self is watching...",
-    msg: "They just sent a reminder: don't click exit, finish this session strong."
-  },
-  {
-    title: "A bug is holding its breath...",
-    msg: "Ancient folklore says every time you quit focus mode early, an unexplained bug is born into production."
-  },
-  {
-    title: "Your goals just sent a ping!",
-    msg: "They are wondering why you are leaving in the middle of an active session. Stay and conquer."
-  }
-];
 
 export function FocusProvider({ children }) {
   const pathname = usePathname();
@@ -257,56 +231,17 @@ export function FocusProvider({ children }) {
     return () => { active = false; };
   }, []);
 
-  // Audio helper
+  // Audio helpers
   const initAudio = useCallback(() => {
-    if (!audioCtxRef.current) {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextClass) return;
-      audioCtxRef.current = new AudioContextClass();
-      masterGainRef.current = audioCtxRef.current.createGain();
-      masterGainRef.current.gain.setValueAtTime(isMuted ? 0 : volume / 100, audioCtxRef.current.currentTime);
-      masterGainRef.current.connect(audioCtxRef.current.destination);
-    }
-    if (audioCtxRef.current.state === 'suspended') {
-      audioCtxRef.current.resume();
-    }
+    initAudioContext(audioCtxRef, masterGainRef, isMuted, volume);
   }, [isMuted, volume]);
 
   const stopAmbientSounds = useCallback(() => {
-    activeSourcesRef.current.forEach(src => {
-      try { src.stop(); } catch(e) {}
-    });
-    activeSourcesRef.current = [];
-    if (metronomeRef.current) {
-      metronomeRef.current.stop();
-      metronomeRef.current = null;
-    }
+    stopAudioSources(activeSourcesRef, metronomeRef);
   }, []);
 
   const playZenBell = useCallback(() => {
-    if (!audioCtxRef.current) return;
-    const ctx = audioCtxRef.current;
-    const now = ctx.currentTime;
-    const bellGain = ctx.createGain();
-    bellGain.gain.setValueAtTime(0, now);
-    bellGain.gain.linearRampToValueAtTime(0.5, now + 0.1);
-    bellGain.gain.exponentialRampToValueAtTime(0.0001, now + 7.0);
-    bellGain.connect(ctx.destination);
-
-    const frequencies = [220, 442, 663, 885, 1107, 1330];
-    frequencies.forEach((freq, idx) => {
-      const osc = ctx.createOscillator();
-      const overtoneGain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, now);
-      const decayFactor = 1.0 - (idx * 0.12);
-      overtoneGain.gain.setValueAtTime(0.12 / frequencies.length, now);
-      overtoneGain.gain.exponentialRampToValueAtTime(0.0001, now + 7.0 * Math.max(0.1, decayFactor));
-      osc.connect(overtoneGain);
-      overtoneGain.connect(bellGain);
-      osc.start(now);
-      osc.stop(now + 7.2);
-    });
+    playZenBellSound(audioCtxRef);
   }, []);
 
   // Save completed session to API
@@ -397,7 +332,6 @@ export function FocusProvider({ children }) {
     if (timerRef.current) clearInterval(timerRef.current);
 
     if (reason === 'practice') {
-      // Session interrupted by entering Practice arena: cancel cleanly, NO XP, NO completion celebration
       toast.warning('Focus session cancelled because you entered Practice. No session recorded.', { duration: 5000 });
       setTimeLeft(duration);
       return;
@@ -525,7 +459,10 @@ export function FocusProvider({ children }) {
     handleBackClick,
     cancelExit,
     confirmExit,
-    loadInitialData
+    loadInitialData,
+    initAudio,
+    stopAmbientSounds,
+    playZenBell
   };
 
   return (

@@ -23,10 +23,6 @@ import com.nextlevel.api.repository.CaptureRepository;
 import com.nextlevel.api.repository.UserRepository;
 import com.nextlevel.api.model.User;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-
 @Service
 public class NotionIntegrationService {
 

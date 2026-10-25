@@ -4,7 +4,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -43,7 +42,7 @@ public class SpacedRepetitionService {
 
     public Question processReview(String questionId, int quality, String userId) {
         Question question = questionRepository.findById(questionId).orElseThrow(() -> new RuntimeException("Question not found"));
-        if (!question.getUserId().equals(userId)) {
+        if (!userId.equals(question.getUserId())) {
             throw new SecurityException("Forbidden");
         }
 

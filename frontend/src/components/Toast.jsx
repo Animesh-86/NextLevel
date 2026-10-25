@@ -38,9 +38,13 @@ export function ToastProvider({ children }) {
         info: (msg, opts) => addToast(msg, 'info', 4000, opts?.id),
         warning: (msg, opts) => addToast(msg, 'warning', 4000, opts?.id),
         loading: (msg, opts) => addToast(msg, 'loading', 999999, opts?.id),
+        dismiss: (id) => {
+          if (id) removeToast(id);
+          else setToasts([]);
+        },
       }
     );
-  }, [addToast]);
+  }, [addToast, removeToast]);
 
   return (
     <ToastContext.Provider value={toast}>

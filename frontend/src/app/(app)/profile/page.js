@@ -4,10 +4,13 @@ import { useToast } from '@/components/Toast';
 import { useSession, signOut } from '@/lib/useAuth';
 import { apiFetch } from '@/lib/api';
 import { SkeletonCard } from '@/components/SkeletonLoader';
-import { User, Mail, Calendar, Flame, BookOpen, HelpCircle, Clock, Award, Save, Lock, Eye, EyeOff, BarChart3, ChevronRight, LogOut, PieChart as PieChartIcon, X, Mic, Swords, Radio, TrendingUp, Users } from 'lucide-react';
-import Link from 'next/link';
+import { User, Mail, Calendar, Flame, BookOpen, HelpCircle, Clock, Award, Save, Lock, LogOut, PieChart as PieChartIcon, Mic, Swords, Radio, TrendingUp } from 'lucide-react';
 import PerformanceTrendChart from '@/components/charts/PerformanceTrendChart';
 import TimeDistributionPie from '@/components/charts/TimeDistributionPie';
+import ProfileActivityHeatmap from './components/ProfileActivityHeatmap';
+import ProfileCategories from './components/ProfileCategories';
+import ProfileAchievements from './components/ProfileAchievements';
+import ChangePasswordModal from './components/ChangePasswordModal';
 
 export default function ProfilePage() {
   const { data: session } = useSession();
@@ -19,12 +22,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
-  const [showPasswords, setShowPasswords] = useState(false);
   const toast = useToast();
-
   const [nameInput, setNameInput] = useState('');
-  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
-  const [showAddCat, setShowAddCat] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -78,40 +77,13 @@ export default function ProfilePage() {
         if (roomsRes.success && Array.isArray(roomsRes.data)) {
           setRooms(roomsRes.data);
         }
-      } catch (err) {
+      } catch {
         toast.error('Failed to load data');
       }
       setLoading(false);
     }
     loadData();
   }, []);
-
-  const heatmap = analytics?.heatmap;
-  const heatmapDays = useMemo(() => {
-    const days = [];
-    const today = new Date();
-    const streakCount = profile?.streak || analytics?.streak || 2;
-    for (let i = 89; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(today.getDate() - i);
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      const dateStr = `${year}-${month}-${day}`;
-      let count = heatmap ? (heatmap[dateStr] || 0) : 0;
-      // If within user's active streak (e.g., today & yesterday), reflect the active streak days!
-      if (i < streakCount && count === 0) {
-        count = 1;
-      }
-      days.push({ date: dateStr, count });
-    }
-    return days;
-  }, [heatmap, profile?.streak, analytics?.streak]);
-
-  const heatmapMax = useMemo(
-    () => Math.max(...Object.values(heatmap || {}), 1),
-    [heatmap]
-  );
 
   const interviewAvgScore = useMemo(() => {
     if (!interviews || interviews.length === 0) return 0;
@@ -135,35 +107,8 @@ export default function ProfilePage() {
       } else {
         toast.error(data.error);
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to update');
-    }
-  }
-
-  async function handleChangePassword() {
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
-    try {
-      const res = await apiFetch('/api/user/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          currentPassword: passwordForm.currentPassword,
-          newPassword: passwordForm.newPassword,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success('Password changed');
-        setChangingPassword(false);
-        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      } else {
-        toast.error(data.error);
-      }
-    } catch (err) {
-      toast.error('Failed to change password');
     }
   }
 
@@ -259,7 +204,7 @@ export default function ProfilePage() {
         </div>
       </header>
 
-      {/* Level & XP Progress - Compact single-line bar with progress line starting directly after Level 1 */}
+      {/* Level & XP Progress */}
       <section className="glass-panel" style={{ 
         padding: '0.65rem 1.25rem', 
         display: 'flex', 
@@ -276,7 +221,6 @@ export default function ProfilePage() {
           </h2>
         </div>
         
-        {/* Progress line starting directly after Level 1 */}
         <div style={{ 
           flex: 1, 
           height: '6px', 
@@ -300,7 +244,7 @@ export default function ProfilePage() {
         </span>
       </section>
 
-      {/* Minimal Stats Row with Room Status & Arena Attended */}
+      {/* Stats Row */}
       <div style={{ 
         display: 'flex', flexWrap: 'wrap', gap: '18px', 
         padding: '12px 20px', background: 'rgba(255,255,255,0.02)', 
@@ -357,44 +301,10 @@ export default function ProfilePage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
           {/* Activity Heatmap */}
           {analytics?.heatmap && (
-            <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-md)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <BarChart3 size={18} />
-                  <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Activity</h2>
-                  <span className="badge" style={{ background: 'rgba(255,255,255,0.05)' }}>90 days</span>
-                </div>
-                <Link href="/journey?tab=analytics" style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}>
-                  Analytics <ChevronRight size={14} />
-                </Link>
-              </div>
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(30, 1fr)', 
-                gap: '4px',
-                background: 'var(--bg-surface)',
-                padding: 'var(--space-sm)',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--border-light)'
-              }}>
-                {heatmapDays.map(({ date, count }) => (
-                  <div
-                    key={date}
-                    title={`${date}: ${count} activities`}
-                    style={{
-                      aspectRatio: '1',
-                      borderRadius: '2px',
-                      background: count > 0 ? `rgba(180, 255, 100, ${0.35 + Math.min(count, 5) * 0.13})` : 'rgba(255, 255, 255, 0.03)',
-                      boxShadow: count > 0 ? `0 0 8px rgba(180, 255, 100, 0.4)` : 'none',
-                      transition: 'all 0.2s',
-                    }}
-                  />
-                ))}
-              </div>
-            </section>
+            <ProfileActivityHeatmap heatmap={analytics.heatmap} streak={profile?.streak || analytics?.streak || 2} />
           )}
 
-          {/* Performance & Score Velocity (replaces broken Subject Mastery) */}
+          {/* Performance & Score Velocity */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--space-md)', flex: 1 }}>
             <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-md)' }}>
@@ -408,8 +318,8 @@ export default function ProfilePage() {
               </div>
               <div style={{ background: 'var(--bg-surface)', padding: 'var(--space-sm)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
                 <PerformanceTrendChart 
-                  examScore={profile.examAvg || (results.length > 0 ? Math.round(results.reduce((a, r) => a + (r.scorePercent || 0), 0) / results.length) : 85)} 
-                  arenaPoints={profile.arenaPoints || 2414} 
+                  examScore={profile?.examAvg || (results.length > 0 ? Math.round(results.reduce((a, r) => a + (r.scorePercent || 0), 0) / results.length) : 85)} 
+                  arenaPoints={profile?.arenaPoints || 2414} 
                   results={results} 
                 />
               </div>
@@ -425,196 +335,17 @@ export default function ProfilePage() {
               </div>
             </section>
           </div>
-
         </div>
 
-        {/* Categories Sidebar */}
+        {/* Categories Sidebar & Achievements */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-          <section className="glass-panel" style={{ padding: 'var(--space-md)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-md)' }}>
-              <BookOpen size={18} />
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Custom Categories</h2>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                {['Work', 'Personal', 'Education', 'Finance', 'Health', 'Projects', 'Notes', 'Other'].map(cat => (
-                  <span key={cat} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'var(--bg-surface)', padding: '4px 10px', borderRadius: 'var(--radius-full)', fontSize: '0.8rem', color: 'var(--text-muted)', border: '1px solid var(--border-light)' }}>
-                    {cat} (Default)
-                  </span>
-                ))}
-                {(profile.customCategories || []).map((cat, idx) => (
-                  <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(180,255,100,0.1)', color: 'var(--brand)', padding: '4px 10px', borderRadius: 'var(--radius-full)', fontSize: '0.8rem', border: '1px solid rgba(180,255,100,0.2)' }}>
-                    {cat}
-                    <button
-                      className="icon-btn"
-                      style={{ padding: 0, marginLeft: '4px', opacity: 0.7 }}
-                      onClick={async () => {
-                        const cats = profile.customCategories.filter((_, i) => i !== idx);
-                        setProfile({ ...profile, customCategories: cats });
-                        await apiFetch('/api/user/profile', {
-                          method: 'PUT',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ customCategories: cats })
-                        });
-                      }}
-                    >
-                      <X size={12} />
-                    </button>
-                  </span>
-                ))}
-              </div>
-              
-              {showAddCat ? (
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <input
-                    className="input"
-                    placeholder="New category..."
-                    autoFocus
-                    onBlur={() => setShowAddCat(false)}
-                    onKeyDown={async (e) => {
-                      if (e.key === 'Escape') setShowAddCat(false);
-                      if (e.key === 'Enter' && e.target.value.trim()) {
-                        const newCat = e.target.value.trim();
-                        e.target.value = '';
-                        const cats = [...(profile.customCategories || []), newCat];
-                        setProfile({ ...profile, customCategories: cats });
-                        await apiFetch('/api/user/profile', {
-                          method: 'PUT',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ customCategories: cats })
-                        });
-                        toast.success('Category added');
-                        setShowAddCat(false);
-                      }
-                    }}
-                  />
-                </div>
-              ) : (
-                <button className="btn" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', color: 'var(--text-primary)', alignSelf: 'flex-start' }} onClick={() => setShowAddCat(true)}>
-                  + Add Custom Category
-                </button>
-              )}
-            </div>
-          </section>
-
-          {/* Achievements */}
-          <section className="glass-panel" style={{ padding: 'var(--space-md)', flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-md)' }}>
-              <Award size={18} />
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Achievements</h2>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 'var(--space-sm)' }}>
-              {[
-                { id: 'first_exam', title: 'First Exam', description: 'Completed your first exam' },
-                { id: 'streak_7', title: '7-Day Streak', description: 'Practiced 7 days in a row' },
-                { id: 'first_interview', title: 'First Mock Interview', description: 'Completed your first AI mock interview' },
-                { id: 'interview_ace', title: 'Interview Ace', description: 'Scored 80%+ on an AI mock interview' },
-                { id: 'interview_veteran', title: 'Staff Ready', description: 'Completed 5+ technical mock interviews' },
-                { id: 'perfect', title: 'Perfect Score', description: 'Scored 100% on an exam' },
-                { id: '100_questions', title: 'Century', description: 'Answered 100 questions' },
-                { id: '10_passed', title: 'Champion', description: 'Passed 10 exams' },
-                { id: 'streak_30', title: 'Monthly Warrior', description: '30-day streak' },
-                { id: '500_questions', title: 'Scholar', description: 'Answered 500 questions' },
-                { id: '10_hours', title: 'Dedicated', description: '10+ hours of study' }
-              ].map((a) => {
-                const isUnlocked = profile.achievements?.some(ua => ua.id === a.id) ||
-                  (a.id === 'first_interview' && interviews.length >= 1) ||
-                  (a.id === 'interview_ace' && interviews.some(i => (i.scorecard?.overallScore || 0) >= 80)) ||
-                  (a.id === 'interview_veteran' && interviews.length >= 5);
-                return (
-                  <div key={a.id} style={{
-                    padding: 'var(--space-sm)',
-                    borderRadius: 'var(--radius-md)',
-                    border: `1px solid ${isUnlocked ? 'var(--brand)' : 'var(--border-light)'}`,
-                    background: isUnlocked ? 'rgba(var(--brand-rgb), 0.05)' : 'var(--bg-surface)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    opacity: isUnlocked ? 1 : 0.4
-                  }}>
-                    <div style={{ 
-                      fontSize: '1.5rem', 
-                      background: isUnlocked ? 'var(--brand)' : 'rgba(255,255,255,0.05)', 
-                      padding: '8px', 
-                      borderRadius: '50%', 
-                      color: isUnlocked ? 'var(--bg-primary)' : 'var(--text-muted)' 
-                    }}>
-                      <Award size={24} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 600, color: isUnlocked ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                        {a.title}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        {a.description}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-              {/* Also show any dynamically generated achievements (e.g. level ups) that aren't in the static list */}
-              {profile.achievements?.filter(ua => !['first_exam', 'streak_7', 'first_interview', 'interview_ace', 'interview_veteran', 'perfect', '100_questions', '10_passed', 'streak_30', '500_questions', '10_hours'].includes(ua.id)).map(a => (
-                <div key={a.id} style={{
-                    padding: 'var(--space-sm)',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid var(--brand)',
-                    background: 'rgba(var(--brand-rgb), 0.05)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                  }}>
-                    <div style={{ fontSize: '1.5rem', background: 'var(--brand)', padding: '8px', borderRadius: '50%', color: 'var(--bg-primary)' }}>
-                      {a.icon ? <span>{a.icon}</span> : <Award size={24} />}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{a.title || a.label}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{a.description || a.desc}</div>
-                    </div>
-                  </div>
-              ))}
-            </div>
-          </section>
+          <ProfileCategories profile={userProfile} setProfile={setProfile} />
+          <ProfileAchievements profile={userProfile} interviews={interviews} />
         </div>
       </div>
 
       {/* Change Password Modal */}
-      {changingPassword && (
-        <div className="dialog-overlay" onClick={() => setChangingPassword(false)}>
-          <div className="capture-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
-            <div className="capture-modal-header">
-              <h2 className="capture-modal-title">Change Password</h2>
-              <button className="icon-btn" onClick={() => setChangingPassword(false)}>
-                <X size={18} />
-              </button>
-            </div>
-            <div className="capture-form" style={{ padding: 'var(--space-md)' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current Password</label>
-                  <input type={showPasswords ? 'text' : 'password'} className="input" value={passwordForm.currentPassword} onChange={e => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} style={{ width: '100%', fontSize: '0.95rem' }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>New Password</label>
-                  <input type={showPasswords ? 'text' : 'password'} className="input" value={passwordForm.newPassword} onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} style={{ width: '100%', fontSize: '0.95rem' }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Confirm New Password</label>
-                  <input type={showPasswords ? 'text' : 'password'} className="input" value={passwordForm.confirmPassword} onChange={e => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} style={{ width: '100%', fontSize: '0.95rem' }} />
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem' }}>
-                  <button type="button" onClick={() => setShowPasswords(!showPasswords)} className="btn" style={{ padding: '0.4rem 0.6rem', background: 'var(--bg-surface)', border: '1px solid var(--border-light)' }}>
-                    {showPasswords ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
-                  <button className="btn" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', color: 'var(--text-primary)' }} onClick={() => { setChangingPassword(false); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); }}>Cancel</button>
-                  <button className="btn btn-primary" onClick={handleChangePassword}>Save</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ChangePasswordModal isOpen={changingPassword} onClose={() => setChangingPassword(false)} />
     </div>
   );
 }

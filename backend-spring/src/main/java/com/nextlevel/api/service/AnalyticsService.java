@@ -123,9 +123,11 @@ public class AnalyticsService {
         Map<String, Integer> catCounts = new HashMap<>();
         Map<String, Integer> catDurations = new HashMap<>();
         tasks.forEach(t -> {
-            catCounts.merge(t.getCategory(), 1, Integer::sum);
-            if (t.getDuration() != null && "done".equals(t.getStatus())) {
-                catDurations.merge(t.getCategory(), t.getDuration(), Integer::sum);
+            String cat = t.getCategory() != null && !t.getCategory().isBlank() ? t.getCategory() : "other";
+            catCounts.merge(cat, 1, Integer::sum);
+            boolean isDone = "done".equals(t.getStatus()) || "completed".equals(t.getStatus());
+            if (t.getDuration() != null && isDone) {
+                catDurations.merge(cat, t.getDuration(), Integer::sum);
             }
         });
         
@@ -133,7 +135,10 @@ public class AnalyticsService {
         var timeDistribution = catDurations.entrySet().stream().map(e -> Map.of("name", e.getKey(), "value", e.getValue())).toList();
 
         Map<String, Integer> pipeline = new HashMap<>();
-        apps.forEach(a -> pipeline.merge(a.getStatus(), 1, Integer::sum));
+        apps.forEach(a -> {
+            String st = a.getStatus() != null ? a.getStatus() : "bookmarked";
+            pipeline.merge(st, 1, Integer::sum);
+        });
 
         int storedUserStreak = userRepository.findById(uid)
                 .map(u -> u.getStreak() != null ? u.getStreak() : 0)
@@ -156,21 +161,28 @@ public class AnalyticsService {
         }
         int streak = Math.max(calculatedStreak, storedUserStreak);
 
+        long doneTasksCount = tasks.stream().filter(t -> "done".equals(t.getStatus()) || "completed".equals(t.getStatus())).count();
+        int totalDoneMinutes = tasks.stream().filter(t -> "done".equals(t.getStatus()) || "completed".equals(t.getStatus()))
+                .mapToInt(t -> t.getDuration() == null ? 0 : t.getDuration()).sum();
+
         Map<String, Object> counts = new HashMap<>();
         counts.put("captures", captures.size());
         counts.put("tasks", tasks.size());
-        counts.put("tasksDone", tasks.stream().filter(t -> "done".equals(t.getStatus())).count());
+        counts.put("tasksDone", doneTasksCount);
         counts.put("files", files.size());
         counts.put("roadmaps", roadmaps.size());
         counts.put("roadmapsActive", roadmaps.stream().filter(r -> "active".equals(r.getStatus())).count());
         counts.put("applications", apps.size());
-        counts.put("totalStudyHours", Math.round(tasks.stream().filter(t -> "done".equals(t.getStatus())).mapToInt(t -> t.getDuration() == null ? 0 : t.getDuration()).sum() / 60f));
+        counts.put("totalStudyHours", Math.round(totalDoneMinutes / 60f));
 
-        var roadmapSummaries = roadmaps.stream().filter(r -> "active".equals(r.getStatus())).map(r -> Map.of(
-                "_id", r.getId(),
-                "title", r.getTitle(),
-                "progress", r.getOverallProgress(),
-                "category", r.getCategory())).toList();
+        var roadmapSummaries = roadmaps.stream().filter(r -> "active".equals(r.getStatus())).map(r -> {
+            Map<String, Object> rm = new HashMap<>();
+            rm.put("_id", r.getId() != null ? r.getId() : "");
+            rm.put("title", r.getTitle() != null ? r.getTitle() : "Untitled Roadmap");
+            rm.put("progress", r.getOverallProgress() != null ? r.getOverallProgress() : 0);
+            rm.put("category", r.getCategory() != null ? r.getCategory() : "other");
+            return rm;
+        }).toList();
 
         Map<String, Object> data = new HashMap<>();
         data.put("heatmap", heatmap);

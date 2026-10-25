@@ -4,9 +4,10 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
-import { Loader2, X, Sparkles, ExternalLink, Box, Layers, PlusCircle, Network } from "lucide-react";
-
+import { Loader2, Box, Layers } from "lucide-react";
 import * as THREE from 'three';
+import GraphExplorePanel from "./components/GraphExplorePanel";
+import GraphEmptyState from "./components/GraphEmptyState";
 
 const ForceGraph3D = dynamic(() => import("react-force-graph-3d"), { ssr: false });
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), { ssr: false });
@@ -300,61 +301,14 @@ export default function KnowledgeGraphPage() {
             </div>
 
             {/* Explore Mode Side-Panel */}
-            {exploreNode && (
-                <div className="graph-explore-panel card" style={{ 
-                    position: 'absolute', top: '20px', right: '20px', zIndex: 10, 
-                    width: '350px', maxWidth: 'calc(100vw - 40px)', 
-                    background: 'rgba(20,20,20,0.85)', backdropFilter: 'blur(10px)', 
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    display: 'flex', flexDirection: 'column', gap: '1rem'
-                }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-                            Explore Node
-                        </h3>
-                        <button onClick={() => setExploreNode(null)} className="icon-btn" style={{ padding: 0 }}>
-                            <X size={18} />
-                        </button>
-                    </div>
-
-                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px' }}>
-                        <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600 }}>{exploreNode.type}</span>
-                        <h4 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginTop: '0.25rem', marginBottom: '1rem' }}>
-                            {exploreNode.name}
-                        </h4>
-                        
-                        <button onClick={() => handleNavigate(exploreNode)} className="btn btn-secondary" style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '0.5rem', alignItems: 'center', color: '#ffffff', borderColor: 'rgba(255,255,255,0.2)' }}>
-                            <ExternalLink size={14} /> Open {exploreNode.type}
-                        </button>
-                    </div>
-
-                    <div>
-                        <button 
-                            onClick={analyzeConnections} 
-                            disabled={analyzing}
-                            className="btn btn-primary" 
-                            style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '0.5rem', alignItems: 'center', background: 'linear-gradient(45deg, var(--brand-purple), var(--brand-blue))', border: 'none', color: '#ffffff' }}
-                        >
-                            {analyzing ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />}
-                            {analyzing ? 'Analyzing connections...' : 'AI Connection Analysis'}
-                        </button>
-                    </div>
-
-                    {aiExplanation && (
-                        <div style={{ 
-                            background: 'rgba(124, 58, 237, 0.1)', 
-                            border: '1px solid rgba(124, 58, 237, 0.3)',
-                            padding: '1rem', 
-                            borderRadius: '8px',
-                            fontSize: '0.9rem',
-                            lineHeight: '1.5',
-                            color: 'var(--text-secondary)'
-                        }}>
-                            {aiExplanation}
-                        </div>
-                    )}
-                </div>
-            )}
+            <GraphExplorePanel
+                exploreNode={exploreNode}
+                onClose={() => setExploreNode(null)}
+                onNavigate={handleNavigate}
+                onAnalyze={analyzeConnections}
+                analyzing={analyzing}
+                aiExplanation={aiExplanation}
+            />
 
             {/* Time Travel Slider */}
             {timeRange.min !== timeRange.max && (
@@ -380,61 +334,11 @@ export default function KnowledgeGraphPage() {
             )}
 
             {/* Empty State Overlay */}
-            {filteredNodes.length === 0 && (
-                <div style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    zIndex: 20,
-                    textAlign: 'center',
-                    background: 'rgba(20, 20, 25, 0.92)',
-                    backdropFilter: 'blur(16px)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    borderRadius: '16px',
-                    padding: '2.5rem',
-                    maxWidth: '480px',
-                    width: '90%',
-                    boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
-                }}>
-                    <div style={{
-                        width: '60px',
-                        height: '60px',
-                        margin: '0 auto 1.25rem',
-                        borderRadius: '50%',
-                        background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(167, 139, 250, 0.2))',
-                        border: '1px solid rgba(167, 139, 250, 0.3)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#a78bfa'
-                    }}>
-                        <Network size={30} />
-                    </div>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem', color: '#ffffff' }}>
-                        Knowledge Graph is Empty
-                    </h2>
-                    <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-                        The graph connects your notes, documents, and learning roadmaps into clusters. Capture new items or preview sample data to explore connections in 3D.
-                    </p>
-                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <button
-                            onClick={loadDemoData}
-                            className="btn btn-primary"
-                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'linear-gradient(135deg, #38bdf8, #a78bfa)', color: '#fff', border: 'none' }}
-                        >
-                            <Sparkles size={15} /> Load Demo Graph
-                        </button>
-                        <button
-                            onClick={() => router.push('/captures')}
-                            className="btn btn-secondary"
-                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                        >
-                            <PlusCircle size={15} /> Create Capture
-                        </button>
-                    </div>
-                </div>
-            )}
+            <GraphEmptyState
+                visible={filteredNodes.length === 0}
+                onLoadDemo={loadDemoData}
+                onCreateCapture={() => router.push('/captures')}
+            />
 
             {/* Graph Engine (3D or 2D) */}
             {is3D ? (

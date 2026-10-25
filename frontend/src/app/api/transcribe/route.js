@@ -12,8 +12,8 @@ export async function POST(req) {
     const formData = await req.formData();
     const file = formData.get('audio') || formData.get('file');
 
-    if (!file) {
-      return NextResponse.json({ success: false, error: 'No audio file provided' }, { status: 400 });
+    if (!file || file.size < 800) {
+      return NextResponse.json({ success: true, text: '' });
     }
 
     const transcription = await groq.audio.transcriptions.create({
@@ -29,10 +29,10 @@ export async function POST(req) {
       text: transcription.text ? transcription.text.trim() : ''
     });
   } catch (error) {
-    console.error('Transcription API error:', error);
+    console.warn('Transcription API warning:', error?.message);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to transcribe audio' },
-      { status: 500 }
+      { success: false, text: '', error: error?.message || 'Failed to transcribe audio' },
+      { status: 200 }
     );
   }
 }

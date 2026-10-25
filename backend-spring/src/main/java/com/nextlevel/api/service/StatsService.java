@@ -75,24 +75,37 @@ public class StatsService {
                 Question q = questionMap.get(qId);
                 
                 if (q != null) {
-                    modulePerformance.putIfAbsent(q.getModule(), new int[]{0, 0});
-                    int[] stat = modulePerformance.get(q.getModule());
+                    String module = q.getModule() != null && !q.getModule().isBlank() ? q.getModule() : "General";
+                    modulePerformance.putIfAbsent(module, new int[]{0, 0});
+                    int[] stat = modulePerformance.get(module);
                     stat[1] += 1;
-                    if (userAnswer.size() == q.getAnswer().size() && userAnswer.stream().allMatch(q.getAnswer()::contains)) {
+                    if (userAnswer != null && q.getAnswer() != null 
+                            && userAnswer.size() == q.getAnswer().size() 
+                            && userAnswer.stream().allMatch(q.getAnswer()::contains)) {
                         stat[0] += 1;
                     }
                 }
             }
         }
 
-        var radarData = modulePerformance.entrySet().stream().map(e -> Map.of(
-                "subject", e.getKey(),
-                "A", e.getValue()[1] > 0 ? Math.round((e.getValue()[0] * 100f) / e.getValue()[1]) : 0,
-                "fullMark", 100)).toList();
+        var radarData = modulePerformance.entrySet().stream().map(e -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("subject", e.getKey() != null ? e.getKey() : "General");
+            map.put("A", e.getValue()[1] > 0 ? Math.round((e.getValue()[0] * 100f) / e.getValue()[1]) : 0);
+            map.put("fullMark", 100);
+            return map;
+        }).toList();
 
-        var weeklyProgress = results.stream().limit(7).sorted((a, b) -> a.getCreatedAt().compareTo(b.getCreatedAt())).map(r -> Map.of(
-                "name", r.getCreatedAt().atOffset(ZoneOffset.UTC).getDayOfWeek().name().substring(0, 3),
-                "score", r.getScorePercent() == null ? 0 : r.getScorePercent())).toList();
+        var weeklyProgress = results.stream()
+                .filter(r -> r.getCreatedAt() != null)
+                .limit(7)
+                .sorted((a, b) -> a.getCreatedAt().compareTo(b.getCreatedAt()))
+                .map(r -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("name", r.getCreatedAt().atOffset(ZoneOffset.UTC).getDayOfWeek().name().substring(0, 3));
+                    map.put("score", r.getScorePercent() == null ? 0 : r.getScorePercent());
+                    return map;
+                }).toList();
 
         // Also fix N+1 for Exams
         Set<String> allExamIds = results.stream().map(Result::getExamId).filter(id -> id != null).collect(Collectors.toSet());

@@ -40,7 +40,7 @@ public class NotificationService {
 
     public void markAsRead(String id, String userId) {
         notificationRepository.findById(id).ifPresent(n -> {
-            if (n.getUserId().equals(userId)) {
+            if (userId.equals(n.getUserId())) {
                 n.setRead(true);
                 notificationRepository.save(n);
             }

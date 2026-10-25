@@ -34,12 +34,15 @@ public class AIQuestionGeneratorService {
                 For each question, ensure the following fields are populated:
                 - scenario: The question text.
                 - options: A list of string options (at least 2, typically 4).
-                - answer: A list of integers representing the 0-indexed correct options. (e.g., [0] for the first option).
+                - answer: A list of integers representing the 0-indexed correct options.
                 - type: Either "MCQ" (single correct answer) or "MSQ" (multiple correct answers).
                 - chooseCount: The number of correct answers.
                 - explanation: A brief explanation of why the answer is correct.
                 - module: Use "%s" as the module.
                 - examId: Use "%s" as the examId.
+                
+                CRITICAL INSTRUCTION FOR ANSWER POSITION DISTRIBUTION:
+                Evenly and randomly distribute the correct answer index across ALL option choices (positions 0, 1, 2, 3 / A, B, C, D). Do NOT bias towards making option A or B the correct answer.
                 
                 <user_text>
                 %s
@@ -50,11 +53,41 @@ public class AIQuestionGeneratorService {
             ParameterizedTypeReference<List<Question>> typeRef = new ParameterizedTypeReference<>() {};
             BeanOutputConverter<List<Question>> converter = new BeanOutputConverter<>(typeRef);
             
-            return chatClient.prompt()
+            List<Question> questions = chatClient.prompt()
                     .user(u -> u.text(prompt))
                     .system(s -> s.text("You are an expert exam creator. You MUST return ONLY valid JSON matching the format: " + converter.getFormat()))
                     .call()
                     .entity(converter);
+
+            if (questions != null) {
+                java.util.Random rnd = new java.util.Random();
+                for (Question q : questions) {
+                    if (q.getOptions() != null && q.getOptions().size() >= 2 && q.getAnswer() != null && !q.getAnswer().isEmpty()) {
+                        List<String> originalOpts = q.getOptions();
+                        List<Integer> originalAns = q.getAnswer();
+                        
+                        List<Integer> indices = new ArrayList<>();
+                        for (int i = 0; i < originalOpts.size(); i++) indices.add(i);
+                        java.util.Collections.shuffle(indices, rnd);
+                        
+                        List<String> shuffledOpts = new ArrayList<>();
+                        for (int idx : indices) {
+                            shuffledOpts.add(originalOpts.get(idx));
+                        }
+                        
+                        List<Integer> newAns = new ArrayList<>();
+                        for (int oldAns : originalAns) {
+                            int newIdx = indices.indexOf(oldAns);
+                            if (newIdx != -1) newAns.add(newIdx);
+                        }
+                        java.util.Collections.sort(newAns);
+                        
+                        q.setOptions(shuffledOpts);
+                        q.setAnswer(newAns);
+                    }
+                }
+            }
+            return questions != null ? questions : new ArrayList<>();
         } catch (Exception e) {
             e.printStackTrace();
             return new ArrayList<>();

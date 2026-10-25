@@ -22,7 +22,6 @@ import com.nextlevel.api.dto.CreateRoomRequest;
 import com.nextlevel.api.dto.PostMessageRequest;
 import com.nextlevel.api.dto.UpdateChallengeScoreRequest;
 import com.nextlevel.api.dto.UpdatePresenceRequest;
-import com.nextlevel.api.dto.UpdateRoomTimerRequest;
 import com.nextlevel.api.model.RoomMessage;
 import com.nextlevel.api.model.StudyRoom;
 import com.nextlevel.api.security.CurrentUser;

@@ -140,7 +140,7 @@ public class UserProfileService {
             }
 
             if (request.getCurrentPassword() != null && request.getNewPassword() != null) {
-                if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+                if (user.getPassword() != null && !passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
                     throw new IllegalArgumentException("Current password is incorrect");
                 }
                 user.setPassword(passwordEncoder.encode(request.getNewPassword()));

@@ -86,7 +86,10 @@ public class InterviewController {
             InterviewSession session = interviewService.finishInterview(currentUser.getUserId(), id);
             return ResponseEntity.ok(ApiResponse.success(session));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+            HttpStatus status = (e.getMessage() != null && e.getMessage().toLowerCase().contains("not found"))
+                    ? HttpStatus.NOT_FOUND
+                    : HttpStatus.BAD_REQUEST;
+            return ResponseEntity.status(status).body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Failed to finish interview: " + e.getMessage()));

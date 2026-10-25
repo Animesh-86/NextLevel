@@ -33,6 +33,7 @@ public class StudyRoom {
     private String category; // "all", "dsa", "gate", "core_cs", "focus", "general"
 
     public String getName() { return title; }
+    public void setName(String name) { this.title = name; }
 
     private String hostUserId;
     private String hostUserName;

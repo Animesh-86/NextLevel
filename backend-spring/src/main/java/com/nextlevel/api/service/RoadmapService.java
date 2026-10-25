@@ -80,10 +80,15 @@ public class RoadmapService {
         Roadmap roadmap = roadmapRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new IllegalArgumentException("Roadmap not found"));
 
+        if (roadmap.getMilestones() == null) {
+            roadmap.setMilestones(new ArrayList<>());
+        }
+
         if (request.toggleTask() != null) {
             String milestoneId = request.toggleTask().milestoneId();
             String taskId = request.toggleTask().taskId();
             roadmap.getMilestones().stream().filter(m -> milestoneId.equals(m.getId())).findFirst().ifPresent(m -> {
+                if (m.getTasks() == null) m.setTasks(new ArrayList<>());
                 m.getTasks().stream().filter(t -> taskId.equals(t.getId())).findFirst().ifPresent(t -> {
                     boolean done = !Boolean.TRUE.equals(t.getDone());
                     t.setDone(done);
@@ -114,6 +119,7 @@ public class RoadmapService {
             String milestoneId = request.addTask().milestoneId();
             String title = request.addTask().title();
             roadmap.getMilestones().stream().filter(m -> milestoneId.equals(m.getId())).findFirst().ifPresent(m -> {
+                if (m.getTasks() == null) m.setTasks(new ArrayList<>());
                 Roadmap.TaskItem task = new Roadmap.TaskItem();
                 task.setId(UUID.randomUUID().toString());
                 task.setTitle(title != null ? title : "Task");
@@ -142,6 +148,9 @@ public class RoadmapService {
     }
 
     private int calculateProgress(Roadmap roadmap) {
+        if (roadmap.getMilestones() == null || roadmap.getMilestones().isEmpty()) {
+            return 0;
+        }
         int total = 0;
         int done = 0;
         for (Roadmap.Milestone m : roadmap.getMilestones()) {

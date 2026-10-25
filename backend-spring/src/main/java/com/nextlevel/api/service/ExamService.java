@@ -17,10 +17,6 @@ import com.nextlevel.api.repository.ExamRepository;
 import com.nextlevel.api.repository.QuestionRepository;
 import com.nextlevel.api.repository.ResultRepository;
 import com.nextlevel.api.security.CurrentUser;
-import com.nextlevel.api.model.Exam;
-import com.nextlevel.api.repository.ExamRepository;
-import com.nextlevel.api.repository.QuestionRepository;
-import com.nextlevel.api.repository.ResultRepository;
 
 @Service
 public class ExamService {
