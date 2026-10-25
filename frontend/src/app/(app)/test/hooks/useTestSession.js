@@ -193,17 +193,12 @@ export function useTestSession({
     }
   }, [currentQ, currentIdx, questions.length, perQuestionSeconds, questionTimeLeft, soundEnabled, timedOutQuestions, questionTimeMap, submitting, handleSubmit, toast]);
 
-  // Overall Exam Timer (untimed count-up for study mode, countdown for timed modes)
+  // Overall Exam Timer (countdown for timed modes only, completely disabled in SRS study mode)
   useEffect(() => {
-    if (phase !== 'testing') return;
+    if (phase !== 'testing' || isStudy) return;
 
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
-        if (isStudy) {
-          // Untimed SRS mode: count up elapsed study time without bounds or auto-termination
-          return prev + 1;
-        }
-
         if (prev <= 1) {
           clearInterval(timerRef.current);
           handleSubmit();
