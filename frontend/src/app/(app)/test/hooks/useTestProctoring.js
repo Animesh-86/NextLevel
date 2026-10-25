@@ -14,6 +14,7 @@ export function useTestProctoring({
   const [isFullscreen, setIsFullscreen] = useState(() => (typeof document !== 'undefined' ? !!document.fullscreenElement : false));
   const [proctorWarnings, setProctorWarnings] = useState(0);
   const lastInfractionTimeRef = useRef(0);
+  const hasBeenFullscreenRef = useRef(false);
 
   const exitFullscreen = useCallback(() => {
     if (typeof document !== 'undefined' && document.fullscreenElement && document.exitFullscreen) {
@@ -67,28 +68,26 @@ export function useTestProctoring({
     };
   }, [mode, phase, submitting, handleInfraction]);
 
-  // Monitor Full-Screen changes & Escape key
+  // Monitor Full-Screen changes & Escape key ONLY in simulation mode
   useEffect(() => {
-    if ((phase !== 'testing' && phase !== 'review') || submitting) return;
+    if (mode !== 'simulation' || (phase !== 'testing' && phase !== 'review') || submitting) return;
 
     const handleFullscreenChange = () => {
       const isCurrentlyFull = !!(typeof document !== 'undefined' && document.fullscreenElement);
       setIsFullscreen(isCurrentlyFull);
-      if (!isCurrentlyFull && (phase === 'testing' || phase === 'review') && !submitting) {
+      if (isCurrentlyFull) {
+        hasBeenFullscreenRef.current = true;
+      } else if (hasBeenFullscreenRef.current && (phase === 'testing' || phase === 'review') && !submitting) {
         setShowExitModal(true);
-        if (mode === 'simulation') {
-          handleInfraction('Exited full-screen exam mode');
-        }
+        handleInfraction('Exited full-screen exam mode');
       }
     };
 
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && hasBeenFullscreenRef.current && !submitting) {
         e.preventDefault();
         setShowExitModal(true);
-        if (mode === 'simulation') {
-          handleInfraction('Pressed Escape / Exited full-screen exam');
-        }
+        handleInfraction('Pressed Escape / Exited full-screen exam');
       }
     };
 
@@ -125,6 +124,7 @@ export function useTestProctoring({
   const resetProctorWarnings = useCallback(() => {
     setProctorWarnings(0);
     lastInfractionTimeRef.current = 0;
+    hasBeenFullscreenRef.current = false;
     setShowExitModal(false);
   }, []);
 
@@ -133,6 +133,7 @@ export function useTestProctoring({
     setShowExitModal,
     isFullscreen,
     setIsFullscreen,
+    hasBeenFullscreen: hasBeenFullscreenRef.current,
     proctorWarnings,
     exitFullscreen,
     handleInfraction,

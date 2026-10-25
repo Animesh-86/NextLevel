@@ -13,7 +13,9 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import com.nextlevel.api.dto.ExamGradingRequest;
@@ -54,25 +56,40 @@ public class ResultService {
 
     public Result createResult(String userId, ExamGradingRequest request) {
         log.info("Creating graded result for user: {}, exam: {}", userId, request.getExamId());
-        
-        Exam exam = null;
-        List<Question> questions;
-        
-        if ("all".equals(request.getExamId())) {
-            questions = questionRepository.findByUserId(userId);
-        } else {
-            exam = examRepository.findById(request.getExamId()).orElseThrow(() -> new IllegalArgumentException("Exam not found"));
-            if (!userId.equals(exam.getUserId())) {
-                throw new IllegalArgumentException("Unauthorized: You do not own this exam");
+
+        // Deduplication guard against rapid double-submission (within 8 seconds)
+        Instant eightSecondsAgo = Instant.now().minusSeconds(8);
+        Page<Result> recentResults = resultRepository.findByUserId(userId, PageRequest.of(0, 1, Sort.by(Sort.Direction.DESC, "createdAt")));
+        if (!recentResults.isEmpty()) {
+            Result latest = recentResults.getContent().get(0);
+            if (latest.getCreatedAt() != null && latest.getCreatedAt().isAfter(eightSecondsAgo)) {
+                boolean sameExam = (request.getExamId() != null && request.getExamId().equals(latest.getExamId())) ||
+                                   (request.getExamId() == null && latest.getExamId() == null);
+                if (sameExam) {
+                    log.warn("Duplicate result submission detected within 8s for user: {}, exam: {}. Returning existing result: {}", 
+                            userId, request.getExamId(), latest.getId());
+                    return latest;
+                }
             }
-            questions = questionRepository.findByExamIdAndUserId(request.getExamId(), userId);
         }
         
+        Exam exam = null;
+        List<Question> questions = null;
+        
+        if (request.getExamId() != null && !"all".equals(request.getExamId()) && !request.getExamId().contains(",")) {
+            exam = examRepository.findById(request.getExamId()).orElse(null);
+        }
+
         if (request.getQuestionIds() != null && !request.getQuestionIds().isEmpty()) {
-            java.util.Set<String> targetIds = new java.util.HashSet<>(request.getQuestionIds());
-            questions = questions.stream()
-                    .filter(q -> targetIds.contains(q.getId()))
-                    .toList();
+            questions = questionRepository.findByIdIn(request.getQuestionIds());
+        } else if (exam != null) {
+            questions = questionRepository.findByExamIdAndUserId(request.getExamId(), userId);
+        } else {
+            questions = questionRepository.findByUserId(userId);
+        }
+
+        if (questions == null) {
+            questions = List.of();
         }
         
         int correctCount = 0;

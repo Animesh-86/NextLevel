@@ -223,25 +223,25 @@ export default function FocusTest() {
         />
       )}
 
-      <ConfirmModal
-        open={showExitModal}
-        onCancel={handleCancelExit}
-        onConfirm={handleConfirmExit}
-        title="Exit Assessment?"
-        message={
-          mode === 'simulation'
-            ? 'You are currently in a timed proctored exam. Exiting will cancel this exam session and your unsaved answers will be discarded.'
-            : isOaBlitz
-            ? 'You are currently in an OA Blitz sprint. Exiting now will forfeit the exam and answers will not be recorded.'
-            : 'Are you sure you want to exit this practice session? Your current progress will be lost.'
-        }
-        confirmText="Exit Exam"
-        cancelText="Resume & Stay Fullscreen"
-        danger={true}
-      />
+      {mode !== 'simulation' && (
+        <ConfirmModal
+          open={showExitModal}
+          onCancel={handleCancelExit}
+          onConfirm={handleConfirmExit}
+          title="Exit Assessment?"
+          message={
+            isOaBlitz
+              ? 'You are currently in an OA Blitz sprint. Exiting now will forfeit the exam and answers will not be recorded.'
+              : 'Are you sure you want to exit this practice session? Your current progress will be lost.'
+          }
+          confirmText="Exit Exam"
+          cancelText="Continue Practice"
+          danger={true}
+        />
+      )}
 
-      {/* Fullscreen Security Blackout Guard for Esc Loophole */}
-      {(!isFullscreen || showExitModal) && phase === 'testing' && !submitting && (
+      {/* Fullscreen Security Blackout Guard for Simulation Proctoring only when exit modal triggered */}
+      {mode === 'simulation' && showExitModal && phase === 'testing' && !submitting && (
         <div
           style={{
             position: 'fixed',
@@ -361,7 +361,7 @@ export default function FocusTest() {
         handleCheck={handleCheck}
         goToReview={goToReview}
         toast={toast}
-        isSecurityActive={!isFullscreen || showExitModal}
+        isSecurityActive={mode === 'simulation' && showExitModal}
       />
 
       <MobileQuestionNavigatorDrawer

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { useToast } from '@/components/Toast';
 import { apiFetch } from '@/lib/api';
 import { AlertTriangle, Maximize2 } from 'lucide-react';
@@ -25,7 +25,8 @@ import RoomChatRail from './components/RoomChatRail';
 import RoomAllModals from './components/RoomAllModals';
 
 export default function StudyRoomArena({ params }) {
-  const { id: roomIdOrCode } = use(params);
+  const routeParams = useParams();
+  const roomIdOrCode = routeParams?.id || (params && typeof params.then !== 'function' ? params?.id : null);
   const router = useRouter();
   const toast = useToast();
 

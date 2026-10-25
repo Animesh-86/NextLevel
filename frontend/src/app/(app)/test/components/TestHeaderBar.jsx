@@ -51,6 +51,11 @@ export default function TestHeaderBar({
               strokeWidth={4}
               compact={true}
             />
+          ) : isStudy ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: '#818cf8', fontWeight: 700 }}>
+              <Clock size={13} /> {formatTime(timeLeft)}
+              <span className="badge" style={{ fontSize: '0.65rem', padding: '1px 5px', backgroundColor: 'rgba(99, 102, 241, 0.15)', color: '#818cf8' }}>Untimed</span>
+            </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', fontFamily: 'monospace', fontWeight: 700, color: timerCritical ? '#ef4444' : 'var(--text-primary)' }}>
               <Clock size={13} /> {formatTime(timeLeft)}
@@ -111,6 +116,20 @@ export default function TestHeaderBar({
               </button>
             </div>
           </div>
+        ) : isStudy ? (
+          <div className="card" style={{ textAlign: 'center', borderColor: 'rgba(99, 102, 241, 0.3)', background: 'rgba(99, 102, 241, 0.04)' }}>
+            <div style={{
+              fontSize: '2rem', fontWeight: 800, fontFamily: 'monospace', letterSpacing: '-0.05em', color: 'var(--text-primary)'
+            }}>
+              {formatTime(timeLeft)}
+            </div>
+            <div style={{ fontSize: '0.72rem', color: '#818cf8', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.08em', marginTop: '0.25rem' }}>
+              <Clock size={12} style={{ display: 'inline', marginRight: '4px' }} />Self-Paced Study
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.4rem', borderTop: '1px solid var(--border-light)', paddingTop: '0.4rem' }}>
+              Untimed • No pressure
+            </div>
+          </div>
         ) : (
           <div className="card" style={{ textAlign: 'center', borderColor: timerCritical ? 'var(--text-primary)' : timerWarning ? 'var(--warning)' : 'var(--border-strong)' }}>
             <div style={{
@@ -120,7 +139,7 @@ export default function TestHeaderBar({
               {formatTime(timeLeft)}
             </div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.1em', marginTop: '0.25rem' }}>
-              <Clock size={12} style={{ display: 'inline', marginRight: '4px' }} />{isStudy ? 'Study Session Time' : 'Time Remaining'}
+              <Clock size={12} style={{ display: 'inline', marginRight: '4px' }} />Time Remaining
             </div>
             <div style={{ marginTop: '0.75rem', height: '4px', backgroundColor: 'var(--bg-accent)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
               <div style={{

@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect, use } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Trash } from "lucide-react";
 import { SkeletonCard, SkeletonText } from "@/components/SkeletonLoader";
 import { apiFetch } from "@/lib/api";
@@ -11,7 +11,8 @@ import ResultModuleBreakdown from "./components/ResultModuleBreakdown";
 import ResultQuestionReview from "./components/ResultQuestionReview";
 
 export default function ResultReview({ params }) {
-  const { id } = use(params);
+  const routeParams = useParams();
+  const id = routeParams?.id || (params && typeof params.then !== 'function' ? params?.id : null);
   const router = useRouter();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);

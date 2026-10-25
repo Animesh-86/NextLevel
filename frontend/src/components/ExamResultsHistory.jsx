@@ -58,13 +58,25 @@ export default function ExamResultsHistory({ onTakeTest }) {
     fetchResults();
   }, [fetchResults]);
 
-  // Summary stats
-  const total = results.length;
-  const passed = results.filter(r => r.passed).length;
-  const avgScore = total > 0 ? Math.round(results.reduce((s, r) => s + (r.scorePercent || 0), 0) / total) : 0;
-  const bestScore = total > 0 ? Math.round(Math.max(...results.map(r => r.scorePercent || 0))) : 0;
+  // Deduplicate any rapid double-submitted results (same exam, same score, within 15 seconds)
+  const displayResults = results.filter((result, index, self) => {
+    const resultTime = new Date(result.createdAt).getTime();
+    return index === self.findIndex(r => {
+      if ((r.id || r._id) === (result.id || result._id)) return true;
+      const sameExam = (r.examId && r.examId === result.examId) || (r.exam?.title && r.exam?.title === result.exam?.title);
+      const sameScore = r.scorePercent === result.scorePercent;
+      const timeDiff = Math.abs(new Date(r.createdAt).getTime() - resultTime);
+      return sameExam && sameScore && timeDiff < 15000;
+    });
+  });
 
-  const filteredResults = results.filter(r => {
+  // Summary stats
+  const total = displayResults.length;
+  const passed = displayResults.filter(r => r.passed).length;
+  const avgScore = total > 0 ? Math.round(displayResults.reduce((s, r) => s + (r.scorePercent || 0), 0) / total) : 0;
+  const bestScore = total > 0 ? Math.round(Math.max(...displayResults.map(r => r.scorePercent || 0))) : 0;
+
+  const filteredResults = displayResults.filter(r => {
     const title = (r.exam?.title || r.title || 'Exam').toLowerCase();
     return title.includes(searchQuery.toLowerCase());
   });

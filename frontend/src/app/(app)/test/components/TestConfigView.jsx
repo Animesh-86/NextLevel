@@ -333,6 +333,28 @@ export default function TestConfigView({
                     </button>
                   </div>
                 </div>
+              ) : isStudy ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Questions</label>
+                    <input type="number" className="input" value={questionCount} onChange={(e) => setQuestionCount(parseInt(e.target.value) || 20)} min={1} max={200} style={{ fontSize: '0.95rem' }} />
+                  </div>
+                  <div style={{
+                    padding: '0.75rem 1rem',
+                    background: 'rgba(99, 102, 241, 0.08)',
+                    border: '1px solid rgba(99, 102, 241, 0.25)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '0.82rem',
+                    color: 'var(--text-secondary)',
+                    lineHeight: 1.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px'
+                  }}>
+                    <Clock size={16} style={{ color: '#818cf8', flexShrink: 0 }} />
+                    <span><strong>Untimed Practice:</strong> SRS Study Mode is self-paced with zero timer bounding. Take your time reviewing options and learning from instant solutions.</span>
+                  </div>
+                </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                   <div>

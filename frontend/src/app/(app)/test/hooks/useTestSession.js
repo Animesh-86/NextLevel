@@ -28,6 +28,7 @@ export function useTestSession({
   const [timeLeft, setTimeLeft] = useState(0);
   const [testStartTime, setTestStartTime] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [showExplanation, setShowExplanation] = useState(false);
   const timerRef = useRef(null);
 
@@ -49,11 +50,12 @@ export function useTestSession({
   const currentQ = questions[currentIdx];
 
   const handleSubmit = useCallback(async (customOverrides = {}) => {
-    if (submitting) return;
+    if (submittingRef.current || submitting) return;
+    submittingRef.current = true;
     setSubmitting(true);
     clearInterval(timerRef.current);
 
-    const timeTaken = (performance.now() - testStartTime) / 1000;
+    const timeTaken = testStartTime ? Math.max(1, (performance.now() - testStartTime) / 1000) : 1;
     localStorage.removeItem(`test_answers_${selectedExams.join(',')}`);
 
     const finalTimeMap = customOverrides.questionTimeTaken || questionTimeMap;
@@ -97,20 +99,34 @@ export function useTestSession({
           document.exitFullscreen().catch(() => {});
         }
         const resultId = data.data?.id || data.data?._id || data?.id || data?._id;
-        router.push(`/results/${resultId}`);
+        if (resultId) {
+          setPhase('submitted');
+          router.push(`/results/${resultId}`);
+          setTimeout(() => {
+            if (typeof window !== 'undefined' && window.location.pathname.includes('/test')) {
+              window.location.href = `/results/${resultId}`;
+            }
+          }, 1200);
+        } else {
+          router.push('/test?tab=results');
+        }
       } else {
         toast.error(data.message || data.error || 'Failed to save result');
+        submittingRef.current = false;
         setSubmitting(false);
       }
     } catch (err) {
       console.error('Submit error:', err);
       toast.error(err.message || 'Failed to submit');
+      submittingRef.current = false;
       setSubmitting(false);
     }
-  }, [submitting, testStartTime, selectedExams, questions, answers, mode, isOaBlitz, perQuestionSeconds, questionTimeMap, timedOutQuestions, router, toast]);
+  }, [submitting, testStartTime, selectedExams, questions, answers, mode, isOaBlitz, perQuestionSeconds, questionTimeMap, timedOutQuestions, router, toast, setPhase]);
 
   const onExitSession = useCallback(() => {
     clearInterval(timerRef.current);
+    submittingRef.current = false;
+    setSubmitting(false);
     setPhase('config');
     setQuestions([]);
     setCurrentIdx(0);
@@ -177,20 +193,20 @@ export function useTestSession({
     }
   }, [currentQ, currentIdx, questions.length, perQuestionSeconds, questionTimeLeft, soundEnabled, timedOutQuestions, questionTimeMap, submitting, handleSubmit, toast]);
 
-  // Overall Exam Timer
+  // Overall Exam Timer (untimed count-up for study mode, countdown for timed modes)
   useEffect(() => {
     if (phase !== 'testing') return;
 
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
+        if (isStudy) {
+          // Untimed SRS mode: count up elapsed study time without bounds or auto-termination
+          return prev + 1;
+        }
+
         if (prev <= 1) {
           clearInterval(timerRef.current);
-          if (isStudy) {
-            toast.info('Study session time limit reached!');
-            goToReview();
-          } else {
-            handleSubmit();
-          }
+          handleSubmit();
           return 0;
         }
         return prev - 1;
@@ -198,7 +214,7 @@ export function useTestSession({
     }, 1000);
 
     return () => clearInterval(timerRef.current);
-  }, [phase, isStudy, handleSubmit, goToReview, toast]);
+  }, [phase, isStudy, handleSubmit]);
 
   // Per-Question Countdown Timer in OA Blitz mode
   useEffect(() => {
@@ -430,22 +446,17 @@ export function useTestSession({
       try { setAnswers(JSON.parse(savedAnswers)); } catch (e) {}
     }
 
-    const calculatedTotalSeconds = isOaBlitz
+    const calculatedTotalSeconds = isStudy
+      ? 0
+      : isOaBlitz
       ? pendingQuestions.length * perQuestionSeconds
       : timeMinutes * 60;
 
     setTimeLeft(calculatedTotalSeconds);
     setTestStartTime(performance.now());
+    submittingRef.current = false;
+    setSubmitting(false);
     setPhase('testing');
-
-    setTimeout(() => {
-      const testElem = document.getElementById('test-container');
-      if (testElem && testElem.requestFullscreen) {
-        testElem.requestFullscreen().catch(() => {});
-      } else if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      }
-    }, 100);
   }, [pendingQuestions, selectedExams, isStudy, isOaBlitz, perQuestionSeconds, timeMinutes, setPhase, resetProctorWarnings]);
 
   async function startTest() {
@@ -521,8 +532,8 @@ export function useTestSession({
     return qId && (answers[qId] || []).length > 0;
   }).length;
   const unansweredCount = questions.length - answeredCount;
-  const timerWarning = timeLeft < 300 && timeLeft > 0;
-  const timerCritical = timeLeft < 60 && timeLeft > 0;
+  const timerWarning = !isStudy && timeLeft < 300 && timeLeft > 0;
+  const timerCritical = !isStudy && timeLeft < 60 && timeLeft > 0;
 
   return {
     questions,

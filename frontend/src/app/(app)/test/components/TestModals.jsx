@@ -228,8 +228,16 @@ export function ReviewSubmitModal({
         )}
 
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button className="btn btn-secondary" onClick={onBack} style={{ flex: 1 }}>Go Back</button>
-          <button className="btn btn-primary" onClick={onSubmit} style={{ flex: 1 }} disabled={submitting}>
+          <button className="btn btn-secondary" onClick={onBack} style={{ flex: 1 }} disabled={submitting}>Go Back</button>
+          <button
+            className="btn btn-primary"
+            onClick={(e) => {
+              e.preventDefault();
+              if (!submitting) onSubmit();
+            }}
+            style={{ flex: 1 }}
+            disabled={submitting}
+          >
             {submitting ? <Loader2 size={18} className="auth-spinner" /> : 'Submit Exam'}
           </button>
         </div>
